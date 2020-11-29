@@ -859,5 +859,5 @@
     "iLeaderboardChannel": 728589779960332289,
     "iLeaderboardMessage": 782361801832136738,
     "iVersion": 10,
-    "sPOSTURL": "https://t2.autopublisher.repl.co/data"
+    "sPOSTURL": "https://discord.kspchallenges.repl.co/data"
 }

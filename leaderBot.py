@@ -67,7 +67,9 @@ class state_machine_class():
             return
     
     async def send(s, channel, content):
-        await channel.send(content)
+        while content:
+            await channel.send(content[:2000])
+            content = content[2000:]
         
     async def update(s, ch, msg, content):
         s.json_data.calculate_rating()
