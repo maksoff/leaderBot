@@ -96,7 +96,7 @@ class json_class():
             rank = player.get('iRank', None)
             points = player.get('iPoints', None)
         if player and rank and points:
-            return '**{}.** place (from {}) with **{}** points'.format(rank, len(s.j['aPlayer']), points)
+            return '**{}.** (from {}) with **{}** points'.format(rank, len(s.j['aPlayer']), points)
         else:
             return 'You need to earn some points. Submit some challenges!'
 

@@ -3,8 +3,7 @@
 
 import os
 
-import datetime as dt
-import sqlite3 as sl
+import requests
 
 import discord
 from dotenv import load_dotenv
@@ -277,6 +276,15 @@ class state_machine_class():
         try:
             s.json_data.calculate_rating()
             s.save_json()
+            try:
+                url = s.json_data.j.get('sPOSTURL')
+                if url:
+                    payload = s.json_data.j.copy()
+                    payload['iGuildID'] = s.guild_id
+                    headers = {'content-type': 'application/json'}
+                    requests.post(url, data=json.dumps(payload), headers=headers)
+            except Exception as e:
+                print(str(e))
             return await s.update(s.leaderboard_channel_id, s.leaderboard_message_id, s.json_data.result_leaderboard())
         except Exception as e:
             print(e)
@@ -323,6 +331,7 @@ class state_machine_class():
         s.next_function = None
         if s.yes_no(msg.content):
             if os.path.exists(s.json_path):
+                await s.json_exp(msg)
                 os.remove(s.json_path)
                 return 'All info removed! Now you can delete bot, or start from scratch'
             else:
@@ -330,7 +339,7 @@ class state_machine_class():
         else:
             return 'Cancelled'
 
-    async def json_del(s, *args):
+    async def json_del(s, *msg):
         s.next_function = s.json_del_confirm
         return 'Do you really want to delete all info?'
 
@@ -354,44 +363,62 @@ class state_machine_class():
         
     async def get_top(s, msg):
         limit = 7
+        if len(msg.content.strip().split(' ')) > 1:
+            try:
+                limit = int(msg.content.split(' ')[1])
+            except:
+                ...
         responce = s.json_data.get_top(limit)
         if s.leaderboard_channel_id:
             responce += '\n\nFull list: <#' + str(s.leaderboard_channel_id) + '>'
         embed = discord.Embed()
         embed.add_field(name='TOP '+str(limit), value=responce)
-        #embed.remove_author()
         await msg.channel.send(embed=embed)
+
+    async def post(s, msg):
+        try:
+            url = msg.content.strip().split(' ')[1]
+            payload = s.json_data.j.copy()
+            payload['iGuildID'] = s.guild_id
+            headers = {'content-type': 'application/json'}
+            try:
+                if len(msg.content.split(' ')) > 2:
+                    r = requests.post(url, data='', headers=headers)
+                else:
+                    r = requests.post(url, data=json.dumps(payload), headers=headers)       
+                response = '\nstatus: {} \ntext: {}'.format(
+                    r.status_code, r.text)
+            except Exception as e:
+                raise e
+                response = 'Exception: ' + str(e)
+            return 'Done: ' + str(response)
+        except Exception as e:
+            raise e
+            return 'Specify URL `?post URL`'
+    
+
+    async def seturl(s, msg):
+        data = msg.content.strip().split(' ')
+        if len(data) == 1:
+            try:
+                del s.json_data.j['sPOSTURL']
+            except:
+                return 'No Auto-POST URL found'
+            return 'Auto-POST URL deleted'
+        else:
+            s.json_data.j['sPOSTURL'] = data[1]
+            s.save_json()
+            return 'Auto-POST URL updated'
             
     async def __call__(s, message):
         responce = ''
         for n, _, f in s.commands:
-            if message.content.lower() == n:
+            if message.content.lower().startswith(n):
                 responce = await f(message)
                 break
         else:
             if s.next_function:
                 responce = await s.next_function(message)
-##                else:
-##                    if message.content.startswith('<@'):
-##                        user = None
-##                        try:
-##                            user = s.client.get_user(s.get_int(message.content))
-##                        except:
-##                            ...
-##                        if user:
-##                            responce = '@' + user.name + '#' + user.discriminator + ' id: `' + message.content + '`'
-##                        else:
-##                            responce = 'user not found'
-##                    elif message.content.startswith('<#'):
-##                        channel = None
-##                        try:
-##                            channel = s.client.get_channel(s.get_int(message.content))
-##                        except:
-##                            ...
-##                        if channel:
-##                            responce = '#' + channel.name + ' id: `' + message.content + '`'
-##                        else:
-##                            responce = 'channel not found'
             elif message.content.startswith('?'):
                 responce = '`' + message.content + '` not recognized - try `?help`'
             
@@ -408,12 +435,12 @@ class state_machine_class():
                       ('?static points', 'add points (e.g. giveaways)', s.add_points),
                       ('?update', 'force leaderboard update', s.update_lb),
                       ('?print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
-                      #('entries', 'list all entries', s.entries),
-                      #('delete', 'deletes submission/points by id', s.del_submission),
                       ('?set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
                       ('?export json', 'exports data in json', s.json_exp),
                       ('?import json', 'imports data from json', s.json_imp),
                       ('?delete json', 'clears all you data from server', s.json_del),
+                      ('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
+                      ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
                       )
     
     def __init__(s, client, guild_id):
