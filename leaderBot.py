@@ -2,6 +2,7 @@
 # ideas - graph of progress
 
 import os
+import time
 
 import requests
 
@@ -29,6 +30,10 @@ class state_machine_class():
     leaderboard_message_id = None
     json_path = None
     json_data = None
+    
+    author_id = None
+    last_time = 0
+    timeout = 60
 
     new_submission = {}
 
@@ -85,12 +90,20 @@ class state_machine_class():
             print(e)
             return 'something wrong'
 
-    async def helpp(s, _):
-        responce = 'Hello! This bot helps to update the leaderboard.\nUse these commands (in `#leaderbot` channel!):\n'
+    async def admin_help(s, *args):
+        response = 'Hello! This bot helps to update the leaderboard.\nUse these commands (in `#leaderbot` channel!):\n'
         for n, t, _ in s.commands:
-            responce += '`{}` - {}\n'.format(n, t)
-        return responce
+            response += '`{}` - {}\n'.format(n, t)
 
+        response += '\nAll users have additional commands:\n' + await s.user_help()
+        return response
+
+    async def user_help(s, *args):
+        response = 'Check ranking:\n'
+        for n, t, _ in s.user_commands:
+            response += '`{}` - {}\n'.format(n, t)
+        return response
+    
     async def add_static_points(s, msg):
         s.next_function = None
         player = s.json_data.find(s.json_data.j['aPlayer'], sName=s.new_submission['sPlayerName'])
@@ -144,31 +157,31 @@ class state_machine_class():
         return 'not implemented'
 
     def get_challenge_types(s):
-        responce = 'You already have following challenge types (`>` = used in this challenge):'
+        response = 'You already have following challenge types (`>` = used in this challenge):'
         for i, chl in enumerate(s.json_data.j['aChallengeType'], 1):
             bold = False
             if s.json_data.find(s.json_data.j['aSubmission'], sChallengeName=s.new_submission['sChallengeName'], sChallengeTypeName=chl.get('sName')):
                 bold = True
-            responce += '\n{5}**{0:3}**. `{1}`; display name: **{2}**, *{3}* score wins, multiplier **{4}**'.format(
+            response += '\n{5}**{0:3}**. `{1}`; display name: **{2}**, *{3}* score wins, multiplier **{4}**'.format(
                 i, chl.get('sName'), chl.get('sNick', chl.get('sName')),
                 '*higher*' if chl.get('bHigherScore') else 'lower',
                 chl.get('fMultiplier', 1),
                 '\>' if bold else '   ')
-        return responce
+        return response
             
 
     async def add_challenge_user(s, msg):
         s.next_function = None
-        responce = ''
+        response = ''
         try:
             user_id = s.get_int(msg.content)
             user = await s.client.fetch_user(user_id)
             player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
             if player:
-                responce += 'Existing user\n'
+                response += 'Existing user\n'
                 s.new_submission['sPlayerName'] = player['sName']
             else:
-                responce += 'New user, cool!\n'
+                response += 'New user, cool!\n'
                 s.json_data.j['aPlayer'].append({'sName':user.name + '#' + user.discriminator,
                                                  'iID':user_id})
                 s.new_submission['sPlayerName'] = user.name + '#' + user.discriminator
@@ -178,11 +191,11 @@ class state_machine_class():
                 s.next_next_function = None
                 return 'how many points?'
             s.next_function = s.add_challenge_type
-            responce += s.get_challenge_types()
-            responce += '\n\nEnter number of existing type (e.g. `1`)'
-            responce += '\nor create new type in format `unique_name display_name lower/higher multiplier`'
-            responce += '\n(e.g. `extra_x3 impossible lower 3.14`)'
-            return responce
+            response += s.get_challenge_types()
+            response += '\n\nEnter number of existing type (e.g. `1`)'
+            response += '\nor create new type in format `unique_name display_name lower/higher multiplier`'
+            response += '\n(e.g. `extra_x3 impossible lower 3.14`)'
+            return response
         except Exception as e:
             print(e)
             return 'something gone wrong'
@@ -219,9 +232,9 @@ class state_machine_class():
     async def add_submission(s, _):
         s.next_function = s.add_challenge
         s.new_submission = {}
-        responce = 'Past challenges: ' + ', '.join(s.json_data.list_of_challenges())
-        responce += '\nFor which challenge is this submission? (e.g. 42):'
-        return responce
+        response = 'Past challenges: ' + ', '.join(s.json_data.list_of_challenges())
+        response += '\nFor which challenge is this submission? (e.g. 42):'
+        return response
     
     async def del_submission(s, _):
         return '_not implemented_'
@@ -354,12 +367,12 @@ class state_machine_class():
         try:
             user = await s.client.fetch_user(user_id)
             name = '@' + user.name
-            responce = s.json_data.get_rank(user_id)
+            response = s.json_data.get_rank(user_id)
         except:
             name = 'user not found'
-            responce = 'maybe invite him?'
+            response = 'maybe invite him?'
         embed = discord.Embed()
-        embed.add_field(name=name, value=responce)
+        embed.add_field(name=name, value=response)
         #embed.remove_author()
         await msg.channel.send(embed=embed)
         
@@ -370,11 +383,11 @@ class state_machine_class():
                 limit = int(msg.content.split(' ')[1])
             except:
                 ...
-        responce = s.json_data.get_top(limit)
+        response = s.json_data.get_top(limit)
         if s.leaderboard_channel_id:
-            responce += '\n\nFull list: <#' + str(s.leaderboard_channel_id) + '>'
+            response += '\n\nFull list: <#' + str(s.leaderboard_channel_id) + '>'
         embed = discord.Embed()
-        embed.add_field(name='TOP '+str(limit), value=responce)
+        embed.add_field(name='TOP '+str(limit), value=response)
         await msg.channel.send(embed=embed)
 
     async def post(s, msg):
@@ -391,11 +404,9 @@ class state_machine_class():
                 response = '\nstatus: {} \ntext: {}'.format(
                     r.status_code, r.text)
             except Exception as e:
-                raise e
                 response = 'Exception: ' + str(e)
             return 'Done: ' + str(response)
         except Exception as e:
-            raise e
             return 'Specify URL `?post URL`'
     
 
@@ -413,26 +424,56 @@ class state_machine_class():
             return 'Auto-POST URL updated'
             
     async def __call__(s, message):
-        responce = ''
-        for n, _, f in s.commands:
-            if message.content.lower().startswith(n):
-                responce = await f(message)
-                break
-        else:
-            if s.next_function:
-                responce = await s.next_function(message)
-            elif message.content.startswith('?'):
-                responce = '`' + message.content + '` not recognized - try `?help`'
+        response = ''
+        
+        bChannel = message.channel.name == CHANNEL
+        bRole = True #ROLE in [role.name for role in s.client.get_user(message.author.id).roles] 
             
-        if responce:
-            await s.send(message.channel, responce)
+
+        if (((check_channel and check_role) and (bChannel and bRole)) or
+            ((check_channel and (not check_role)) and bChannel) or
+            (((not check_channel) and check_role) and bRole)):
+            if s.author_id and (message.author.id != s.author_id and time.time() - s.last_time > s.timeout):
+                s.author_id = None
+                s.next_function = None
+                await s.send(message.channel, '**timeout**')
+            for n, _, f in s.commands:
+                if message.content.lower().startswith(n):
+                    s.author_id = message.author.id
+                    s.last_time = time.time()
+                    response = await f(message)
+                    break
+            else:
+                if s.next_function and s.author_id == message.author.id:
+                    response = await s.next_function(message)  
+            if response:
+                await s.send(message.channel, response)
+                return
+                    
+        for n, _, f in s.user_commands:
+            if message.content.lower().startswith(n):
+                response = await f(message)
+                break
+            
+        if response:
+            await s.send(message.channel, response)
+            return
+        
+        if 'good' in message.content.lower() and 'bot' in message.content.lower():
+            if len(message.content) == 8:
+                await message.channel.send('Thanks!')
+                return
             
     def create_help (s, *args):
+
+        s.user_commands = (
+                              ('?help', 'prints this message', s.user_help),
+                              ('?rank', 'your rank; `?rank @user` to get @user rank', s.get_rank),
+                              ('?top', 'leaderboard; add number to limit positions `?top 3`', s.get_top),
+                              ('?leaderboard', 'same as `?top`', s.get_top),
+                          )
         
-        s.commands = (('?help', 'prints this message', s.helpp),
-                      ('?rank', 'rank - *server-wide*', s.get_rank),
-                      ('?leaderboard', 'TOP list - *server-wide*', s.get_top),
-                      ('?top', 'TOP list (same as `?leaderboard`) - *server-wide*', s.get_top),
+        s.commands = (('?help', 'prints this message', s.admin_help),
                       ('?add', 'to add new submission', s.add_submission),
                       ('?static points', 'add points (e.g. giveaways)', s.add_points),
                       ('?update', 'force leaderboard update', s.update_lb),
@@ -474,31 +515,10 @@ async def on_ready():
             f'{guild.name}(id: {guild.id})'
         )
 
-
 @client.event
 async def on_message(message):
-    
     if message.author == client.user:
         return
-
-    if message.content.lower().startswith('?rank'):
-        await sm[message.guild.id].get_rank(message)
-    elif message.content.lower().startswith('?leaderboard') or message.content.lower().startswith('?top'):
-        await sm[message.guild.id].get_top(message)
-    elif 'good' in message.content.lower() and 'bot' in message.content.lower():
-        if len(message.content) == 8:
-            await message.channel.send('Thanks!')
-    else:
-        if check_role:
-            for role in message.author.roles:
-                if role.name == ROLE:
-                    break
-            else:
-                return
-        if check_channel:
-            if message.channel.name != CHANNEL:
-                return
-        
-        await sm[message.guild.id](message)
+    await sm[message.guild.id](message)
         
 client.run(TOKEN)
