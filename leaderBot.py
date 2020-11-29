@@ -436,6 +436,7 @@ class state_machine_class():
             if s.author_id and (message.author.id != s.author_id and time.time() - s.last_time > s.timeout):
                 s.author_id = None
                 s.next_function = None
+                s.next_next_function = None
                 await s.send(message.channel, '**timeout**')
             for n, _, f in s.commands:
                 if message.content.lower().startswith(n):
