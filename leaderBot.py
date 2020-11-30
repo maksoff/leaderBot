@@ -31,12 +31,16 @@ class state_machine_class():
     leaderboard_message_id = None
     json_path = None
     json_data = None
+
+    client = None
     
     author_id = None
     last_time = 0
     timeout = 60
 
     new_submission = {}
+
+    ## assistant functions
 
     @staticmethod
     def get_int (string):
@@ -49,20 +53,20 @@ class state_machine_class():
             return True
         elif val in ('no', 'n', 'false', 'f', '0', 'disable', 'off'):
             return False
-        
-    def save_json(s):
-        with open(s.json_path, 'w') as f:
-            f.write(s.json_data.dump())
-            
-    def open_json(s):
-        with open(s.json_path, 'r') as f:
-            try:
-                s.json_data.load(f)
-                s.leaderboard_channel_id, s.leaderboard_message_id = s.json_data.get_lb_message()
-            except Exception as e:
-                print(e)
-                print('wrong json')
-                
+
+    async def wait_response(s, message, timeout=30):
+        '''returns message or None if timeout'''
+        try:
+            def check(m):
+                return (m.author.id == message.author.id) and (m.channel == message.channel)
+            return await client.wait_for('message', timeout=timeout, check=check)
+        except asyncio.TimeoutError:
+            await message.channel.send(f'`timeout {timeout}s`')
+            return 
+        except Exception as e:
+            print(e)
+            return
+                    
     async def get_message(s, ch_id, m_id):
         try:
             channel = s.client.get_channel(ch_id)
@@ -87,6 +91,67 @@ class state_machine_class():
             print(e)
             return 'something wrong'
 
+    ## json file functions
+          
+    def save_json(s):
+        with open(s.json_path, 'w') as f:
+            f.write(s.json_data.dump())
+            
+    def open_json(s):
+        with open(s.json_path, 'r') as f:
+            try:
+                s.json_data.load(f)
+                s.leaderboard_channel_id, s.leaderboard_message_id = s.json_data.get_lb_message()
+            except Exception as e:
+                print(e)
+                print('wrong json')
+        
+    async def json_exp(s, message):
+        try:
+            await message.channel.send(file=discord.File(s.json_path))
+        except:
+            return '**No file found.** Please add some challenges or import json.'
+        return 'Here we go'
+
+
+    async def json_imp(s, message):
+        await message.channel.send('Please send me your json!')
+
+        message = await s.wait_response(message)
+        if not message:
+            return 'cancelled'
+        if message.attachments:
+            test = message.attachments[0].filename
+            try:
+                await message.attachments[0].save(fp=s.json_path)
+                s.open_json()
+                await s.update_lb()
+                s.save_json()
+                await s.update_winners()
+            except Exception as e:
+                print(e)
+                return 'failed to save'
+            return test + ' received and saved'
+        return 'No file sent. Try again'
+
+
+    async def json_del(s, message):
+        await message.channel.send('Do you really want to delete all info?')
+        message = await s.wait_response(message, timeout=5)
+        if not message:
+            return 'cancelled'
+        if s.yes_no(message.content):
+            if os.path.exists(s.json_path):
+                await s.json_exp(message)
+                os.remove(s.json_path)
+                return 'All info removed! Now you can delete bot, or start from scratch'
+            else:
+                return 'File not found'
+        else:
+            return 'Cancelled'
+
+    ## state machine functions
+    
     async def admin_help(s, *args):
         response = 'Hello! This bot helps to update the leaderboard.\nUse these commands (in `#leaderbot` channel!):\n'
         for n, t, _ in s.commands:
@@ -227,20 +292,20 @@ class state_machine_class():
         s.next_function = s.add_winners_channel
         return 'New challenge, cool! \n In which channel should be added winners-table? (e.g. #winners-42)'
 
-    async def add_submission(s, _):
+    async def add_submission(s, *args):
         s.next_function = s.add_challenge
         s.new_submission = {}
         response = 'Past challenges: ' + ', '.join(s.json_data.list_of_challenges())
         response += '\nFor which challenge is this submission? (e.g. 42):'
         return response
     
-    async def del_submission(s, _):
-        return '_not implemented_'
-    
-    async def add_points(s, _):
+    async def add_points(s, message):
         s.next_next_function = s.add_static_points
         s.next_function = s.add_challenge_user
-        return 'Please enter user (e.g. @best_user) or user id:'
+        await s.send(message.channel, 'Please enter user (e.g. @best_user) or user id:')
+        message = await s.wait_response(message, timeout=5)
+        if not message:
+            return 'cancelled'
 
     async def entries(s, _):
         return '_not implemented_'
@@ -322,49 +387,6 @@ class state_machine_class():
             return '*** Done ***'
         except:
             return 'no/corrupt json'
-    
-    async def json_exp(s, message):
-        try:
-            await message.channel.send(file=discord.File(s.json_path))
-        except:
-            return '**No file found.** Please add some challenges or import json.'
-        return 'Here we go'
-
-    async def json_read(s, message):
-        s.next_function = None
-        if message.attachments:
-            test = message.attachments[0].filename
-            try:
-                await message.attachments[0].save(fp=s.json_path)
-                s.open_json()
-                await s.update_lb()
-                s.save_json()
-                await s.update_winners()
-            except Exception as e:
-                print(e)
-                return 'failed to save'
-            return test + ' received and saved'
-        return 'No file sent. Try again'
-
-    async def json_imp(s, _):
-        s.next_function = s.json_read
-        return 'Please send me your json!'
-
-    async def json_del_confirm(s, msg):
-        s.next_function = None
-        if s.yes_no(msg.content):
-            if os.path.exists(s.json_path):
-                await s.json_exp(msg)
-                os.remove(s.json_path)
-                return 'All info removed! Now you can delete bot, or start from scratch'
-            else:
-                return 'File not found'
-        else:
-            return 'Cancelled'
-
-    async def json_del(s, *msg):
-        s.next_function = s.json_del_confirm
-        return 'Do you really want to delete all info?'
 
     async def get_rank(s, msg):
         message = msg.content.strip().split(' ')
@@ -550,6 +572,9 @@ async def on_message(message):
             msg = await client.wait_for('message', timeout=10, check=check)
         except asyncio.TimeoutError:
             await message.channel.send('> Timeout')
+        except Exception as e:
+            print(e)
+            return
         else:
             await message.channel.send('Received ' + msg.content)
 client.run(TOKEN)
