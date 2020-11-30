@@ -3,6 +3,7 @@
 
 import os
 import time
+import asyncio
 
 import requests
 
@@ -30,12 +31,14 @@ class state_machine_class():
     leaderboard_message_id = None
     json_path = None
     json_data = None
+
+    client = None
     
     author_id = None
     last_time = 0
     timeout = 60
 
-    new_submission = {}
+    ## assistant functions
 
     @staticmethod
     def get_int (string):
@@ -48,7 +51,47 @@ class state_machine_class():
             return True
         elif val in ('no', 'n', 'false', 'f', '0', 'disable', 'off'):
             return False
+
+    async def wait_response(s, message, timeout=30):
+        '''returns message or None if timeout'''
+        try:
+            def check(m):
+                return (m.author.id == message.author.id) and (m.channel == message.channel)
+            return await client.wait_for('message', timeout=timeout, check=check)
+        except asyncio.TimeoutError:
+            await message.channel.send(f'`timeout {timeout}s`')
+            return 
+        except Exception as e:
+            print(e)
+            return
+                    
+    async def get_message(s, ch_id, m_id):
+        try:
+            channel = s.client.get_channel(ch_id)
+            return await channel.fetch_message(m_id)
+        except Exception as e:
+            print(e)
+            return
+    
+    async def send(s, channel, content):
+        content = str(content)
+        while content:
+            await channel.send(content[:2000])
+            content = content[2000:]
         
+    async def update(s, ch, msg, content):
+        if (not msg) or (not ch):
+            return 'no message set to update - check settings'
+        msg = await s.get_message(ch, msg)
+        try:
+            await msg.edit(content = content)
+            return 'updated'
+        except Exception as e:
+            print(e)
+            return 'something wrong'
+
+    ## json file functions
+          
     def save_json(s):
         with open(s.json_path, 'w') as f:
             f.write(s.json_data.dump())
@@ -61,35 +104,53 @@ class state_machine_class():
             except Exception as e:
                 print(e)
                 print('wrong json')
-                
-    async def get_message(s, ch_id, m_id):
-        try:
-            channel = s.client.get_channel(ch_id)
-            #print('> getting message', channel)
-            return await channel.fetch_message(m_id)
-        except Exception as e:
-            print(e)
-            return
-    
-    async def send(s, channel, content):
-        while content:
-            await channel.send(content[:2000])
-            content = content[2000:]
         
-    async def update(s, ch, msg, content):
-        s.json_data.calculate_rating()
-        if (not msg) or (not ch):
-            return 'no message set to update - check settings'
-        #print ('> entering update routine')
-        msg = await s.get_message(ch, msg)
-        #print ('> message is', msg)
+    async def json_exp(s, message):
         try:
-            await msg.edit(content = content)
-            return 'updated'
-        except Exception as e:
-            print(e)
-            return 'something wrong'
+            await message.channel.send(file=discord.File(s.json_path))
+        except:
+            return '**No file found.** Please add some challenges or import json.'
+        return 'Here we go'
 
+
+    async def json_imp(s, message):
+        await message.channel.send('Please send me your json!')
+
+        message = await s.wait_response(message)
+        if not message:
+            return 'cancelled'
+        if message.attachments:
+            test = message.attachments[0].filename
+            try:
+                await message.attachments[0].save(fp=s.json_path)
+                s.open_json()
+                await s.update_lb()
+                s.save_json()
+                await s.update_winners()
+            except Exception as e:
+                print(e)
+                return 'failed to save'
+            return test + ' received and saved'
+        return 'No file sent. Try again'
+
+
+    async def json_del(s, message):
+        await message.channel.send('Do you really want to delete all info?')
+        message = await s.wait_response(message, timeout=5)
+        if not message:
+            return 'cancelled'
+        if s.yes_no(message.content):
+            if os.path.exists(s.json_path):
+                await s.json_exp(message)
+                os.remove(s.json_path)
+                return 'All info removed! Now you can delete bot, or start from scratch'
+            else:
+                return 'File not found'
+        else:
+            return 'Cancelled'
+
+    ## state machine functions
+    
     async def admin_help(s, *args):
         response = 'Hello! This bot helps to update the leaderboard.\nUse these commands (in `#leaderbot` channel!):\n'
         for n, t, _ in s.commands:
@@ -103,64 +164,12 @@ class state_machine_class():
         for n, t, _ in s.user_commands:
             response += '`{}` - {}\n'.format(n, t)
         return response
-    
-    async def add_static_points(s, msg):
-        s.next_function = None
-        player = s.json_data.find(s.json_data.j['aPlayer'], sName=s.new_submission['sPlayerName'])
-        try:
-            player['iStaticPoints'] = player.get('iStaticPoints', 0) + float(msg.content)
-            s.save_json()
-            return await s.update_lb()
-        except Exception as e:
-            print(e)
-            return 'something wrong'
 
-    async def add_score(s, msg):
-        s.next_function = None
-        try:
-            iSubmissionId = 0
-            for ss in s.json_data.j['aSubmission']:
-                if (ss.get('sChallengeName') == s.new_submission.get('sChallengeName') and
-                        ss.get('sChallengeTypeName') == s.new_submission.get('sChallengeTypeName') and
-                        ss.get('sPlayerName') == s.new_submission.get('sPlayerName')):
-                    iSubmissionId += 1
-            s.new_submission['iSubmissionId'] = iSubmissionId
-            s.new_submission['fScore'] = float(msg.content)
-            s.json_data.j['aSubmission'].append(s.new_submission)
-            s.json_data.calculate_rating()
-            s.save_json()
-            await s.update_winners()
-            await s.update_lb()
-            return 'Ready!'
-        except Exception as e:
-            print(e)
-            return 'Something really wrong'
-
-    async def add_challenge_type(s, msg):
-        s.next_function = None
-        temp = msg.content.strip().split(' ')
-        if len(temp) == 1:
-            s.new_submission['sChallengeTypeName'] = s.json_data.j['aChallengeType'][int(temp[0])-1]['sName']
-            s.next_function = s.add_score
-            return 'Now enter score for this challenge:'
-        elif len(temp) == 4:
-            s.json_data.j['aChallengeType'].append({'sName':temp[0],
-                                                    'sNick':temp[1],
-                                                    'bHigherScore':temp[2][0] == 'h',
-                                                    'fMultiplier':float(temp[3].replace(',','.'))})
-            s.new_submission['sChallengeTypeName'] = temp[0]
-            s.save_json()
-            s.next_function = s.add_score
-            return 'New type created!\nNow enter score for this challenge:'
-        else:
-            return 'Wrong parameter count'
-        return 'not implemented'
-
-    def get_challenge_types(s):
+    def get_challenge_types(s, sChallengeName):
         response = 'You already have following challenge types (`>` = used in this challenge):'
         for i, chl in enumerate(s.json_data.j['aChallengeType'], 1):
             bold = False
-            if s.json_data.find(s.json_data.j['aSubmission'], sChallengeName=s.new_submission['sChallengeName'], sChallengeTypeName=chl.get('sName')):
+            if s.json_data.find(s.json_data.j['aSubmission'], sChallengeName=sChallengeName, sChallengeTypeName=chl.get('sName')):
                 bold = True
             response += '\n{5}**{0:3}**. `{1}`; display name: **{2}**, *{3}* score wins, multiplier **{4}**'.format(
                 i, chl.get('sName'), chl.get('sNick', chl.get('sName')),
@@ -168,95 +177,168 @@ class state_machine_class():
                 chl.get('fMultiplier', 1),
                 '\>' if bold else '   ')
         return response
-            
 
-    async def add_challenge_user(s, msg):
-        s.next_function = None
-        response = ''
+    async def ask_for_challenge_type(s, message, sChallengeName):
+        ''' returns sChallengeTypeName, if new - creates'''
+        response = s.get_challenge_types(sChallengeName)
+        response += '\n\nEnter number of existing type (e.g. `1`)'
+        response += '\nor create new type in format `unique_name display_name lower/higher multiplier`'
+        response += '\n(e.g. `extra_x3 impossible lower 3.14`)'
+        await s.send(message.channel, response)
+        
+        message = await s.wait_response(message)
+        if not message:
+            return 'aborted'
+        
+        temp = message.content.strip().split(' ')
+        if len(temp) == 1:
+            return s.json_data.j['aChallengeType'][int(temp[0])-1]['sName']
+        elif len(temp) == 4:
+            s.json_data.j['aChallengeType'].append({'sName':temp[0],
+                                                    'sNick':temp[1],
+                                                    'bHigherScore':temp[2][0] == 'h',
+                                                    'fMultiplier':float(temp[3].replace(',','.'))})
+            s.save_json()
+            return temp[0]
+        else:
+            await s.send(message.channel, 'Wrong parameter count')
+            return 
+
+    async def ask_for_user_id(s, message):
+        '''returns user_id or None if failed, creates user if new'''
+        await s.send(message.channel, 'Please enter user (e.g. @best_user) or user id:')
+        
+        message = await s.wait_response(message)
+        if not message:
+            return
+        
         try:
-            user_id = s.get_int(msg.content)
+            user_id = s.get_int(message.content)
             user = await s.client.fetch_user(user_id)
+            user_id = user.id
             player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
             if player:
-                response += 'Existing user\n'
-                s.new_submission['sPlayerName'] = player['sName']
+                await s.send(message.channel,  'Existing user')
             else:
-                response += 'New user, cool!\n'
-                s.json_data.j['aPlayer'].append({'sName':user.name + '#' + user.discriminator,
+                await s.send(message.channel, '**New** user, cool!')
+                s.json_data.j['aPlayer'].append({'sName':user.name, 'iDiscriminator': user.discriminator,
                                                  'iID':user_id})
-                s.new_submission['sPlayerName'] = user.name + '#' + user.discriminator
                 s.save_json()
-            if s.next_next_function:
-                s.next_function = s.next_next_function
-                s.next_next_function = None
-                return 'how many points?'
-            s.next_function = s.add_challenge_type
-            response += s.get_challenge_types()
-            response += '\n\nEnter number of existing type (e.g. `1`)'
-            response += '\nor create new type in format `unique_name display_name lower/higher multiplier`'
-            response += '\n(e.g. `extra_x3 impossible lower 3.14`)'
-            return response
+            return user_id
         except Exception as e:
+            await s.send(message.channel, 'No user with this id found. Aborting')
             print(e)
-            return 'something gone wrong'
-        return 'not implemented'
+            return
 
-    async def add_winners_channel(s, msg):
-        s.next_function = None
+
+    async def set_challenge_channel(s, message, change_existing_channel=True):
+        '''selection for challenge, and updating/creating of channel. Returns None in case of error or sChallengeName'''
+        # challenges list
+        response = 'Past challenges: `' + '`, `'.join(s.json_data.list_of_challenges())
+        response += '`\nEnter challenge name (e.g. `42`)\n(if challenge not in the list, new challenge will be created)'
+        await s.send(message.channel, response)
+        # select challenge
+        message = await s.wait_response(message)
+        if not message:
+            return
+        sChallengeName = message.content
+        if sChallengeName in s.json_data.list_of_challenges():
+            await s.send(message.channel, 'Existing challenge')
+            if not change_existing_channel: return ('Done: ' if change_existing_channel else '') + sChallengeName 
+        else:
+            await s.send(message.channel, '**New** challenge, cool!')
         try:
-            channel_id = s.get_int(msg.content)
+            await s.send(message.channel, 'Select channel to post winners (e.g. `#winners-42`)')
+            message = await s.wait_response(message)
+            if not message:
+                return 'aborted'
+            channel_id = s.get_int(message.content)
             channel = client.get_channel(channel_id)
             msg = await channel.send('Here will be winners published')
             message_id = msg.id
-            s.json_data.j['aChallenge'].append({'sName':s.new_submission['sChallengeName'],
-                                                 'idChannel':channel_id,
-                                                 'idMessage':message_id})
+            if sChallengeName in s.json_data.list_of_challenges():
+                sC = s.json_data.find(s.json_data.j['aChallenge'], sName=sChallengeName)
+                sC['idChannel'] = channel_id
+                sC['idMessage'] = message_id
+            else:
+                s.json_data.j['aChallenge'].append({'sName':sChallengeName,
+                                                     'idChannel':channel_id,
+                                                     'idMessage':message_id})
             s.save_json()
+            await s.update_winners(sChallengeName=sChallengeName)
+            return ('Done: ' if change_existing_channel else '') + sChallengeName 
         except Exception as e:
             print(e)
-            return "channel doesn't exist"
-        else:
-            s.next_function = s.add_challenge_user
-            return 'Placeholder created. \nPlease enter user (e.g. @best_user) or user id:'
+            return None
         return
 
-    async def add_challenge(s, msg):
-        s.next_function = None
-        s.new_submission['sChallengeName'] = msg.content
-        if msg.content in s.json_data.list_of_challenges():
-            s.next_function = s.add_challenge_user
-            return 'Existing challenge. \nPlease enter user (e.g. @best_user) or user id:'
-        s.next_function = s.add_winners_channel
-        return 'New challenge, cool! \n In which channel should be added winners-table? (e.g. #winners-42)'
-
-    async def add_submission(s, _):
-        s.next_function = s.add_challenge
-        s.new_submission = {}
-        response = 'Past challenges: ' + ', '.join(s.json_data.list_of_challenges())
-        response += '\nFor which challenge is this submission? (e.g. 42):'
-        return response
-    
-    async def del_submission(s, _):
-        return '_not implemented_'
-    
-    async def add_points(s, _):
-        s.next_next_function = s.add_static_points
-        s.next_function = s.add_challenge_user
-        return 'Please enter user (e.g. @best_user) or user id:'
-
-    async def entries(s, _):
-        return '_not implemented_'
-
-    async def del_submission(s, _):
-        return '_not implemented_'
-
-    # settings for leaderboard
-    async def set_lb_channel_name(s, msg):
-        s.next_function = None
+    async def add_submission(s, message):
+        await s.send(message.channel, 'For which challenge is this submission?')
+        # select challenge
+        sChallengeName = await s.set_challenge_channel(message, change_existing_channel=False)
+        if not sChallengeName:
+            return 'Something wrong'
+        # select user
+        user_id = await s.ask_for_user_id(message)
+        if not user_id:
+            return 'wrong id - aborted'
+        # select challenge type
+        sChallengeTypeName = await s.ask_for_challenge_type(message, sChallengeName)
+        if not sChallengeName:
+            return 'wrong challenge type - aborted'
+        # add score
         try:
-            s.leaderboard_channel_id = s.get_int(msg.content)
-            channel = client.get_channel(s.leaderboard_channel_id)
-            msg = await channel.send('Here will be leaderboard published')
+            iSubmissionId = 0
+            for ss in s.json_data.j['aSubmission']:
+                if (ss.get('sChallengeName') == sChallengeName and
+                        ss.get('sChallengeTypeName') == sChallengeTypeName and
+                        ss.get('iUserID') == user_id):
+                    iSubmissionId += 1
+            await s.send(message.channel, 'Enter score (e.g. `3.14`):')
+            message = await s.wait_response(message)
+            if not message:
+                return 'aborted'
+            fScore = float(message.content)
+            s.json_data.j['aSubmission'].append({'iUserID':user_id,
+                                                 'sChallengeName':sChallengeName,
+                                                 'sChallengeTypeName':sChallengeTypeName,
+                                                 'iSubmissionId':iSubmissionId,
+                                                 'fScore':fScore})
+            s.json_data.calculate_rating()
+            response = await s.update_all()
+            return response
+        except Exception as e:
+            print(e)
+            return 'Something really wrong'
+        return 'not ready'
+    
+    async def add_points(s, message):
+        user_id = await s.ask_for_user_id(message)
+        if not user_id:
+            return 'cancelled'
+        player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
+        await s.send(message.channel, 'How many points? (e.g. `2.5`)')
+        message = await s.wait_response(message)
+        if not message:
+            return 'cancelled'
+        try:
+            player['iStaticPoints'] = player.get('iStaticPoints', 0) + float(message.content)
+            s.save_json()
+            return await s.update_lb()
+        except Exception as e:
+            print(e)
+            return 'something wrong'
+
+    async def set_lb(s, message):
+        await s.send(message.channel, 'In which channel should be posted leaderboard?')
+        message = await s.wait_response(message)
+        if not message:
+            return 'cancelled'
+        try:
+            channel_id = s.get_int(message.content)
+            channel = client.get_channel(channel_id)
+            msg = await channel.send('Here will be published leaderboard')
+            s.leaderboard_channel_id = channel.id
             s.leaderboard_message_id = msg.id
             s.json_data.set_lb_message(s.leaderboard_channel_id, s.leaderboard_message_id)
             s.save_json()
@@ -267,14 +349,20 @@ class state_machine_class():
             await s.update_lb()
             return 'placeholder created'
 
-    async def set_lb(s, _):
-        s.next_function = s.set_lb_channel_name
-        return 'In which channel should be posted leaderboard?'
+    async def update_usernames(s, *args):
+        for player in s.json_data.j['aPlayer']:
+            try:
+                user = await s.client.fetch_user(player.get('iID'))
+                player['sName'] = user.name
+                player['iDiscriminator'] = user.discriminator
+            except Exception as e:
+                print(e)
+        s.save_json()
+        return
 
-    async def update_winners(s, *args):
-        sub = s.new_submission.get('sChallengeName')
-        if sub:
-            sub = [sub]
+    async def update_winners(s, *args, sChallengeName=None):
+        if sChallengeName:
+            sub = [sChallengeName]
         else:
             sub = s.json_data.list_of_challenges()
         for sub in sub:
@@ -294,6 +382,7 @@ class state_machine_class():
             try:
                 url = s.json_data.j.get('sPOSTURL')
                 if url:
+                    await s.update_usernames()
                     payload = s.json_data.j
                     payload['iGuildID'] = s.guild_id
                     headers = {'content-type': 'application/json'}
@@ -309,6 +398,11 @@ class state_machine_class():
         except Exception as e:
             print(e)
             return 'something wrong'
+
+    async def update_all(s, *args):
+        response = await s.update_lb()
+        await s.update_winners()
+        return response
             
     async def print_lb(s, msg):
         try:
@@ -319,49 +413,6 @@ class state_machine_class():
             return '*** Done ***'
         except:
             return 'no/corrupt json'
-    
-    async def json_exp(s, message):
-        try:
-            await message.channel.send(file=discord.File(s.json_path))
-        except:
-            return '**No file found.** Please add some challenges or import json.'
-        return 'Here we go'
-
-    async def json_read(s, message):
-        s.next_function = None
-        if message.attachments:
-            test = message.attachments[0].filename
-            try:
-                await message.attachments[0].save(fp=s.json_path)
-                s.open_json()
-                await s.update_lb()
-                s.save_json()
-                await s.update_winners()
-            except Exception as e:
-                print(e)
-                return 'failed to save'
-            return test + ' received and saved'
-        return 'No file sent. Try again'
-
-    async def json_imp(s, _):
-        s.next_function = s.json_read
-        return 'Please send me your json!'
-
-    async def json_del_confirm(s, msg):
-        s.next_function = None
-        if s.yes_no(msg.content):
-            if os.path.exists(s.json_path):
-                await s.json_exp(msg)
-                os.remove(s.json_path)
-                return 'All info removed! Now you can delete bot, or start from scratch'
-            else:
-                return 'File not found'
-        else:
-            return 'Cancelled'
-
-    async def json_del(s, *msg):
-        s.next_function = s.json_del_confirm
-        return 'Do you really want to delete all info?'
 
     async def get_rank(s, msg):
         message = msg.content.strip().split(' ')
@@ -397,6 +448,7 @@ class state_machine_class():
 
     async def post(s, msg):
         try:
+            await s.update_usernames()
             url = msg.content.strip().split(' ')[1]
             payload = s.json_data.j
             payload['iGuildID'] = s.guild_id
@@ -436,17 +488,19 @@ class state_machine_class():
     async def __call__(s, message):
         response = ''
         
-        bChannel = message.channel.name == CHANNEL
+        def has_rights(message):
+            bChannel = message.channel.name == CHANNEL
+            try:
+                bRole = ROLE in [role.name for role in message.author.roles]
+            except:
+                bRole = False
+            return (((check_channel and check_role) and (bChannel and bRole)) or
+                    ((check_channel and (not check_role)) and bChannel) or
+                    (((not check_channel) and check_role) and bRole))
+        
+        #if s.guild_id == 715549991212548216: return
 
-        try:
-            bRole = ROLE in [role.name for role in message.author.roles]
-        except:
-            bRole = False
-            
-
-        if (((check_channel and check_role) and (bChannel and bRole)) or
-            ((check_channel and (not check_role)) and bChannel) or
-            (((not check_channel) and check_role) and bRole)):
+        if has_rights(message):
             if s.next_function and s.author_id and (message.author.id != s.author_id and time.time() - s.last_time > s.timeout):
                 s.author_id = None
                 s.next_function = None
@@ -493,9 +547,10 @@ class state_machine_class():
         s.commands = (('?help', 'prints this message', s.admin_help),
                       ('?add', 'to add new submission', s.add_submission),
                       ('?static points', 'add points (e.g. giveaways)', s.add_points),
-                      ('?update', 'force leaderboard update', s.update_lb),
+                      ('?update', 'force leaderboard update', s.update_all),
                       ('?print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
                       ('?set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
+                      ('?set winners', 'set in which channel to post winners for challenge', s.set_challenge_channel),
                       ('?export json', 'exports data in json', s.json_exp),
                       ('?import json', 'imports data from json', s.json_imp),
                       ('?delete json', 'clears all you data from server', s.json_del),
@@ -537,5 +592,18 @@ async def on_message(message):
     if message.author == client.user:
         return
     await sm[message.guild.id](message)
-        
+    if message.content.strip().lower() == '?test':
+        await message.channel.send('Waiting for message')
+        try:
+            def check(m):
+                print(m.author.id)
+                return m.author != client.user
+            msg = await client.wait_for('message', timeout=10, check=check)
+        except asyncio.TimeoutError:
+            await message.channel.send('> Timeout')
+        except Exception as e:
+            print(e)
+            return
+        else:
+            await message.channel.send('Received ' + msg.content)
 client.run(TOKEN)
