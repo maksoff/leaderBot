@@ -66,7 +66,6 @@ class state_machine_class():
     async def get_message(s, ch_id, m_id):
         try:
             channel = s.client.get_channel(ch_id)
-            #print('> getting message', channel)
             return await channel.fetch_message(m_id)
         except Exception as e:
             print(e)
@@ -78,12 +77,9 @@ class state_machine_class():
             content = content[2000:]
         
     async def update(s, ch, msg, content):
-        s.json_data.calculate_rating()
         if (not msg) or (not ch):
             return 'no message set to update - check settings'
-        #print ('> entering update routine')
         msg = await s.get_message(ch, msg)
-        #print ('> message is', msg)
         try:
             await msg.edit(content = content)
             return 'updated'
@@ -132,6 +128,7 @@ class state_machine_class():
             s.save_json()
             await s.update_winners()
             await s.update_lb()
+            s.new_submission = {}
             return 'Ready!'
         except Exception as e:
             print(e)
@@ -310,6 +307,11 @@ class state_machine_class():
         except Exception as e:
             print(e)
             return 'something wrong'
+
+    async def update_all(s, *args):
+        response = await s.update_lb()
+        await s.update_winners()
+        return response
             
     async def print_lb(s, msg):
         try:
@@ -437,17 +439,18 @@ class state_machine_class():
     async def __call__(s, message):
         response = ''
         
-        bChannel = message.channel.name == CHANNEL
-
-        try:
-            bRole = ROLE in [role.name for role in message.author.roles]
-        except:
-            bRole = False
+        def has_rights(message):
+            bChannel = message.channel.name == CHANNEL
+            try:
+                bRole = ROLE in [role.name for role in message.author.roles]
+            except:
+                bRole = False
+            return (((check_channel and check_role) and (bChannel and bRole)) or
+                    ((check_channel and (not check_role)) and bChannel) or
+                    (((not check_channel) and check_role) and bRole))
             
 
-        if (((check_channel and check_role) and (bChannel and bRole)) or
-            ((check_channel and (not check_role)) and bChannel) or
-            (((not check_channel) and check_role) and bRole)):
+        if has_rights(message):
             if s.next_function and s.author_id and (message.author.id != s.author_id and time.time() - s.last_time > s.timeout):
                 s.author_id = None
                 s.next_function = None
@@ -494,7 +497,7 @@ class state_machine_class():
         s.commands = (('?help', 'prints this message', s.admin_help),
                       ('?add', 'to add new submission', s.add_submission),
                       ('?static points', 'add points (e.g. giveaways)', s.add_points),
-                      ('?update', 'force leaderboard update', s.update_lb),
+                      ('?update', 'force leaderboard update', s.update_all),
                       ('?print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
                       ('?set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
                       ('?export json', 'exports data in json', s.json_exp),
