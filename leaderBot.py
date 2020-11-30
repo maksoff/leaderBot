@@ -294,10 +294,15 @@ class state_machine_class():
             try:
                 url = s.json_data.j.get('sPOSTURL')
                 if url:
-                    payload = s.json_data.j.copy()
+                    payload = s.json_data.j
                     payload['iGuildID'] = s.guild_id
                     headers = {'content-type': 'application/json'}
-                    requests.post(url, data=json.dumps(payload), headers=headers)
+                    for player in payload['aPlayer']:
+                        player['iID'] = str(player['iID'])
+                    data = json.dumps(payload)
+                    for player in payload['aPlayer']:
+                        player['iID'] = int(player['iID'])
+                    requests.post(url, data=data, headers=headers)
             except Exception as e:
                 print(str(e))
             return await s.update(s.leaderboard_channel_id, s.leaderboard_message_id, s.json_data.result_leaderboard())
@@ -393,14 +398,19 @@ class state_machine_class():
     async def post(s, msg):
         try:
             url = msg.content.strip().split(' ')[1]
-            payload = s.json_data.j.copy()
+            payload = s.json_data.j
             payload['iGuildID'] = s.guild_id
             headers = {'content-type': 'application/json'}
             try:
                 if len(msg.content.split(' ')) > 2:
                     r = requests.post(url, data='', headers=headers)
                 else:
-                    r = requests.post(url, data=json.dumps(payload), headers=headers)       
+                    for player in payload['aPlayer']:
+                        player['iID'] = str(player['iID'])
+                    data = json.dumps(payload)
+                    for player in payload['aPlayer']:
+                        player['iID'] = int(player['iID'])
+                    r = requests.post(url, data=data, headers=headers)       
                 response = '\nstatus: {} \ntext: {}'.format(
                     r.status_code, r.text)
             except Exception as e:
@@ -427,19 +437,25 @@ class state_machine_class():
         response = ''
         
         bChannel = message.channel.name == CHANNEL
-        bRole = True #ROLE in [role.name for role in s.client.get_user(message.author.id).roles] 
+
+        try:
+            bRole = ROLE in [role.name for role in message.author.roles]
+        except:
+            bRole = False
             
 
         if (((check_channel and check_role) and (bChannel and bRole)) or
             ((check_channel and (not check_role)) and bChannel) or
             (((not check_channel) and check_role) and bRole)):
-            if s.author_id and (message.author.id != s.author_id and time.time() - s.last_time > s.timeout):
+            if s.next_function and s.author_id and (message.author.id != s.author_id and time.time() - s.last_time > s.timeout):
                 s.author_id = None
                 s.next_function = None
                 s.next_next_function = None
                 await s.send(message.channel, '**timeout**')
             for n, _, f in s.commands:
                 if message.content.lower().startswith(n):
+                    s.next_function = None
+                    s.next_next_function = None
                     s.author_id = message.author.id
                     s.last_time = time.time()
                     response = await f(message)
@@ -517,7 +533,7 @@ async def on_ready():
         )
 
 @client.event
-async def on_message(message):
+async def on_message(message):             
     if message.author == client.user:
         return
     await sm[message.guild.id](message)

@@ -96,7 +96,7 @@ class json_class():
             rank = player.get('iRank', None)
             points = player.get('iPoints', None)
         if player and rank and points:
-            return '**{}.** (from {}) with **{}** points'.format(rank, len(s.j['aPlayer']), points)
+            return '**{}.** (out of {} members) with **{}** points'.format(rank, len(s.j['aPlayer']), points)
         else:
             return 'You need to earn some points. Submit some challenges!'
 
@@ -181,8 +181,14 @@ if __name__ == '__main__':
 
     j = json_class()
 
-    with open("message.txt", 'r') as f:
+    with open("779778238091624448.txt", 'r') as f:
         j.load(f)
+
+    for row in j.j['aSubmission']:
+        row['iPlayerID'] = j.find(j.j['aPlayer'], sName=row['sPlayerName'])['iID']
+
+    with open("779778238091624448.txt", 'w') as f:
+        f.write(json.dumps(j.j, indent=4))
 
     #print(j.dump())
     print(j.print_all())

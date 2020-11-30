@@ -105,23 +105,23 @@
     ],
     "aPlayer": [
         {
-            "iPoints": 176,
+            "iPoints": 174,
             "iRank": 1,
             "iStaticPoints": 2.0,
             "sName": "Maksoff",
             "iID": 740118933809528872
         },
         {
-            "iPoints": 154,
+            "iPoints": 156,
             "iRank": 2,
-            "iStaticPoints": 4.0,
+            "iStaticPoints": 6.0,
             "sName": "bestPlayer_xu",
             "iID": 556593706313187338
         },
         {
-            "iPoints": 95,
+            "iPoints": 97,
             "iRank": 3,
-            "iStaticPoints": 18,
+            "iStaticPoints": 19.0,
             "sName": "ikoemc",
             "iID": 709425110846537740
         },
@@ -133,25 +133,25 @@
             "iID": 611779836268118026
         },
         {
-            "iPoints": 53,
+            "iPoints": 63,
             "iRank": 5,
             "iStaticPoints": 0,
             "sName": "Goufalite",
             "iID": 562013926729187348
         },
         {
-            "iPoints": 19,
-            "iRank": 6,
-            "iStaticPoints": 0,
-            "sName": "english muffin",
-            "iID": 512748409266896924
-        },
-        {
             "iPoints": 18,
-            "iRank": 7,
+            "iRank": 6,
             "iStaticPoints": 2,
             "sName": "Boostseeker",
             "iID": 710113093354782720
+        },
+        {
+            "iPoints": 15,
+            "iRank": 7,
+            "iStaticPoints": 0,
+            "sName": "english muffin",
+            "iID": 512748409266896924
         },
         {
             "iPoints": 12,
@@ -358,15 +358,6 @@
             "iPoints": 6.0
         },
         {
-            "fScore": 274072,
-            "iSubmissionId": 0,
-            "sChallengeName": "10",
-            "sChallengeTypeName": "normal",
-            "sPlayerName": "Ratbedoinratstuffandrattstuff",
-            "iRank": 4,
-            "iPoints": 2.0
-        },
-        {
             "fScore": 55524,
             "iSubmissionId": 0,
             "sChallengeName": "10",
@@ -390,8 +381,8 @@
             "sChallengeName": "10",
             "sChallengeTypeName": "normal",
             "sPlayerName": "ikoemc",
-            "iRank": 5,
-            "iPoints": 1.0
+            "iRank": 4,
+            "iPoints": 2.0
         },
         {
             "fScore": 256000,
@@ -789,8 +780,8 @@
             "sChallengeName": "22",
             "sChallengeTypeName": "easy_x1",
             "sPlayerName": "Maksoff",
-            "iRank": 2,
-            "iPoints": 6.0
+            "iRank": 3,
+            "iPoints": 4.0
         },
         {
             "fScore": 5,
@@ -843,8 +834,8 @@
             "sChallengeName": "22",
             "sChallengeTypeName": "easy_x1",
             "sPlayerName": "english muffin",
-            "iRank": 1,
-            "iPoints": 10.0
+            "iRank": 2,
+            "iPoints": 6.0
         },
         {
             "sChallengeName": "23",
@@ -854,10 +845,20 @@
             "fScore": 10.0,
             "iRank": 1,
             "iPoints": 15.0
+        },
+        {
+            "sChallengeName": "22",
+            "sPlayerName": "Goufalite",
+            "sChallengeTypeName": "easy_x1",
+            "iSubmissionId": 0,
+            "fScore": 2.0,
+            "iRank": 1,
+            "iPoints": 10.0
         }
     ],
     "iLeaderboardChannel": 728589779960332289,
     "iLeaderboardMessage": 782361801832136738,
     "iVersion": 10,
-    "sPOSTURL": "https://discord.kspchallenges.repl.co/data"
+    "sPOSTURL": "https://discord.kspchallenges.repl.co/data",
+    "iGuildID": 715549991212548216
 }
