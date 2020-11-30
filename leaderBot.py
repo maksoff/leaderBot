@@ -328,7 +328,7 @@ class state_machine_class():
         sChallengeName = message.content
         if sChallengeName in s.json_data.list_of_challenges():
             await s.send(message.channel, 'Existing challenge')
-            if not change_existing_channel: return sChallengeName
+            if not change_existing_channel: return ('Done: ' if change_existing_channel else '') + sChallengeName 
         else:
             await s.send(message.channel, '**New** challenge, cool!')
         try:
@@ -349,7 +349,8 @@ class state_machine_class():
                                                      'idChannel':channel_id,
                                                      'idMessage':message_id})
             s.save_json()
-            return sChallengeName
+            await s.update_winners(sChallengeName=sChallengeName)
+            return ('Done: ' if change_existing_channel else '') + sChallengeName 
         except Exception as e:
             print(e)
             return None
@@ -406,10 +407,9 @@ class state_machine_class():
             await s.update_lb()
             return 'placeholder created'
 
-    async def update_winners(s, *args):
-        sub = s.new_submission.get('sChallengeName')
-        if sub:
-            sub = [sub]
+    async def update_winners(s, *args, sChallengeName=None):
+        if sChallengeName:
+            sub = [sChallengeName]
         else:
             sub = s.json_data.list_of_challenges()
         for sub in sub:
