@@ -76,6 +76,7 @@ class state_machine_class():
             return
     
     async def send(s, channel, content):
+        content = str(content)
         while content:
             await channel.send(content[:2000])
             content = content[2000:]
@@ -231,8 +232,34 @@ class state_machine_class():
                 chl.get('fMultiplier', 1),
                 '\>' if bold else '   ')
         return response
-            
 
+    async def ask_for_user_id(s, message):
+        '''returns user_id or None if failed'''
+        await s.send(message.channel, 'Please enter user (e.g. @best_user) or user id:')
+        
+        message = await s.wait_response(message)
+        if not message:
+            return
+        
+        try:
+            user_id = s.get_int(message.content)
+            user = await s.client.fetch_user(user_id)
+            user_id = user.id
+            player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
+            if player:
+                await s.send(message.channel,  'Existing user')
+            else:
+                await s.send(message.channel, '**New** user, cool!')
+                s.json_data.j['aPlayer'].append({'sName':user.name, 'iDiscriminator': user.discriminator,
+                                                 'iID':user_id})
+                s.save_json()
+            return user_id
+        except Exception as e:
+            await s.send(message.channel, 'No user with this id found. Aborting')
+            print(e)
+            return
+
+#old
     async def add_challenge_user(s, msg):
         s.next_function = None
         response = ''
@@ -527,6 +554,7 @@ class state_machine_class():
                       ('?delete json', 'clears all you data from server', s.json_del),
                       ('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
                       ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
+                      ('?utest', '', s.ask_for_user_id),
                       )
     
     def __init__(s, client, guild_id):
