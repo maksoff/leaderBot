@@ -349,6 +349,17 @@ class state_machine_class():
             await s.update_lb()
             return 'placeholder created'
 
+    async def update_usernames(s, *args):
+        for player in s.json_data.j['aPlayer']:
+            try:
+                user = await s.client.fetch_user(player.get('iID'))
+                player['sName'] = user.name
+                player['iDiscriminator'] = user.discriminator
+            except Exception as e:
+                print(e)
+        s.save_json()
+        return
+
     async def update_winners(s, *args, sChallengeName=None):
         if sChallengeName:
             sub = [sChallengeName]
@@ -371,6 +382,7 @@ class state_machine_class():
             try:
                 url = s.json_data.j.get('sPOSTURL')
                 if url:
+                    await s.update_usernames()
                     payload = s.json_data.j
                     payload['iGuildID'] = s.guild_id
                     headers = {'content-type': 'application/json'}
@@ -436,6 +448,7 @@ class state_machine_class():
 
     async def post(s, msg):
         try:
+            await s.update_usernames()
             url = msg.content.strip().split(' ')[1]
             payload = s.json_data.j
             payload['iGuildID'] = s.guild_id

@@ -112,92 +112,105 @@
             "iPoints": 174,
             "iRank": 1,
             "iStaticPoints": 2.0,
-            "sName": "Maksoff",
-            "iID": 740118933809528872
+            "sName": "maksoff",
+            "iID": 740118933809528872,
+            "iDiscriminator": "8999"
         },
         {
             "iPoints": 156,
             "iRank": 2,
             "iStaticPoints": 6.0,
             "sName": "bestPlayer_xu",
-            "iID": 556593706313187338
+            "iID": 556593706313187338,
+            "iDiscriminator": "0702"
         },
         {
             "iPoints": 97,
             "iRank": 3,
             "iStaticPoints": 19.0,
-            "sName": "ikoemc",
-            "iID": 709425110846537740
+            "sName": "Ikoemc",
+            "iID": 709425110846537740,
+            "iDiscriminator": "7837"
         },
         {
             "iPoints": 78,
             "iRank": 4,
             "iStaticPoints": 0,
             "sName": "Goufalite",
-            "iID": 562013926729187348
+            "iID": 562013926729187348,
+            "iDiscriminator": "8702"
         },
         {
             "iPoints": 76,
             "iRank": 5,
             "iStaticPoints": 21,
             "sName": "Gzzi",
-            "iID": 611779836268118026
+            "iID": 611779836268118026,
+            "iDiscriminator": "6425"
         },
         {
             "iPoints": 18,
             "iRank": 6,
             "iStaticPoints": 2,
             "sName": "Boostseeker",
-            "iID": 710113093354782720
+            "iID": 710113093354782720,
+            "iDiscriminator": "2926"
         },
         {
             "iPoints": 15,
             "iRank": 7,
             "iStaticPoints": 0,
             "sName": "english muffin",
-            "iID": 512748409266896924
+            "iID": 512748409266896924,
+            "iDiscriminator": "8663"
         },
         {
             "iPoints": 12,
             "iRank": 8,
             "iStaticPoints": 2,
             "sName": "Oohoa",
-            "iID": 251550163884179456
+            "iID": 251550163884179456,
+            "iDiscriminator": "2538"
         },
         {
             "iPoints": 8,
             "iRank": 9,
             "iStaticPoints": 0,
             "sName": "MXSH3097",
-            "iID": 564330064293134336
+            "iID": 564330064293134336,
+            "iDiscriminator": "4529"
         },
         {
-            "sName": "ooooomar#2940",
+            "sName": "ooooomar",
             "iID": 400335772080930819,
             "iStaticPoints": 0,
             "iPoints": 6,
-            "iRank": 10
+            "iRank": 10,
+            "iDiscriminator": "2940"
         },
         {
             "iPoints": 2,
             "iRank": 11,
             "iStaticPoints": 2,
             "sName": "SoNotTheHeroType",
-            "iID": 653023851013341201
+            "iID": 653023851013341201,
+            "iDiscriminator": "1039"
         },
         {
             "iPoints": 2,
             "iRank": 11,
             "iStaticPoints": 2,
             "sName": "Binull",
-            "iID": 726943897657409556
+            "iID": 726943897657409556,
+            "iDiscriminator": "7277"
         },
         {
-            "sName": "smartguy96#5617",
+            "sName": "smartguy96",
             "iID": 333300759687069706,
             "iStaticPoints": 2.0,
             "iPoints": 2,
-            "iRank": 11
+            "iRank": 11,
+            "iDiscriminator": "5617"
         }
     ],
     "aSubmission": [
