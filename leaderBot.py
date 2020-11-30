@@ -166,17 +166,6 @@ class state_machine_class():
         for n, t, _ in s.user_commands:
             response += '`{}` - {}\n'.format(n, t)
         return response
-    
-    async def add_static_points(s, msg):
-        s.next_function = None
-        player = s.json_data.find(s.json_data.j['aPlayer'], sName=s.new_submission['sPlayerName'])
-        try:
-            player['iStaticPoints'] = player.get('iStaticPoints', 0) + float(msg.content)
-            s.save_json()
-            return await s.update_lb()
-        except Exception as e:
-            print(e)
-            return 'something wrong'
 
     async def add_score(s, msg):
         s.next_function = None
@@ -327,12 +316,21 @@ class state_machine_class():
         return response
     
     async def add_points(s, message):
-        s.next_next_function = s.add_static_points
-        s.next_function = s.add_challenge_user
-        await s.send(message.channel, 'Please enter user (e.g. @best_user) or user id:')
-        message = await s.wait_response(message, timeout=5)
+        user_id = await s.ask_for_user_id(message)
+        if not user_id:
+            return 'cancelled'
+        player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
+        await s.send(message.channel, 'How many points? (e.g. `2.5`)')
+        message = await s.wait_response(message)
         if not message:
             return 'cancelled'
+        try:
+            player['iStaticPoints'] = player.get('iStaticPoints', 0) + float(message.content)
+            s.save_json()
+            return await s.update_lb()
+        except Exception as e:
+            print(e)
+            return 'something wrong'
 
     async def entries(s, _):
         return '_not implemented_'
