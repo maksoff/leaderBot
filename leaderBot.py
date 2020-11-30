@@ -488,7 +488,7 @@ class state_machine_class():
                     ((check_channel and (not check_role)) and bChannel) or
                     (((not check_channel) and check_role) and bRole))
         
-        if s.guild_id == 715549991212548216: return
+        #if s.guild_id == 715549991212548216: return
 
         if has_rights(message):
             if s.next_function and s.author_id and (message.author.id != s.author_id and time.time() - s.last_time > s.timeout):

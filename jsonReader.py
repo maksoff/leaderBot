@@ -2,7 +2,7 @@ import json
 
 class json_class():
     j = None
-    iVersion = 10
+    iVersion = 11
     aPoint = (10, 6, 4, 2, 1)
     oRankByChallenge = {}
 
@@ -68,7 +68,7 @@ class json_class():
             responce += 'Challenge **{}** in modus **{}**\n'.format(ChallengeName, modus)
             value.sort(key=lambda x: x['iRank'])
             for val in value:
-                p = s.find(s.j['aPlayer'], sName=val['sPlayerName'])
+                p = s.find(s.j['aPlayer'], iID=val['iUserID'])
                 user = p.get('iID', None)
                 if user:
                     user = '<@{}>'.format(user)
@@ -129,7 +129,7 @@ class json_class():
                 s.oRankByChallenge[sub['sChallengeName']][sub['sChallengeTypeName']] = []
             oRCT = s.oRankByChallenge[sub['sChallengeName']][sub['sChallengeTypeName']]
             bHigh = s.find(s.j['aChallengeType'], 'sName', sub['sChallengeTypeName'])['bHigherScore']
-            oP = s.find(oRCT, 'sPlayerName', sub['sPlayerName'])
+            oP = s.find(oRCT, iUserID=sub['iUserID'])
             if (oP):
                 if (((oP['fScore'] > sub['fScore']) and not bHigh) or ((oP['fScore'] < sub['fScore']) and bHigh)):
                     oP['fScore'] = sub['fScore']
@@ -157,12 +157,12 @@ class json_class():
                         iRank = i
                     cc['iRank'] = iRank
                     cc['iPoints'] = s.getPoints(iRank - 1)*float(s.find(s.j['aChallengeType'], 'sName', ct).get('fMultiplier', 1))
-                    oS = s.find(s.j['aSubmission'], sChallengeName=rbc, sChallengeTypeName=ct, sPlayerName=cc['sPlayerName'], fScore=cc['fScore'])
+                    oS = s.find(s.j['aSubmission'], sChallengeName=rbc, sChallengeTypeName=ct, iUserID=cc['iUserID'], fScore=cc['fScore'])
                     oS['iRank'] = iRank
                     oS['iPoints'] = cc['iPoints']
 
         for p in s.j['aPlayer']:
-            p['iPoints'] = p.get('iStaticPoints', 0) + sum(x.get('iPoints', 0) for x in s.j['aSubmission'] if x['sPlayerName'] == p['sName'])
+            p['iPoints'] = p.get('iStaticPoints', 0) + sum(x.get('iPoints', 0) for x in s.j['aSubmission'] if x['iUserID'] == p['iID'])
             if p['iPoints'] == int(p['iPoints']): p['iPoints'] = int(p['iPoints'])
                 
         s.j['aPlayer'].sort(key=lambda x: float(x['iPoints']), reverse=True)
@@ -181,13 +181,16 @@ if __name__ == '__main__':
 
     j = json_class()
 
-    with open("779778238091624448.txt", 'r') as f:
+    with open("715549991212548216.txt", 'r') as f:
         j.load(f)
 
     for row in j.j['aSubmission']:
-        row['iPlayerID'] = j.find(j.j['aPlayer'], sName=row['sPlayerName'])['iID']
+        try:
+            row['iUserID'] = j.find(j.j['aPlayer'], sName=row['sPlayerName'])['iID']
+        except:
+            print (row['sPlayerName'])
 
-    with open("779778238091624448.txt", 'w') as f:
+    with open("715549991212548216.txt", 'w') as f:
         f.write(json.dumps(j.j, indent=4))
 
     #print(j.dump())

@@ -174,7 +174,7 @@
         {
             "sName": "ooooomar#2940",
             "iID": 400335772080930819,
-            "iStaticPoints": 6.0,
+            "iStaticPoints": 0,
             "iPoints": 6,
             "iRank": 10
         },
@@ -207,6 +207,7 @@
             "sChallengeName": "1",
             "sChallengeTypeName": "normal",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -216,6 +217,7 @@
             "sChallengeName": "1",
             "sChallengeTypeName": "normal",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -224,7 +226,8 @@
             "iSubmissionId": 1,
             "sChallengeName": "1",
             "sChallengeTypeName": "normal",
-            "sPlayerName": "ikoemc"
+            "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740
         },
         {
             "fScore": 19,
@@ -232,6 +235,7 @@
             "sChallengeName": "2",
             "sChallengeTypeName": "easy",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -241,6 +245,7 @@
             "sChallengeName": "3",
             "sChallengeTypeName": "easy",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -250,6 +255,7 @@
             "sChallengeName": "3",
             "sChallengeTypeName": "easy",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 3,
             "iPoints": 4.0
         },
@@ -259,6 +265,7 @@
             "sChallengeName": "5",
             "sChallengeTypeName": "normal",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -268,6 +275,7 @@
             "sChallengeName": "6",
             "sChallengeTypeName": "normal",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -277,6 +285,7 @@
             "sChallengeName": "6",
             "sChallengeTypeName": "normal",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 3,
             "iPoints": 4.0
         },
@@ -286,6 +295,7 @@
             "sChallengeName": "6",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Boostseeker",
+            "iUserID": 710113093354782720,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -295,6 +305,7 @@
             "sChallengeName": "7",
             "sChallengeTypeName": "normal",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -304,6 +315,7 @@
             "sChallengeName": "7",
             "sChallengeTypeName": "normal",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -313,6 +325,7 @@
             "sChallengeName": "8",
             "sChallengeTypeName": "easy",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -322,6 +335,7 @@
             "sChallengeName": "8",
             "sChallengeTypeName": "easy",
             "sPlayerName": "Boostseeker",
+            "iUserID": 710113093354782720,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -331,6 +345,7 @@
             "sChallengeName": "9",
             "sChallengeTypeName": "easy",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -340,6 +355,7 @@
             "sChallengeName": "5",
             "sChallengeTypeName": "normal",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -349,6 +365,7 @@
             "sChallengeName": "10",
             "sChallengeTypeName": "easy",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -358,6 +375,7 @@
             "sChallengeName": "10",
             "sChallengeTypeName": "easy",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -367,6 +385,7 @@
             "sChallengeName": "10",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Gzzi",
+            "iUserID": 611779836268118026,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -376,6 +395,7 @@
             "sChallengeName": "10",
             "sChallengeTypeName": "hard",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -385,6 +405,7 @@
             "sChallengeName": "10",
             "sChallengeTypeName": "normal",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 4,
             "iPoints": 2.0
         },
@@ -394,6 +415,7 @@
             "sChallengeName": "10",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Boostseeker",
+            "iUserID": 710113093354782720,
             "iRank": 3,
             "iPoints": 4.0
         },
@@ -403,6 +425,7 @@
             "sChallengeName": "10",
             "sChallengeTypeName": "normal",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -412,6 +435,7 @@
             "sChallengeName": "9",
             "sChallengeTypeName": "normal",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -421,6 +445,7 @@
             "sChallengeName": "3",
             "sChallengeTypeName": "easy",
             "sPlayerName": "MXSH3097",
+            "iUserID": 564330064293134336,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -430,6 +455,7 @@
             "sChallengeName": "11",
             "sChallengeTypeName": "easy",
             "sPlayerName": "MXSH3097",
+            "iUserID": 564330064293134336,
             "iRank": 4,
             "iPoints": 2.0
         },
@@ -439,6 +465,7 @@
             "sChallengeName": "11",
             "sChallengeTypeName": "easy",
             "sPlayerName": "Oohoa",
+            "iUserID": 251550163884179456,
             "iRank": 3,
             "iPoints": 4.0
         },
@@ -448,6 +475,7 @@
             "sChallengeName": "11",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Oohoa",
+            "iUserID": 251550163884179456,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -457,6 +485,7 @@
             "sChallengeName": "11",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -466,6 +495,7 @@
             "sChallengeName": "11",
             "sChallengeTypeName": "easy",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -474,21 +504,24 @@
             "iSubmissionId": 1,
             "sChallengeName": "11",
             "sChallengeTypeName": "normal",
-            "sPlayerName": "Maksoff"
+            "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872
         },
         {
             "fScore": 3,
             "iSubmissionId": 2,
             "sChallengeName": "11",
             "sChallengeTypeName": "normal",
-            "sPlayerName": "Maksoff"
+            "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872
         },
         {
             "fScore": 280,
             "iSubmissionId": 0,
             "sChallengeName": "12",
             "sChallengeTypeName": "normal",
-            "sPlayerName": "ooooomar",
+            "sPlayerName": "ooooomar#2940",
+            "iUserID": 400335772080930819,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -498,6 +531,7 @@
             "sChallengeName": "12",
             "sChallengeTypeName": "easy",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -507,6 +541,7 @@
             "sChallengeName": "11",
             "sChallengeTypeName": "easy",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -516,6 +551,7 @@
             "sChallengeName": "12",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -525,6 +561,7 @@
             "sChallengeName": "12",
             "sChallengeTypeName": "easy",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -534,6 +571,7 @@
             "sChallengeName": "13",
             "sChallengeTypeName": "inverted",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -543,15 +581,9 @@
             "sChallengeName": "13",
             "sChallengeTypeName": "inverted",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 2,
             "iPoints": 6.0
-        },
-        {
-            "fScore": 4.68,
-            "iSubmissionId": 1,
-            "sChallengeName": "13",
-            "sChallengeTypeName": "inverted",
-            "sPlayerName": "Maksoff"
         },
         {
             "fScore": 2200,
@@ -559,6 +591,7 @@
             "sChallengeName": "16",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -568,6 +601,7 @@
             "sChallengeName": "16",
             "sChallengeTypeName": "easy",
             "sPlayerName": "Gzzi",
+            "iUserID": 611779836268118026,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -577,6 +611,7 @@
             "sChallengeName": "18",
             "sChallengeTypeName": "inverted",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -586,6 +621,7 @@
             "sChallengeName": "18",
             "sChallengeTypeName": "inverted",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 3,
             "iPoints": 4.0
         },
@@ -595,6 +631,7 @@
             "sChallengeName": "19",
             "sChallengeTypeName": "easy",
             "sPlayerName": "Gzzi",
+            "iUserID": 611779836268118026,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -604,6 +641,7 @@
             "sChallengeName": "19",
             "sChallengeTypeName": "easy",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -613,6 +651,7 @@
             "sChallengeName": "19",
             "sChallengeTypeName": "easy",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 3,
             "iPoints": 4.0
         },
@@ -622,6 +661,7 @@
             "sChallengeName": "19",
             "sChallengeTypeName": "easy",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 3,
             "iPoints": 4.0
         },
@@ -631,6 +671,7 @@
             "sChallengeName": "19",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -640,6 +681,7 @@
             "sChallengeName": "19",
             "sChallengeTypeName": "hard",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -649,6 +691,7 @@
             "sChallengeName": "20",
             "sChallengeTypeName": "easy",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -658,6 +701,7 @@
             "sChallengeName": "20",
             "sChallengeTypeName": "easy",
             "sPlayerName": "Gzzi",
+            "iUserID": 611779836268118026,
             "iRank": 3,
             "iPoints": 4.0
         },
@@ -667,6 +711,7 @@
             "sChallengeName": "20",
             "sChallengeTypeName": "easy",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 4,
             "iPoints": 2.0
         },
@@ -676,6 +721,7 @@
             "sChallengeName": "18",
             "sChallengeTypeName": "inverted",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -685,6 +731,7 @@
             "sChallengeName": "18",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -694,6 +741,7 @@
             "sChallengeName": "20",
             "sChallengeTypeName": "easy",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -703,6 +751,7 @@
             "sChallengeName": "20",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -712,6 +761,7 @@
             "sChallengeName": "21",
             "sChallengeTypeName": "easy",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -721,6 +771,7 @@
             "sChallengeName": "21",
             "sChallengeTypeName": "hard",
             "sPlayerName": "Goufalite",
+            "iUserID": 562013926729187348,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -730,6 +781,7 @@
             "sChallengeName": "21",
             "sChallengeTypeName": "easy",
             "sPlayerName": "ikoemc",
+            "iUserID": 709425110846537740,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -739,6 +791,7 @@
             "sChallengeName": "21",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -748,6 +801,7 @@
             "sChallengeName": "21",
             "sChallengeTypeName": "hard",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -757,6 +811,7 @@
             "sChallengeName": "21",
             "sChallengeTypeName": "hard",
             "sPlayerName": "Gzzi",
+            "iUserID": 611779836268118026,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -766,6 +821,7 @@
             "sChallengeName": "21",
             "sChallengeTypeName": "easy",
             "sPlayerName": "Goufalite",
+            "iUserID": 562013926729187348,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -775,6 +831,7 @@
             "sChallengeName": "21",
             "sChallengeTypeName": "normal",
             "sPlayerName": "Goufalite",
+            "iUserID": 562013926729187348,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -784,6 +841,7 @@
             "sChallengeName": "22",
             "sChallengeTypeName": "easy_x1",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 3,
             "iPoints": 4.0
         },
@@ -793,6 +851,7 @@
             "sChallengeName": "22",
             "sChallengeTypeName": "med_x1.5",
             "sPlayerName": "english muffin",
+            "iUserID": 512748409266896924,
             "iRank": 2,
             "iPoints": 9.0
         },
@@ -802,6 +861,7 @@
             "sChallengeName": "22",
             "sChallengeTypeName": "hard_x2",
             "sPlayerName": "Goufalite",
+            "iUserID": 562013926729187348,
             "iRank": 3,
             "iPoints": 8.0
         },
@@ -811,6 +871,7 @@
             "sChallengeName": "22",
             "sChallengeTypeName": "hard_x2",
             "sPlayerName": "bestPlayer_xu",
+            "iUserID": 556593706313187338,
             "iRank": 2,
             "iPoints": 12.0
         },
@@ -820,6 +881,7 @@
             "sChallengeName": "22",
             "sChallengeTypeName": "med_x1.5",
             "sPlayerName": "Goufalite",
+            "iUserID": 562013926729187348,
             "iRank": 1,
             "iPoints": 15.0
         },
@@ -829,6 +891,7 @@
             "sChallengeName": "22",
             "sChallengeTypeName": "hard_x2",
             "sPlayerName": "Maksoff",
+            "iUserID": 740118933809528872,
             "iRank": 1,
             "iPoints": 20.0
         },
@@ -838,6 +901,7 @@
             "sChallengeName": "22",
             "sChallengeTypeName": "easy_x1",
             "sPlayerName": "english muffin",
+            "iUserID": 512748409266896924,
             "iRank": 2,
             "iPoints": 6.0
         },
@@ -847,6 +911,7 @@
             "sChallengeTypeName": "med_x1.5",
             "iSubmissionId": 0,
             "fScore": 10.0,
+            "iUserID": 611779836268118026,
             "iRank": 1,
             "iPoints": 15.0
         },
@@ -856,6 +921,7 @@
             "sChallengeTypeName": "easy_x1",
             "iSubmissionId": 0,
             "fScore": 2.0,
+            "iUserID": 562013926729187348,
             "iRank": 1,
             "iPoints": 10.0
         },
@@ -865,13 +931,14 @@
             "sChallengeTypeName": "med_x1.5",
             "iSubmissionId": 0,
             "fScore": 10.0,
+            "iUserID": 562013926729187348,
             "iRank": 1,
             "iPoints": 15.0
         }
     ],
     "iLeaderboardChannel": 728589779960332289,
     "iLeaderboardMessage": 782361801832136738,
-    "iVersion": 10,
+    "iVersion": 11,
     "sPOSTURL": "https://ksp.weeklychallenge.repl.co/data",
     "iGuildID": 715549991212548216
 }
