@@ -332,19 +332,16 @@ class state_machine_class():
             print(e)
             return 'something wrong'
 
-    async def entries(s, _):
-        return '_not implemented_'
-
-    async def del_submission(s, _):
-        return '_not implemented_'
-
-    # settings for leaderboard
-    async def set_lb_channel_name(s, msg):
-        s.next_function = None
+    async def set_lb(s, message):
+        await s.send(message.channel, 'In which channel should be posted leaderboard?')
+        message = await s.wait_response(message)
+        if not message:
+            return 'cancelled'
         try:
-            s.leaderboard_channel_id = s.get_int(msg.content)
-            channel = client.get_channel(s.leaderboard_channel_id)
-            msg = await channel.send('Here will be leaderboard published')
+            channel_id = s.get_int(message.content)
+            channel = client.get_channel(channel_id)
+            msg = await channel.send('Here will be published leaderboard')
+            s.leaderboard_channel_id = channel.id
             s.leaderboard_message_id = msg.id
             s.json_data.set_lb_message(s.leaderboard_channel_id, s.leaderboard_message_id)
             s.save_json()
@@ -354,10 +351,6 @@ class state_machine_class():
         else:
             await s.update_lb()
             return 'placeholder created'
-
-    async def set_lb(s, _):
-        s.next_function = s.set_lb_channel_name
-        return 'In which channel should be posted leaderboard?'
 
     async def update_winners(s, *args):
         sub = s.new_submission.get('sChallengeName')
