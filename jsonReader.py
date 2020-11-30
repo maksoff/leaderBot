@@ -186,7 +186,7 @@ if __name__ == '__main__':
 
     for row in j.j['aSubmission']:
         try:
-            row['iUserID'] = j.find(j.j['aPlayer'], sName=row['sPlayerName'])['iID']
+            del row['sPlayerName']
         except:
             print (row['sPlayerName'])
 
