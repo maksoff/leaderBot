@@ -3,6 +3,7 @@
 
 import os
 import time
+import asyncio
 
 import requests
 
@@ -537,5 +538,15 @@ async def on_message(message):
     if message.author == client.user:
         return
     await sm[message.guild.id](message)
-        
+    if message.content.strip().lower() == '?test':
+        await message.channel.send('Waiting for message')
+        try:
+            def check(m):
+                print(m.author.id)
+                return m.author != client.user
+            msg = await client.wait_for('message', timeout=10, check=check)
+        except asyncio.TimeoutError:
+            await message.channel.send('> Timeout')
+        else:
+            await message.channel.send('Received ' + msg.content)
 client.run(TOKEN)

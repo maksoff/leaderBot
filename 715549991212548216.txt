@@ -126,18 +126,18 @@
             "iID": 709425110846537740
         },
         {
-            "iPoints": 76,
+            "iPoints": 78,
             "iRank": 4,
-            "iStaticPoints": 21,
-            "sName": "Gzzi",
-            "iID": 611779836268118026
-        },
-        {
-            "iPoints": 63,
-            "iRank": 5,
             "iStaticPoints": 0,
             "sName": "Goufalite",
             "iID": 562013926729187348
+        },
+        {
+            "iPoints": 76,
+            "iRank": 5,
+            "iStaticPoints": 21,
+            "sName": "Gzzi",
+            "iID": 611779836268118026
         },
         {
             "iPoints": 18,
@@ -854,6 +854,15 @@
             "fScore": 2.0,
             "iRank": 1,
             "iPoints": 10.0
+        },
+        {
+            "sChallengeName": "23",
+            "sPlayerName": "Goufalite",
+            "sChallengeTypeName": "med_x1.5",
+            "iSubmissionId": 0,
+            "fScore": 10.0,
+            "iRank": 1,
+            "iPoints": 15.0
         }
     ],
     "iLeaderboardChannel": 728589779960332289,
