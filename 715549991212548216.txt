@@ -872,6 +872,6 @@
     "iLeaderboardChannel": 728589779960332289,
     "iLeaderboardMessage": 782361801832136738,
     "iVersion": 10,
-    "sPOSTURL": "https://discord.kspchallenges.repl.co/data",
+    "sPOSTURL": "https://ksp.weeklychallenge.repl.co/data",
     "iGuildID": 715549991212548216
 }

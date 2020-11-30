@@ -38,8 +38,6 @@ class state_machine_class():
     last_time = 0
     timeout = 60
 
-    new_submission = {}
-
     ## assistant functions
 
     @staticmethod
@@ -167,53 +165,11 @@ class state_machine_class():
             response += '`{}` - {}\n'.format(n, t)
         return response
 
-    async def add_score(s, msg):
-        s.next_function = None
-        try:
-            iSubmissionId = 0
-            for ss in s.json_data.j['aSubmission']:
-                if (ss.get('sChallengeName') == s.new_submission.get('sChallengeName') and
-                        ss.get('sChallengeTypeName') == s.new_submission.get('sChallengeTypeName') and
-                        ss.get('sPlayerName') == s.new_submission.get('sPlayerName')):
-                    iSubmissionId += 1
-            s.new_submission['iSubmissionId'] = iSubmissionId
-            s.new_submission['fScore'] = float(msg.content)
-            s.json_data.j['aSubmission'].append(s.new_submission)
-            s.json_data.calculate_rating()
-            s.save_json()
-            await s.update_winners()
-            await s.update_lb()
-            s.new_submission = {}
-            return 'Ready!'
-        except Exception as e:
-            print(e)
-            return 'Something really wrong'
-
-    async def add_challenge_type(s, msg):
-        s.next_function = None
-        temp = msg.content.strip().split(' ')
-        if len(temp) == 1:
-            s.new_submission['sChallengeTypeName'] = s.json_data.j['aChallengeType'][int(temp[0])-1]['sName']
-            s.next_function = s.add_score
-            return 'Now enter score for this challenge:'
-        elif len(temp) == 4:
-            s.json_data.j['aChallengeType'].append({'sName':temp[0],
-                                                    'sNick':temp[1],
-                                                    'bHigherScore':temp[2][0] == 'h',
-                                                    'fMultiplier':float(temp[3].replace(',','.'))})
-            s.new_submission['sChallengeTypeName'] = temp[0]
-            s.save_json()
-            s.next_function = s.add_score
-            return 'New type created!\nNow enter score for this challenge:'
-        else:
-            return 'Wrong parameter count'
-        return 'not implemented'
-
-    def get_challenge_types(s):
+    def get_challenge_types(s, sChallengeName):
         response = 'You already have following challenge types (`>` = used in this challenge):'
         for i, chl in enumerate(s.json_data.j['aChallengeType'], 1):
             bold = False
-            if s.json_data.find(s.json_data.j['aSubmission'], sChallengeName=s.new_submission['sChallengeName'], sChallengeTypeName=chl.get('sName')):
+            if s.json_data.find(s.json_data.j['aSubmission'], sChallengeName=sChallengeName, sChallengeTypeName=chl.get('sName')):
                 bold = True
             response += '\n{5}**{0:3}**. `{1}`; display name: **{2}**, *{3}* score wins, multiplier **{4}**'.format(
                 i, chl.get('sName'), chl.get('sNick', chl.get('sName')),
@@ -222,8 +178,34 @@ class state_machine_class():
                 '\>' if bold else '   ')
         return response
 
+    async def ask_for_challenge_type(s, message, sChallengeName):
+        ''' returns sChallengeTypeName, if new - creates'''
+        response = s.get_challenge_types(sChallengeName)
+        response += '\n\nEnter number of existing type (e.g. `1`)'
+        response += '\nor create new type in format `unique_name display_name lower/higher multiplier`'
+        response += '\n(e.g. `extra_x3 impossible lower 3.14`)'
+        await s.send(message.channel, response)
+        
+        message = await s.wait_response(message)
+        if not message:
+            return 'aborted'
+        
+        temp = message.content.strip().split(' ')
+        if len(temp) == 1:
+            return s.json_data.j['aChallengeType'][int(temp[0])-1]['sName']
+        elif len(temp) == 4:
+            s.json_data.j['aChallengeType'].append({'sName':temp[0],
+                                                    'sNick':temp[1],
+                                                    'bHigherScore':temp[2][0] == 'h',
+                                                    'fMultiplier':float(temp[3].replace(',','.'))})
+            s.save_json()
+            return temp[0]
+        else:
+            await s.send(message.channel, 'Wrong parameter count')
+            return 
+
     async def ask_for_user_id(s, message):
-        '''returns user_id or None if failed'''
+        '''returns user_id or None if failed, creates user if new'''
         await s.send(message.channel, 'Please enter user (e.g. @best_user) or user id:')
         
         message = await s.wait_response(message)
@@ -248,78 +230,12 @@ class state_machine_class():
             print(e)
             return
 
-#old
-    async def add_challenge_user(s, msg):
-        s.next_function = None
-        response = ''
-        try:
-            user_id = s.get_int(msg.content)
-            user = await s.client.fetch_user(user_id)
-            player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
-            if player:
-                response += 'Existing user\n'
-                s.new_submission['sPlayerName'] = player['sName']
-            else:
-                response += 'New user, cool!\n'
-                s.json_data.j['aPlayer'].append({'sName':user.name + '#' + user.discriminator,
-                                                 'iID':user_id})
-                s.new_submission['sPlayerName'] = user.name + '#' + user.discriminator
-                s.save_json()
-            if s.next_next_function:
-                s.next_function = s.next_next_function
-                s.next_next_function = None
-                return 'how many points?'
-            s.next_function = s.add_challenge_type
-            response += s.get_challenge_types()
-            response += '\n\nEnter number of existing type (e.g. `1`)'
-            response += '\nor create new type in format `unique_name display_name lower/higher multiplier`'
-            response += '\n(e.g. `extra_x3 impossible lower 3.14`)'
-            return response
-        except Exception as e:
-            print(e)
-            return 'something gone wrong'
-        return 'not implemented'
-
-    async def add_winners_channel(s, msg):
-        s.next_function = None
-        try:
-            channel_id = s.get_int(msg.content)
-            channel = client.get_channel(channel_id)
-            msg = await channel.send('Here will be winners published')
-            message_id = msg.id
-            s.json_data.j['aChallenge'].append({'sName':s.new_submission['sChallengeName'],
-                                                 'idChannel':channel_id,
-                                                 'idMessage':message_id})
-            s.save_json()
-        except Exception as e:
-            print(e)
-            return "channel doesn't exist"
-        else:
-            s.next_function = s.add_challenge_user
-            return 'Placeholder created. \nPlease enter user (e.g. @best_user) or user id:'
-        return
-
-    async def add_challenge(s, msg):
-        s.next_function = None
-        s.new_submission['sChallengeName'] = msg.content
-        if msg.content in s.json_data.list_of_challenges():
-            s.next_function = s.add_challenge_user
-            return 'Existing challenge. \nPlease enter user (e.g. @best_user) or user id:'
-        s.next_function = s.add_winners_channel
-        return 'New challenge, cool! \n In which channel should be added winners-table? (e.g. #winners-42)'
-
-    async def add_submission(s, *args):
-        s.next_function = s.add_challenge
-        s.new_submission = {}
-        response = 'Past challenges: ' + ', '.join(s.json_data.list_of_challenges())
-        response += '\nFor which challenge is this submission? (e.g. 42):'
-        return response
 
     async def set_challenge_channel(s, message, change_existing_channel=True):
         '''selection for challenge, and updating/creating of channel. Returns None in case of error or sChallengeName'''
         # challenges list
-        response = 'Past challenges: ' + ', '.join(s.json_data.list_of_challenges())
-        response += '\nEnter challenge name (e.g. 42)\n(if challenge not in the list, new challenge will be created)'
+        response = 'Past challenges: `' + '`, `'.join(s.json_data.list_of_challenges())
+        response += '`\nEnter challenge name (e.g. `42`)\n(if challenge not in the list, new challenge will be created)'
         await s.send(message.channel, response)
         # select challenge
         message = await s.wait_response(message)
@@ -356,19 +272,48 @@ class state_machine_class():
             return None
         return
 
-    async def _add_submission(s, message):
-        new_submission = {}
+    async def add_submission(s, message):
         await s.send(message.channel, 'For which challenge is this submission?:')
         # select challenge
         sChallengeName = await s.set_challenge_channel(message, change_existing_channel=False)
         if not sChallengeName:
             return 'Something wrong'
-        message = await s.wait_response(message)
-        if not message:
-            return 'aborted'
+        # select user
+        user_id = await s.ask_for_user_id(message)
+        if not user_id:
+            return 'wrong id - aborted'
+        # select challenge type
+        sChallengeTypeName = await s.ask_for_challenge_type(message, sChallengeName)
+        if not sChallengeName:
+            return 'wrong challenge type - aborted'
+        # add score
+        try:
+            iSubmissionId = 0
+            for ss in s.json_data.j['aSubmission']:
+                if (ss.get('sChallengeName') == sChallengeName and
+                        ss.get('sChallengeTypeName') == sChallengeTypeName and
+                        ss.get('iUserID') == user_id):
+                    iSubmissionId += 1
+            await s.send(message.channel, 'Enter score (e.g. `3.14`):')
+            message = await s.wait_response(message)
+            if not message:
+                return 'aborted'
+            fScore = float(message.content)
+            s.json_data.j['aSubmission'].append({'iUserID':user_id,
+                                                 'sChallengeName':sChallengeName,
+                                                 'sChallengeTypeName':sChallengeTypeName,
+                                                 'fScore':fScore})
+            s.json_data.calculate_rating()
+            response = await s.update_all()
+            return response
+        except Exception as e:
+            print(e)
+            return 'Something really wrong'
+        
+        
                          
         
-        return
+        return 'not ready'
     
     async def add_points(s, message):
         user_id = await s.ask_for_user_id(message)
@@ -542,7 +487,8 @@ class state_machine_class():
             return (((check_channel and check_role) and (bChannel and bRole)) or
                     ((check_channel and (not check_role)) and bChannel) or
                     (((not check_channel) and check_role) and bRole))
-            
+        
+        if s.guild_id == 715549991212548216: return
 
         if has_rights(message):
             if s.next_function and s.author_id and (message.author.id != s.author_id and time.time() - s.last_time > s.timeout):
