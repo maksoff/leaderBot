@@ -273,7 +273,7 @@ class state_machine_class():
         return
 
     async def add_submission(s, message):
-        await s.send(message.channel, 'For which challenge is this submission?:')
+        await s.send(message.channel, 'For which challenge is this submission?')
         # select challenge
         sChallengeName = await s.set_challenge_channel(message, change_existing_channel=False)
         if not sChallengeName:
@@ -302,6 +302,7 @@ class state_machine_class():
             s.json_data.j['aSubmission'].append({'iUserID':user_id,
                                                  'sChallengeName':sChallengeName,
                                                  'sChallengeTypeName':sChallengeTypeName,
+                                                 'iSubmissionId':iSubmissionId,
                                                  'fScore':fScore})
             s.json_data.calculate_rating()
             response = await s.update_all()
@@ -309,10 +310,6 @@ class state_machine_class():
         except Exception as e:
             print(e)
             return 'Something really wrong'
-        
-        
-                         
-        
         return 'not ready'
     
     async def add_points(s, message):
