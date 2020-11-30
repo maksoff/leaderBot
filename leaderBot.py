@@ -545,7 +545,6 @@ class state_machine_class():
                       ('?delete json', 'clears all you data from server', s.json_del),
                       ('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
                       ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
-                      ('?utest', '', s.ask_for_user_id),
                       )
     
     def __init__(s, client, guild_id):
