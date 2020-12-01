@@ -25,8 +25,6 @@ CHANNEL = os.getenv('DISCORD_CHANNEL')
 
 class state_machine_class():
     guild_id = None
-    next_function = None
-    next_next_function = None
     leaderboard_channel_id = None
     leaderboard_message_id = None
     json_path = None
@@ -34,10 +32,6 @@ class state_machine_class():
 
     client = None
     
-    author_id = None
-    last_time = 0
-    timeout = 60
-
     ## assistant functions
 
     @staticmethod
@@ -497,26 +491,12 @@ class state_machine_class():
             return (((check_channel and check_role) and (bChannel and bRole)) or
                     ((check_channel and (not check_role)) and bChannel) or
                     (((not check_channel) and check_role) and bRole))
-        
-        #if s.guild_id == 715549991212548216: return
 
         if has_rights(message):
-            if s.next_function and s.author_id and (message.author.id != s.author_id and time.time() - s.last_time > s.timeout):
-                s.author_id = None
-                s.next_function = None
-                s.next_next_function = None
-                await s.send(message.channel, '**timeout**')
             for n, _, f in s.commands:
                 if message.content.lower().startswith(n):
-                    s.next_function = None
-                    s.next_next_function = None
-                    s.author_id = message.author.id
-                    s.last_time = time.time()
                     response = await f(message)
                     break
-            else:
-                if s.next_function and s.author_id == message.author.id:
-                    response = await s.next_function(message)  
             if response:
                 await s.send(message.channel, response)
                 return
@@ -592,18 +572,5 @@ async def on_message(message):
     if message.author == client.user:
         return
     await sm[message.guild.id](message)
-    if message.content.strip().lower() == '?test':
-        await message.channel.send('Waiting for message')
-        try:
-            def check(m):
-                print(m.author.id)
-                return m.author != client.user
-            msg = await client.wait_for('message', timeout=10, check=check)
-        except asyncio.TimeoutError:
-            await message.channel.send('> Timeout')
-        except Exception as e:
-            print(e)
-            return
-        else:
-            await message.channel.send('Received ' + msg.content)
+
 client.run(TOKEN)
