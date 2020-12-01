@@ -373,21 +373,7 @@ class state_machine_class():
         try:
             s.json_data.calculate_rating()
             s.save_json()
-            try:
-                url = s.json_data.j.get('sPOSTURL')
-                if url:
-                    await s.update_usernames()
-                    payload = s.json_data.j
-                    payload['iGuildID'] = s.guild_id
-                    headers = {'content-type': 'application/json'}
-                    for player in payload['aPlayer']:
-                        player['iID'] = str(player['iID'])
-                    data = json.dumps(payload)
-                    for player in payload['aPlayer']:
-                        player['iID'] = int(player['iID'])
-                    requests.post(url, data=data, headers=headers)
-            except Exception as e:
-                print(str(e))
+            await s.post()
             return await s.update(s.leaderboard_channel_id, s.leaderboard_message_id, s.json_data.result_leaderboard())
         except Exception as e:
             print(e)
@@ -440,30 +426,51 @@ class state_machine_class():
         embed.add_field(name='TOP '+str(limit), value=response)
         await msg.channel.send(embed=embed)
 
-    async def post(s, msg):
-        try:
-            await s.update_usernames()
-            url = msg.content.strip().split(' ')[1]
-            payload = s.json_data.j
-            payload['iGuildID'] = s.guild_id
-            headers = {'content-type': 'application/json'}
+    async def post(s, *args):
+        data = None
+        if len(args) == 0:
             try:
-                if len(msg.content.split(' ')) > 2:
-                    r = requests.post(url, data='', headers=headers)
-                else:
-                    for player in payload['aPlayer']:
-                        player['iID'] = str(player['iID'])
-                    data = json.dumps(payload)
-                    for player in payload['aPlayer']:
-                        player['iID'] = int(player['iID'])
-                    r = requests.post(url, data=data, headers=headers)       
-                response = '\nstatus: {} \ntext: {}'.format(
-                    r.status_code, r.text)
+                url = s.json_data.j.get('sPOSTURL')
+                if not url:
+                    return
             except Exception as e:
-                response = 'Exception: ' + str(e)
-            return 'Done: ' + str(response)
+                print(str(e))
+                return
+        else:
+            try:
+                url = args[0].content.strip().split(' ')[1]
+            except Exception as e:
+                return 'Specify URL `?post URL`'
+            
+            if len(args[0].content.split(' ')) > 2:
+                data = ''
+            else:
+                def deepcopy(temp):
+                    ret = None
+                    if type(temp) is dict:
+                        ret = {}
+                        for key, val in temp.items():
+                            ret[key] = deepcopy(val)
+                    elif type(temp) is list:
+                        ret = []
+                        for val in temp:
+                            ret.append(deepcopy(val))
+                    else:
+                        return str(temp)
+                    return ret
+                await s.update_usernames()
+                payload = deepcopy(s.json_data.j)            
+                payload['iGuildID'] = s.guild_id
+                data = json.dumps(payload)
+            
+        headers = {'content-type': 'application/json'}
+        try:
+            r = requests.post(url, data=data, headers=headers)       
+            response = '\nstatus: `{}` \ntext: `{}`'.format(
+                        r.status_code, r.text)
         except Exception as e:
-            return 'Specify URL `?post URL`'
+            response = 'Exception: {}'.format(e)
+        return 'Done: ' + str(response)
     
 
     async def seturl(s, msg):
