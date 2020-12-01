@@ -404,7 +404,8 @@ class state_machine_class():
             user = await s.client.fetch_user(user_id)
             name = '@' + user.name
             response = s.json_data.get_rank(user_id)
-        except:
+        except Exception as e:
+            print(e)
             name = 'user not found'
             response = 'maybe invite him?'
         embed = discord.Embed()
