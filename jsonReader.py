@@ -90,13 +90,27 @@ class json_class():
         result += s.result_leaderboard()
         return result
 
+    @staticmethod
+    def suffix(n):
+        if 10 <= n <= 20:
+            return 'th'
+        elif n%10 == 1:
+            return 'st'
+        elif n%10 == 2:
+            return 'nd'
+        elif n%10 == 3:
+            return 'rd'
+        else:
+            return 'th'
+
     def get_rank(s, user_id):
         player = s.find(s.j['aPlayer'], iID=user_id)
         if player:
             rank = player.get('iRank', None)
             points = player.get('iPoints', None)
         if player and rank and points:
-            return '**{}.** (out of {} members) with **{}** points'.format(rank, len(s.j['aPlayer']), points)
+            
+            return 'Ranked **{}**{} (out of {} members) with **{}** points'.format(rank, s.suffix(rank), len(s.j['aPlayer']), points)
         else:
             return 'You need to earn some points. Submit some challenges!'
 
@@ -183,15 +197,6 @@ if __name__ == '__main__':
 
     with open("715549991212548216.txt", 'r') as f:
         j.load(f)
-
-    for row in j.j['aSubmission']:
-        try:
-            del row['sPlayerName']
-        except:
-            print (row['sPlayerName'])
-
-    with open("715549991212548216.txt", 'w') as f:
-        f.write(json.dumps(j.j, indent=4))
 
     #print(j.dump())
     print(j.print_all())
