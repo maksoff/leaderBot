@@ -209,6 +209,9 @@ class state_machine_class():
         try:
             user_id = s.get_int(message.content)
             user = await s.client.fetch_user(user_id)
+            if user.bot:
+                await s.send(message.channel, "No bots, please. *aborted*")
+                return
             user_id = user.id
             player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
             if player:
