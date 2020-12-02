@@ -288,6 +288,12 @@ class state_machine_class():
                         ss.get('sChallengeTypeName') == sChallengeTypeName and
                         ss.get('iUserID') == user_id):
                     iSubmissionId += 1
+            
+            embed = discord.Embed()
+            embed.add_field(name='Submissions for this challenge',
+                value=s.json_data.result_challenge(sChallengeName, ignoreScore=False))
+            #embed.remove_author()
+            await message.channel.send(embed=embed)
             await s.send(message.channel, 'Enter score (e.g. `3.14`):')
             message = await s.wait_response(message)
             if not message:
@@ -299,7 +305,7 @@ class state_machine_class():
                                                  'iSubmissionId':iSubmissionId,
                                                  'fScore':fScore})
             s.json_data.calculate_rating()
-            response = await s.update_all()
+            response = await s.update_all(message)
             return response
         except Exception as e:
             print(e)
@@ -379,7 +385,8 @@ class state_machine_class():
             print(e)
             return 'something wrong'
 
-    async def update_all(s, *args):
+    async def update_all(s, message):
+        await s.send(message.channel, '*updating...*')
         response = await s.update_lb()
         await s.update_winners()
         return response
@@ -442,27 +449,29 @@ class state_machine_class():
                 url = args[0].content.strip().split(' ')[1]
             except Exception as e:
                 return 'Specify URL `?post URL`'
-            
+
+            # send empty data
             if len(args[0].content.split(' ')) > 2:
                 data = ''
-            else:
-                def deepcopy(temp):
-                    ret = None
-                    if type(temp) is dict:
-                        ret = {}
-                        for key, val in temp.items():
-                            ret[key] = deepcopy(val)
-                    elif type(temp) is list:
-                        ret = []
-                        for val in temp:
-                            ret.append(deepcopy(val))
-                    else:
-                        return str(temp)
-                    return ret
-                await s.update_usernames()
-                payload = deepcopy(s.json_data.j)            
-                payload['iGuildID'] = s.guild_id
-                data = json.dumps(payload)
+
+        if data == None:    
+            def deepcopy(temp):
+                ret = None
+                if type(temp) is dict:
+                    ret = {}
+                    for key, val in temp.items():
+                        ret[key] = deepcopy(val)
+                elif type(temp) is list:
+                    ret = []
+                    for val in temp:
+                        ret.append(deepcopy(val))
+                else:
+                    return str(temp)
+                return ret
+            await s.update_usernames()
+            payload = deepcopy(s.json_data.j)            
+            payload['iGuildID'] = s.guild_id
+            data = json.dumps(payload)
             
         headers = {'content-type': 'application/json'}
         try:
