@@ -1,16 +1,19 @@
 # maksoff - KSP leaderbot (automagically calculates the rating and etc.)
 # ideas - graph of progress
 
+import io
 import os
 import time
 import asyncio
 
 import requests
+import random
 
 import discord
 from dotenv import load_dotenv
 
 from jsonReader import json_class
+import rankDisplay
 
 import json
 
@@ -31,6 +34,8 @@ class state_machine_class():
     json_data = None
 
     client = None
+
+    ksp_hints = None
     
     ## assistant functions
 
@@ -422,6 +427,52 @@ class state_machine_class():
         embed.add_field(name=name, value=response)
         #embed.remove_author()
         await msg.channel.send(embed=embed)
+
+    async def rank_img(s, msg):
+        message = msg.content.strip().split(' ')
+        if len(message) == 1:
+            user_id = msg.author.id
+        else:
+            user_id = s.get_int(message[1])
+            
+        try:
+            user = await s.client.fetch_user(user_id)
+        except Exception as e:
+            print(e)
+            return 'User not found. Maybe invite him?'
+
+        player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
+        if player:
+            rank = player.get('iRank', None)
+            points = player.get('iPoints', None)
+        if not (player and rank and points):
+            return 'You need to earn some points. Submit some challenges!'
+
+        max_points = max(player.get('iPoints') for player in s.json_data.j['aPlayer'])
+            
+        AVATAR_SIZE = 128
+        try:
+            avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
+            user_avatar = io.BytesIO(await avatar_asset.read())
+        except:
+            user_avatar = None
+            
+        try:
+            avatar_asset = msg.guild.icon_url_as(format='png', size=AVATAR_SIZE)
+            guild_avatar = io.BytesIO(await avatar_asset.read())
+        except:
+            guild_avatar = None
+
+        buffer = rankDisplay.create_rank_card(user_avatar,
+                                              guild_avatar,
+                                              user.name,
+                                              user.discriminator,
+                                              points,
+                                              max_points,
+                                              rank,
+                                              len(s.json_data.j['aPlayer']))
+        await msg.channel.send(file=discord.File(buffer, 'rank.png'))
+        return None
         
     async def get_top(s, msg):
         limit = 7
@@ -499,6 +550,11 @@ class state_machine_class():
             s.save_json()
             return 'Auto-POST URL updated'
 
+    async def ksp(s, *args):
+        if not s.ksp_hints:
+            s.ksp_hints = open("ksp.txt").readlines()
+        return random.choice(s.ksp_hints)[:-1]
+
     async def ping(s, *args):
         return 'Pong! {}ms'.format(int(s.client.latency*1000))
             
@@ -545,6 +601,7 @@ class state_machine_class():
                               ('?rank', 'your rank; `?rank @user` to get @user rank', s.get_rank),
                               ('?top', 'leaderboard; add number to limit positions `?top 3`', s.get_top),
                               ('?leaderboard', 'same as `?top`', s.get_top),
+                              ('?ksp', 'random ksp loading hint', s.ksp),
                           )
         
         s.commands = (('?help', 'prints this message', s.admin_help),
@@ -560,6 +617,7 @@ class state_machine_class():
                       ('?delete json', 'clears all you data from server', s.json_del),
                       ('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
                       ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
+                      ('?rank', 'test ranking', s.rank_img),
                       )
     
     def __init__(s, client, guild_id):
