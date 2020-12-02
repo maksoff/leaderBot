@@ -498,6 +498,9 @@ class state_machine_class():
             s.json_data.j['sPOSTURL'] = data[1]
             s.save_json()
             return 'Auto-POST URL updated'
+
+    async def ping(s, *args):
+        return 'Pong! {}ms'.format(int(s.client.latency*1000))
             
     async def __call__(s, message):
         response = ''
@@ -545,6 +548,7 @@ class state_machine_class():
                           )
         
         s.commands = (('?help', 'prints this message', s.admin_help),
+                      ('?ping', 'latency', s.ping),
                       ('?add', 'to add new submission', s.add_submission),
                       ('?static points', 'add points (e.g. giveaways)', s.add_points),
                       ('?update', 'force leaderboard update', s.update_all),
