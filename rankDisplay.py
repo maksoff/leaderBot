@@ -3,18 +3,19 @@ import io
 import math 
 from PIL import Image, ImageDraw, ImageFont
 
-w, h = 900, 300
+avatar_size = 128
+diam = 34
+x = 2.5*diam + avatar_size
+w, h = 900, avatar_size + 2*diam
+y = h-diam*1.25
+length = w - x - diam*1.25
+
 
 background = "#23272A"
 grey = "#484B4E"
 cian = "#62D3F5"
-diam = 34
 
-avatar_size = 128
 
-x = diam*2
-y = h-diam*1.5
-length = w - 2*x
 
 def create_rank_card(user_avatar,
                      guild_avatar,
@@ -43,7 +44,42 @@ def create_rank_card(user_avatar,
         bar = [(x+length, y+diam/2), (x+length+diam/2, y-diam/2)]
         draw.arc(bar, 180, 0, 'black')
 
-    buffer = io.BytesIO()
+    def place_avatar(image, avatar, x, y, diam, avatar_size = avatar_size, circle=True):
+        if not avatar:
+            return
+        avatar.seek(0)
+
+        bck_image = Image.new('RGBA', (avatar_size, avatar_size))
+        bck_draw = ImageDraw.Draw(bck_image)
+        bck_draw.rectangle((0, 0, avatar_size, avatar_size), fill = background)
+        
+        img = Image.open(avatar)
+        img = img.resize((avatar_size, avatar_size))
+        try:
+            # workaround for transparency
+            img = Image.alpha_composite(bck_image, img)
+        except:
+            ...
+        
+        mask_image = Image.new('L', (avatar_size, avatar_size))
+        mask_draw = ImageDraw.Draw(mask_image)
+        if circle:
+            mask_draw.ellipse((0, 0, avatar_size, avatar_size), fill = 255)
+        else:
+            d = diam/2
+            x0 = d
+            y0 = d
+            x1 = avatar_size - x0
+            y1 = avatar_size - y0
+            mask_draw.ellipse((x0-d, y0-d, x0+d, y0+d), fill = 255)
+            mask_draw.ellipse((x1-d, y0-d, x1+d, y0+d), fill = 255)
+            mask_draw.ellipse((x0-d, y1-d, x0+d, y1+d), fill = 255)
+            mask_draw.ellipse((x1-d, y1-d, x1+d, y1+d), fill = 255)
+            mask_draw.rectangle((x0-d, y0, x1+d, y1), fill = 255)
+            mask_draw.rectangle((x0, y0-d, x1, y1+d), fill = 255)
+
+        image.paste(img, (x, y), mask_image)
+
         
     # create progress bar background
     create_ebar(draw, x, y, length, diam+4, "black")
@@ -52,36 +88,23 @@ def create_rank_card(user_avatar,
     # create progress bar
     create_ebar(draw, x, y, length*user_points/max_points, diam, cian)
 
+    # add avatars
+
+    place_avatar(img, user_avatar, diam//2, diam//2, diam,
+                 avatar_size = avatar_size + diam)
+    place_avatar(img, guild_avatar, int(w-diam*1.5-avatar_size/2), diam//2, diam//2,
+                 avatar_size = avatar_size//2+diam, circle=False)
+
+
+
+
     # save PNG in buffer
-    img.save(buffer, format='PNG')    
-
-    # move to beginning of buffer so `send()` it will read from beginning
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
     buffer.seek(0)
-
     return buffer
     
 
-    avatar_asset = ctx.author.avatar_url_as(format='png', size=AVATAR_SIZE)
-
-    # read JPG from server to buffer (file-like object)
-
-#    buffer_avatar = io.BytesIO()
-#    await avatar_asset.save(buffer_avatar)
-#    buffer_avatar.seek(0)
-
-    # read JPG from buffer to Image
-    avatar_image = Image.open(user_avatar)
-
-    # resize it
-    avatar_image = avatar_image.resize((AVATAR_SIZE, AVATAR_SIZE)) #
-
-    circle_image = Image.new('L', (AVATAR_SIZE, AVATAR_SIZE))
-    circle_draw = ImageDraw.Draw(circle_image)
-    circle_draw.ellipse((0, 0, AVATAR_SIZE, AVATAR_SIZE), fill=255)
-    #avatar_image.putalpha(circle_image)
-    #avatar_image.show()
-
-    image.paste(avatar_image, (rect_x0, rect_y0), circle_image)
 
 ### get a font
 ##fnt = ImageFont.truetype("arial.ttf", 40)

@@ -429,6 +429,7 @@ class state_machine_class():
         await msg.channel.send(embed=embed)
 
     async def rank_img(s, msg):
+        # find user.id and user
         message = msg.content.strip().split(' ')
         if len(message) == 1:
             user_id = msg.author.id
@@ -440,7 +441,8 @@ class state_machine_class():
         except Exception as e:
             print(e)
             return 'User not found. Maybe invite him?'
-
+    
+        # get player info from json
         player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
         if player:
             rank = player.get('iRank', None)
@@ -448,19 +450,23 @@ class state_machine_class():
         if not (player and rank and points):
             return 'You need to earn some points. Submit some challenges!'
 
+        # find max points
         max_points = max(player.get('iPoints') for player in s.json_data.j['aPlayer'])
-            
+
+        #get avatar & channel icon    
         AVATAR_SIZE = 128
         try:
             avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
             user_avatar = io.BytesIO(await avatar_asset.read())
-        except:
+        except Exception as e:
+            print(e)
             user_avatar = None
             
         try:
             avatar_asset = msg.guild.icon_url_as(format='png', size=AVATAR_SIZE)
             guild_avatar = io.BytesIO(await avatar_asset.read())
-        except:
+        except Exception as e:
+            print(e)
             guild_avatar = None
 
         buffer = rankDisplay.create_rank_card(user_avatar,
@@ -634,6 +640,7 @@ class state_machine_class():
             print('no json found')
 
 client = discord.Client()
+print('client created')
 
 sm = {}
 
@@ -655,4 +662,5 @@ async def on_message(message):
         return
     await sm[message.guild.id](message)
 
+print('ready, steady, go')
 client.run(TOKEN)
