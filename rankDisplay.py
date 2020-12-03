@@ -9,10 +9,12 @@ x = 2.5*diam + avatar_size
 w, h = 900, avatar_size + 2*diam
 y = h-diam*1.25
 length = w - x - diam*1.25
+d = 5
 
 
 background = "#23272A"
 grey = "#484B4E"
+grey_text = "#808486"
 cian = "#62D3F5"
 
 
@@ -96,7 +98,63 @@ def create_rank_card(user_avatar,
                  avatar_size = avatar_size//2+diam, circle=False)
 
 
+    ## add text
+    # add discriminator
+    draw = ImageDraw.Draw(img) 
+    font = ImageFont.truetype('Roboto-Medium.ttf', 30)
+    text = '#' + str(user_discriminator)
+    tdw, tdh = draw.textsize(text, font=font)
+    draw.text((avatar_size+diam*2, int(avatar_size/2 + diam + diam/2-tdh)), text,
+              fill = grey_text, font = font)
 
+    # add points
+    draw = ImageDraw.Draw(img) 
+    font = ImageFont.truetype('Roboto-Italic.ttf', 30)
+    text = f'points: {user_points} / {max_points}'
+    tpw, tph = draw.textsize(text, font=font)
+    draw.text((int(w-diam*2-avatar_size/2-tpw), int(avatar_size/2 + diam + diam/2-tdh)), text,
+              fill = grey_text, font = font)
+
+    # add rank
+    draw = ImageDraw.Draw(img) 
+    font = ImageFont.truetype('Roboto-Medium.ttf', 30)
+    text = " / " + str(members)
+    trw, trh = draw.textsize(text, font=font)
+    draw.text((int(w-diam*2-avatar_size/2-trw), int(avatar_size/2 + diam + diam/2-tph-trh-d)), text,
+              fill = "white", font = font)
+
+    
+    draw = ImageDraw.Draw(img) 
+    font = ImageFont.truetype('Roboto-Medium.ttf', 50)
+    text = "  #" + str(rank)
+    trrw, trrh = draw.textsize(text, font=font)
+    draw.text((int(w-diam*2-avatar_size/2-trw-trrw), int(avatar_size/2 + diam + diam/2-tph-trrh-d)), text,
+              fill = "white", font = font)
+
+    # add user
+    text = str(user_name)
+
+    size_w = int(w-diam*2-avatar_size/2-trw-trrw - (avatar_size+diam*2))
+    draw = ImageDraw.Draw(img)
+    f_size = 50
+    
+    while f_size > 35:
+        font = ImageFont.truetype('Roboto-Medium.ttf', f_size)
+        tuw, tuh = draw.textsize(text, font=font)
+        if tuw <= size_w:
+            break
+        f_size -= 1
+
+    if tuw > size_w:
+        text += '...'
+        
+    while tuw > size_w:
+        text=text[:-4]
+        text += '...'
+        tuw, tuh = draw.textsize(text, font=font)
+        
+    draw.text((avatar_size+diam*2, int(avatar_size/2 + diam + diam/2-tdh-tuh-d)), text,
+              fill = "white", font = font)
 
     # save PNG in buffer
     buffer = io.BytesIO()

@@ -604,14 +604,14 @@ class state_machine_class():
 
         s.user_commands = (
                               ('?help', 'prints this message', s.user_help),
-                              ('?rank', 'your rank; `?rank @user` to get @user rank', s.get_rank),
+                              ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
                               ('?top', 'leaderboard; add number to limit positions `?top 3`', s.get_top),
                               ('?leaderboard', 'same as `?top`', s.get_top),
                               ('?ksp', 'random ksp loading hint', s.ksp),
                           )
         
         s.commands = (('?help', 'prints this message', s.admin_help),
-                      ('?ping', 'latency', s.ping),
+                      ('?ping', 'bot latency', s.ping),
                       ('?add', 'to add new submission', s.add_submission),
                       ('?static points', 'add points (e.g. giveaways)', s.add_points),
                       ('?update', 'force leaderboard update', s.update_all),
@@ -623,7 +623,7 @@ class state_machine_class():
                       ('?delete json', 'clears all you data from server', s.json_del),
                       ('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
                       ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
-                      ('?rank', 'test ranking', s.rank_img),
+                      #('?rank', 'test ranking', s.rank_img),
                       )
     
     def __init__(s, client, guild_id):
