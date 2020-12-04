@@ -4,12 +4,14 @@ import math
 from PIL import Image, ImageDraw, ImageFont
 
 avatar_size = 128
-diam = 34
-x = 2.5*diam + avatar_size
-w, h = 900, avatar_size + 2*diam
+diam = 20
+x = 1*diam + avatar_size
+w, h = 600, avatar_size + diam
 y = h-diam*1.25
 length = w - x - diam*1.25
 d = 5
+
+g_a_s = int(y-diam/2-diam) # guild avatar size
 
 
 background = "#23272A"
@@ -56,7 +58,7 @@ def create_rank_card(user_avatar,
         bck_draw.rectangle((0, 0, avatar_size, avatar_size), fill = background)
         
         img = Image.open(avatar)
-        img = img.resize((avatar_size, avatar_size))
+        img = img.resize((avatar_size, avatar_size), Image.ANTIALIAS)
         try:
             # workaround for transparency
             img = Image.alpha_composite(bck_image, img)
@@ -93,53 +95,53 @@ def create_rank_card(user_avatar,
     # add avatars
 
     place_avatar(img, user_avatar, diam//2, diam//2, diam,
-                 avatar_size = avatar_size + diam)
-    place_avatar(img, guild_avatar, int(w-diam*1.5-avatar_size/2), diam//2, diam//2,
-                 avatar_size = avatar_size//2+diam, circle=False)
+                 avatar_size = avatar_size)
+    place_avatar(img, guild_avatar, int(w-diam/2-g_a_s), diam//2, diam,
+                 avatar_size = g_a_s, circle=False)
 
 
     ## add text
     # add discriminator
     draw = ImageDraw.Draw(img) 
-    font = ImageFont.truetype('Roboto-Medium.ttf', 30)
+    font = ImageFont.truetype('Roboto-Medium.ttf', 20)
     text = '#' + str(user_discriminator)
     tdw, tdh = draw.textsize(text, font=font)
-    draw.text((avatar_size+diam*2, int(avatar_size/2 + diam + diam/2-tdh)), text,
+    draw.text((avatar_size+diam, int(g_a_s + diam/2-tdh)), text,
               fill = grey_text, font = font)
 
     # add points
     draw = ImageDraw.Draw(img) 
-    font = ImageFont.truetype('Roboto-Italic.ttf', 30)
+    font = ImageFont.truetype('Roboto-Italic.ttf', 20)
     text = f'points: {user_points} / {max_points}'
     tpw, tph = draw.textsize(text, font=font)
-    draw.text((int(w-diam*2-avatar_size/2-tpw), int(avatar_size/2 + diam + diam/2-tdh)), text,
+    draw.text((int(w-diam-g_a_s-tpw), int(g_a_s + diam/2-tdh)), text,
               fill = grey_text, font = font)
 
     # add rank
     draw = ImageDraw.Draw(img) 
-    font = ImageFont.truetype('Roboto-Medium.ttf', 30)
+    font = ImageFont.truetype('Roboto-Medium.ttf', 20)
     text = " / " + str(members)
     trw, trh = draw.textsize(text, font=font)
-    draw.text((int(w-diam*2-avatar_size/2-trw), int(avatar_size/2 + diam + diam/2-tph-trh-d)), text,
+    draw.text((int(w-diam-g_a_s-trw), int(g_a_s + diam/2-tph-trh-d)), text,
               fill = "white", font = font)
 
     
     draw = ImageDraw.Draw(img) 
-    font = ImageFont.truetype('Roboto-Medium.ttf', 50)
-    text = "  #" + str(rank)
+    font = ImageFont.truetype('Roboto-Medium.ttf', 40, encoding="utf-8")
+    text = " #" + str(rank)
     trrw, trrh = draw.textsize(text, font=font)
-    draw.text((int(w-diam*2-avatar_size/2-trw-trrw), int(avatar_size/2 + diam + diam/2-tph-trrh-d)), text,
+    draw.text((int(w-diam-g_a_s-trw-trrw), int(g_a_s + diam/2-tph-trrh-d)), text,
               fill = "white", font = font)
 
     # add user
     text = str(user_name)
 
-    size_w = int(w-diam*2-avatar_size/2-trw-trrw - (avatar_size+diam*2))
+    size_w = int(w-diam*2-g_a_s-trw-trrw - (avatar_size))
     draw = ImageDraw.Draw(img)
-    f_size = 50
+    f_size = 40
     
-    while f_size > 35:
-        font = ImageFont.truetype('Roboto-Medium.ttf', f_size)
+    while f_size > 21:
+        font = ImageFont.truetype('Roboto-Medium.ttf', f_size, encoding="utf-8")
         tuw, tuh = draw.textsize(text, font=font)
         if tuw <= size_w:
             break
@@ -153,7 +155,7 @@ def create_rank_card(user_avatar,
         text += '...'
         tuw, tuh = draw.textsize(text, font=font)
         
-    draw.text((avatar_size+diam*2, int(avatar_size/2 + diam + diam/2-tdh-tuh-d)), text,
+    draw.text((avatar_size+diam, int(g_a_s + diam/2-tdh-tuh-d)), text,
               fill = "white", font = font)
 
     # save PNG in buffer

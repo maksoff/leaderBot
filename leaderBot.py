@@ -432,16 +432,17 @@ class state_machine_class():
         # find user.id and user
         message = msg.content.strip().split(' ')
         if len(message) == 1:
+            user = msg.author
             user_id = msg.author.id
         else:
             user_id = s.get_int(message[1])
             
-        try:
-            user = await s.client.fetch_user(user_id)
-        except Exception as e:
-            print(e)
-            return 'User not found. Maybe invite him?'
-    
+            try:
+                user = await s.client.fetch_user(user_id)
+            except Exception as e:
+                print(e)
+                return 'User not found. Maybe invite him?'
+
         # get player info from json
         player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
         if player:
