@@ -312,7 +312,7 @@ class state_machine_class():
                                                  'sChallengeTypeName':sChallengeTypeName,
                                                  'iSubmissionId':iSubmissionId,
                                                  'fScore':fScore})
-            s.json_data.calculate_rating()
+            #s.json_data.calculate_rating()
             response = await s.update_all(message)
             return response
         except Exception as e:
@@ -443,6 +443,11 @@ class state_machine_class():
                 print(e)
                 return 'User not found. Maybe invite him?'
 
+##        guild = s.client.get_guild(s.guild_id)
+##        print(guild)
+##        member = guild.get_member(user_id)
+##        print(member)
+
         # get player info from json
         player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
         if player:
@@ -472,7 +477,7 @@ class state_machine_class():
 
         buffer = rankDisplay.create_rank_card(user_avatar,
                                               guild_avatar,
-                                              user.name,
+                                              user.display_name,
                                               user.discriminator,
                                               points,
                                               max_points,
