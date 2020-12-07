@@ -176,6 +176,8 @@ def create_rank_card(user_avatar,
     },
     '''
 def create_top_card(the_top, limit):
+    if not the_top:
+        return
     step = 72
     diam = 20
     avatar_size = 64
@@ -193,9 +195,12 @@ def create_top_card(the_top, limit):
     draw = ImageDraw.Draw(img) 
     #draw.rectangle([(0, 0), (w, h)], fill =background)
 
-    max_w = max(draw.textsize(' ' + str(p.get('iRank'))+'.', font=font)[0] for p in the_top)
-    max_wp = max(draw.textsize(str(p.get('iPoints')), font=font)[0] for p in the_top)
-    print(max_w)
+    max_w = max(draw.textsize(' ' + str(p.get('iRank'))+'.', font=font50)[0] for p in the_top)
+    max_wp = max(draw.textsize(str(p.get('iPoints')), font=font20)[0] for p in the_top)
+
+    w = max_w + step + diam + bar + diam + max_wp + 5
+    h = step * len(the_top)
+    print(max_w, max_wp, w, h)
     print(the_top)
     return
     
