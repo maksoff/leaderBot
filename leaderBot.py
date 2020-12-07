@@ -26,6 +26,21 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 ROLE  = os.getenv('DISCORD_ROLE')
 CHANNEL = os.getenv('DISCORD_CHANNEL')
 
+
+def deepcopy(temp):
+    ret = None
+    if type(temp) is dict:
+        ret = {}
+        for key, val in temp.items():
+            ret[key] = deepcopy(val)
+    elif type(temp) is list:
+        ret = []
+        for val in temp:
+            ret.append(deepcopy(val))
+    else:
+        return str(temp)
+    return ret
+
 class state_machine_class():
     guild_id = None
     leaderboard_channel_id = None
@@ -485,6 +500,47 @@ class state_machine_class():
                                               len(s.json_data.j['aPlayer']))
         await msg.channel.send(file=discord.File(buffer, 'rank.png'))
         return None
+
+    async def top_img(s, msg, leaderboard=False):
+        data = []
+        limit = 5
+        if len(msg.content.strip().split(' ')) > 1:
+            try:
+                limit = int(msg.content.split(' ')[1])
+            except:
+                ...
+        if leaderboard:
+            limit = 0
+            
+        s.json_data.calculate_rating()
+        players = sorted(s.json_data.j['aPlayer'], key=lambda x: float(x.get('iPoints')), reverse=True)
+        if not players:
+            return 'no submissions'
+        for player in players:
+            if limit:
+                if player.get('iRank') > limit:
+                    break
+            user_id = player.get('iID', None)
+            user = await s.client.fetch_user(user_id)
+            #get avatar & channel icon    
+            AVATAR_SIZE = 128
+            try:
+                avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
+                user_avatar = io.BytesIO(await avatar_asset.read())
+            except Exception as e:
+                print(e)
+                user_avatar = None
+
+            player = deepcopy(player)
+            player['avatar'] = user_avatar
+            data.append(player)
+
+        
+        buffer = rankDisplay.create_top_card(data, limit)
+        if buffer:
+            await msg.channel.send(file=discord.File(buffer, 'top.png'))
+        return 'Test'
+        
         
     async def get_top(s, msg):
         limit = 7
@@ -501,6 +557,7 @@ class state_machine_class():
         await msg.channel.send(embed=embed)
 
     async def post(s, *args):
+        return '***'
         data = None
         if len(args) == 0:
             try:
@@ -521,19 +578,6 @@ class state_machine_class():
                 data = ''
 
         if data == None:    
-            def deepcopy(temp):
-                ret = None
-                if type(temp) is dict:
-                    ret = {}
-                    for key, val in temp.items():
-                        ret[key] = deepcopy(val)
-                elif type(temp) is list:
-                    ret = []
-                    for val in temp:
-                        ret.append(deepcopy(val))
-                else:
-                    return str(temp)
-                return ret
             await s.update_usernames()
             payload = deepcopy(s.json_data.j)            
             payload['iGuildID'] = s.guild_id
@@ -609,26 +653,27 @@ class state_machine_class():
     def create_help (s, *args):
 
         s.user_commands = (
-                              ('?help', 'prints this message', s.user_help),
-                              ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
-                              ('?top', 'leaderboard; add number to limit positions `?top 3`', s.get_top),
-                              ('?leaderboard', 'same as `?top`', s.get_top),
-                              ('?ksp', 'random ksp loading hint', s.ksp),
+                              #('?help', 'prints this message', s.user_help),
+                              ('?rnk', 'your rank; `?rank @user` to get @user rank', s.rank_img),
+                              ('?tp', 'leaderboard; add number to limit positions `?top 3`', s.get_top),
+                              ('?tg', 'test', s.top_img),
+                              #('?leaderboard', 'same as `?top`', s.get_top),
+                              #('?ksp', 'random ksp loading hint', s.ksp),
                           )
         
-        s.commands = (('?help', 'prints this message', s.admin_help),
-                      ('?ping', 'bot latency', s.ping),
-                      ('?add', 'to add new submission', s.add_submission),
-                      ('?static points', 'add points (e.g. giveaways)', s.add_points),
-                      ('?update', 'force leaderboard update', s.update_all),
-                      ('?print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
-                      ('?set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
-                      ('?set winners', 'set in which channel to post winners for challenge', s.set_challenge_channel),
-                      ('?export json', 'exports data in json', s.json_exp),
-                      ('?import json', 'imports data from json', s.json_imp),
-                      ('?delete json', 'clears all you data from server', s.json_del),
-                      ('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
-                      ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
+        s.commands = (#('?help', 'prints this message', s.admin_help),
+                      ('?png', 'bot latency', s.ping),
+                      #('?add', 'to add new submission', s.add_submission),
+                      #('?static points', 'add points (e.g. giveaways)', s.add_points),
+                      #('?update', 'force leaderboard update', s.update_all),
+                      #('?print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
+                      #('?set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
+                      #('?set winners', 'set in which channel to post winners for challenge', s.set_challenge_channel),
+                      ('?exp json', 'exports data in json', s.json_exp),
+                      ('?imp json', 'imports data from json', s.json_imp),
+                      ('?del json', 'clears all you data from server', s.json_del),
+                      #('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
+                      #('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
                       #('?rank', 'test ranking', s.rank_img),
                       )
     
@@ -653,6 +698,9 @@ sm = {}
 @client.event
 async def on_ready():
     for guild in client.guilds:
+        print(guild.id)
+        if guild.id != 779778238091624448:
+            continue
         sm[guild.id] = state_machine_class(client, guild.id)
         await sm[guild.id].update_lb()
         await sm[guild.id].update_winners()
@@ -663,7 +711,9 @@ async def on_ready():
         )
 
 @client.event
-async def on_message(message):             
+async def on_message(message):
+    if message.guild.id != 779778238091624448:
+        return
     if message.author == client.user:
         return
     await sm[message.guild.id](message)
