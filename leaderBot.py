@@ -399,8 +399,14 @@ class state_machine_class():
                 challenge = s.json_data.find(s.json_data.j['aChallenge'], sName=sub)
                 idChannel = challenge.get('idChannel')
                 idMessage = challenge.get('idMessage')
+                
+                embed = discord.Embed()
+                embed.add_field(name='Submissions for this challenge',
+                    value=s.json_data.result_challenge(sub, ignoreScore=True))
+                
                 if idChannel and idMessage:
-                    await s.update(idChannel, idMessage, s.json_data.result_challenge(sub))
+                    msg = await s.get_message(idChannel, idMessage)
+                    await msg.edit(content='', embed=embed)
             except Exception as e:
                 print(e)
     
@@ -742,10 +748,9 @@ class state_machine_class():
         s.user_commands = (
                               ('?help', 'prints this message', s.user_help),
                               ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
-                              ('?top', 'leaderboard; add number to limit positions `?top 3`', s.get_top),
-                              ('?leaderboard', 'same as `?top`', s.get_top),
+                              ('?top', 'leaderboard; add number to limit positions `?top 3`', s.top_img),
+                              ('?leaderboard', 'same as `?top`', s.top_img),
                               ('?ksp', 'random ksp loading hint', s.ksp),
-                              ('?ttop', 'test top', s.top_img),
                           )
         
         s.commands = (('?help', 'prints this message', s.admin_help),
@@ -763,7 +768,6 @@ class state_machine_class():
                       ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
                       ('?disable user', 'to hide user from leaderboard', s.disable),
                       ('?enable user', 'to reenable user to leaderboard', s.enable),
-                      ('?tupd', 'test update', s.update_lb_img),
                       )
     
     def __init__(s, client, guild_id):
