@@ -504,7 +504,7 @@ class state_machine_class():
         await msg.channel.send(file=discord.File(buffer, 'rank.png'))
         return None
 
-    async def top_img(s, *msg, leaderboard=False):
+    async def top_img(s, *msg, leaderboard=False, content=None):
         data = []
         limit = 5
         if msg:
@@ -540,11 +540,11 @@ class state_machine_class():
             player['avatar'] = user_avatar
             data.append(player)
 
-        
+        content = "Top {}".format(limit)
         buffer = rankDisplay.create_top_card(data)
         if buffer:
-            await msg.channel.send(file=discord.File(buffer, 'top.png'))
-        return 'Test'
+            await msg.channel.send(content=content, file=discord.File(buffer, 'top.png'))
+        return
         
         
     async def get_top(s, msg):

@@ -181,9 +181,9 @@ def create_top_card(the_top):
     
     w, h = 700, 700
 
-    fontB = ImageFont.truetype('Roboto-Medium.ttf', 40, encoding="utf-8")
+    fontB = ImageFont.truetype('Roboto-Medium.ttf', 36, encoding="utf-8")
     fontM = ImageFont.truetype('Roboto-Medium.ttf', 28, encoding="utf-8")
-    fontS = ImageFont.truetype('Roboto-Medium.ttf', 20, encoding="utf-8")
+    fontS = ImageFont.truetype('Roboto-Medium.ttf', 24, encoding="utf-8")
     # creating new Image object 
     img = Image.new("RGB", (w, h)) 
 
@@ -195,8 +195,8 @@ def create_top_card(the_top):
 
     max_p = max(int(p.get('iPoints')) for p in the_top)
 
-    w = max_w + step + diam + bar + diam + max_wp + 5
-    user_w = w - max_w - step
+    w = max_w + step + diam + bar + diam + max_wp + diam//2
+    user_w = w - max_w - step - diam
     h = step * len(the_top)
     
     # creating new Image object 
@@ -224,11 +224,21 @@ def create_top_card(the_top):
                      bar * int(p.get('iPoints')) / max_p, diam, cian)
 
         # add score
-        t_w, t_h = draw.textsize(str(p.get('iPoints')))     
+        t_w, t_h = draw.textsize(str(p.get('iPoints')), font=fontS)     
         draw.text((max_w + step + diam + bar * int(p.get('iPoints')) / max_p + diam,
-                   int(step * i + step*3/4 - t_h)),
+                   int(step * i + step*3/4 - t_h/2)),
                    str(p.get('iPoints')), fill = grey_text, font = fontS)
-        
+
+        # add username & discriminator
+        disc = ' #' + str(p.get('iDiscriminator'))
+        name = str(p.get('sName'))
+        d_w, d_h = draw.textsize(disc, font=fontS)
+        u_w, u_h = draw.textsize(name, font=fontM)
+        while u_w > user_w - d_w:
+            name = name[:-4] + '...'
+            u_w, u_h = draw.textsize(name, font=fontM)
+        draw.text((max_w + step + diam, step*i + (step/2 - u_h)//2), name, fill="white", font=fontM)
+        draw.text((max_w + step + diam + u_w, step*i + (step/2 + u_h)//2-d_h), disc, fill=grey_text, font=fontS)
         
     
     # save PNG in buffer
