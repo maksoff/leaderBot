@@ -45,6 +45,8 @@ class json_class():
     def result_leaderboard(s):
         responce = '**Actual ranking**\n'
         for p in sorted(s.j['aPlayer'], key = lambda i: i['iPoints'], reverse = True):
+            if p.get('bDisabled'):
+                continue
             user = p.get('iID', None)
             if user:
                 user = '<@{}>'.format(user)
@@ -108,11 +110,10 @@ class json_class():
         if player:
             rank = player.get('iRank', None)
             points = player.get('iPoints', None)
-        if player and rank and points:
-            
+        if player and rank and points:    
             return 'Ranked **{}**{} (out of {} members) with **{}** points'.format(rank, s.suffix(rank), len(s.j['aPlayer']), points)
         else:
-            return 'You need to earn some points. Submit some challenges!'
+            return 'Still no points. Submit some challenges!'
 
         
     def get_top(s, limit = 10):
@@ -121,6 +122,8 @@ class json_class():
         if not players:
             return 'no submissions'
         for player in players:
+            if player.get('bDisabled'):
+                continue
             user = player.get('iID', None)
             if user:
                 user = '<@{}>'.format(user)
@@ -128,7 +131,9 @@ class json_class():
                 user = '@' + player.get('sName')
             rank = player.get('iRank')
             points = player.get('iPoints')
-            if rank > limit: break
+            if limit:
+                if rank > limit:
+                    break
             if player and rank and points:
                 responce += '\n**{:4}.** {} with **{}** points'.format(rank, user, points)
         return responce
@@ -183,7 +188,11 @@ class json_class():
         
         curRank = None
         lastPoints = None
-        for i, p in enumerate(s.j['aPlayer'], 1):
+        i = 0
+        for p in s.j['aPlayer']:
+            if p.get('bDisabled'):
+                continue
+            i += 1
             if p['iPoints'] != lastPoints:
                 lastPoints = p['iPoints']
                 curRank = i

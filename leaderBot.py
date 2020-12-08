@@ -25,6 +25,24 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 ROLE  = os.getenv('DISCORD_ROLE')
 CHANNEL = os.getenv('DISCORD_CHANNEL')
+DEBUG_CH = os.getenv('DISCORD_DEBUG_CH')
+if DEBUG_CH:
+    DEBUG_CH = int(DEBUG_CH)
+
+
+def deepcopy(temp):
+    ret = None
+    if type(temp) is dict:
+        ret = {}
+        for key, val in temp.items():
+            ret[key] = deepcopy(val)
+    elif type(temp) is list:
+        ret = []
+        for val in temp:
+            ret.append(deepcopy(val))
+    else:
+        return str(temp)
+    return ret
 
 class state_machine_class():
     guild_id = None
@@ -203,7 +221,7 @@ class state_machine_class():
             await s.send(message.channel, 'Wrong parameter count')
             return 
 
-    async def ask_for_user_id(s, message):
+    async def ask_for_user_id(s, message, no_creation=False):
         '''returns user_id or None if failed, creates user if new'''
         await s.send(message.channel, 'Please enter user (e.g. @best_user) or user id:')
         
@@ -222,6 +240,9 @@ class state_machine_class():
             if player:
                 await s.send(message.channel,  'Existing user')
             else:
+                if no_creation:
+                    await s.send(message.channel, 'No user with this id found. Aborting')
+                    return
                 await s.send(message.channel, '**New** user, cool!')
                 s.json_data.j['aPlayer'].append({'sName':user.name, 'iDiscriminator': user.discriminator,
                                                  'iID':user_id})
@@ -378,8 +399,14 @@ class state_machine_class():
                 challenge = s.json_data.find(s.json_data.j['aChallenge'], sName=sub)
                 idChannel = challenge.get('idChannel')
                 idMessage = challenge.get('idMessage')
+                
+                embed = discord.Embed()
+                embed.add_field(name='Submissions for this challenge',
+                    value=s.json_data.result_challenge(sub, ignoreScore=True))
+                
                 if idChannel and idMessage:
-                    await s.update(idChannel, idMessage, s.json_data.result_challenge(sub))
+                    msg = await s.get_message(idChannel, idMessage)
+                    await msg.edit(content='', embed=embed)
             except Exception as e:
                 print(e)
     
@@ -388,7 +415,21 @@ class state_machine_class():
             s.json_data.calculate_rating()
             s.save_json()
             await s.post()
-            return await s.update(s.leaderboard_channel_id, s.leaderboard_message_id, s.json_data.result_leaderboard())
+
+            name, value = s.json_data.result_leaderboard().split('\n', 1)
+            
+            embed = discord.Embed()
+            embed.add_field(name=name, value=value)
+            
+            msg = await s.get_message(s.leaderboard_channel_id, s.leaderboard_message_id)
+            try:
+                await msg.edit(content='', embed=embed)
+                await s.update_lb_img()
+                return 'updated'
+            except Exception as e:
+                print(e)
+                return 'something wrong'
+            
         except Exception as e:
             print(e)
             return 'something wrong'
@@ -485,22 +526,108 @@ class state_machine_class():
                                               len(s.json_data.j['aPlayer']))
         await msg.channel.send(file=discord.File(buffer, 'rank.png'))
         return None
+
+    
+    
+    async def update_lb_img(s, *args):
+        try:
+            s.json_data.calculate_rating()
+            try:
+                channel_id = s.leaderboard_channel_id
+                if not channel_id:
+                    return 'please configure `?set leaderboard`'
+                channel = client.get_channel(channel_id)
+                message_id = s.json_data.j.get('iLeaderboardImage')
+                if message_id:
+                    message = await channel.fetch_message(message_id)
+                    await message.delete()
+                buffer = await s.get_top_img(0)
+                message = await channel.send(content = 'click to enlarge', file=discord.File(buffer, 'lb.png'))
+                s.json_data.j['iLeaderboardImage'] = message.id
+                s.save_json()
+                return 'updated'
+            except Exception as e:
+                raise e
+                return 'something wrong'
+
+        except Exception as e:
+            raise e
+            return 'something wrong'
+
+    async def get_top_img(s, limit):
+        s.json_data.calculate_rating()
+        players = sorted(s.json_data.j['aPlayer'], key=lambda x: float(x.get('iPoints')), reverse=True)
+        if not players:
+            return
+        data = []
+        for player in players:
+            if player.get('bDisabled'):
+                continue
+            if limit:
+                if player.get('iRank') > limit:
+                    break
+            user_id = player.get('iID', None)
+            user = await s.client.fetch_user(user_id)
+            #get avatar & channel icon    
+            AVATAR_SIZE = 128
+            try:
+                avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
+                user_avatar = io.BytesIO(await avatar_asset.read())
+            except Exception as e:
+                print(e)
+                user_avatar = None
+
+            player = deepcopy(player)
+            player['avatar'] = user_avatar
+            data.append(player)
+        buffer = rankDisplay.create_top_card(data)
+        return buffer
         
-    async def get_top(s, msg):
+
+    async def top_img(s, *msg, leaderboard=False, content=None):
+        limit = 7
+        if msg:
+            msg = msg[0]
+        if len(msg.content.strip().split(' ')) > 1:
+            try:
+                limit = int(msg.content.split(' ')[1])
+            except:
+                ...
+        if leaderboard:
+            limit = 0
+            
+        if not leaderboard and not content:
+            content = f"Full leaderboard: <#{s.leaderboard_channel_id}>\n**Top {limit}**"
+            if limit > 7:
+                content += " (click to enlarge)"
+        buffer = await s.get_top_img(limit)
+        if buffer:
+            await msg.channel.send(content=content, file=discord.File(buffer, 'top.png'))
+        else:
+            return "no submissions found"
+        return
+        
+        
+    async def get_top(s, msg, full_list=False):
         limit = 7
         if len(msg.content.strip().split(' ')) > 1:
             try:
                 limit = int(msg.content.split(' ')[1])
             except:
                 ...
+        if full_list:
+            limit = 0
         response = s.json_data.get_top(limit)
         if s.leaderboard_channel_id:
             response += '\n\nFull list: <#' + str(s.leaderboard_channel_id) + '>'
         embed = discord.Embed()
+        if not limit:
+            limit = 'ALL'
         embed.add_field(name='TOP '+str(limit), value=response)
         await msg.channel.send(embed=embed)
 
     async def post(s, *args):
+        return '***'
         data = None
         if len(args) == 0:
             try:
@@ -521,19 +648,6 @@ class state_machine_class():
                 data = ''
 
         if data == None:    
-            def deepcopy(temp):
-                ret = None
-                if type(temp) is dict:
-                    ret = {}
-                    for key, val in temp.items():
-                        ret[key] = deepcopy(val)
-                elif type(temp) is list:
-                    ret = []
-                    for val in temp:
-                        ret.append(deepcopy(val))
-                else:
-                    return str(temp)
-                return ret
             await s.update_usernames()
             payload = deepcopy(s.json_data.j)            
             payload['iGuildID'] = s.guild_id
@@ -561,6 +675,29 @@ class state_machine_class():
             s.json_data.j['sPOSTURL'] = data[1]
             s.save_json()
             return 'Auto-POST URL updated'
+
+    async def disable(s, msg):
+        await s.get_top(msg, full_list=True)
+        user_id = await s.ask_for_user_id(msg, no_creation=True)
+        if not user_id:
+            return
+        s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)['bDisabled']=True
+        s.save_json()
+        await msg.channel.send('Disabled.')
+        return await s.update_all(msg)
+
+    async def enable(s, msg):
+        responce = 'Disabled players:'
+        for p in s.json_data.j['aPlayer']:
+            if p.get('bDisabled'):
+                responce += f'\n<@{p.get("iID")}>'
+        responce += '\n**Who should be reenabled?**'
+        await msg.channel.send(responce)
+        user_id = await s.ask_for_user_id(msg, no_creation=True)
+        s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)['bDisabled']=False
+        s.save_json()
+        await msg.channel.send('Enabled.')
+        return await s.update_all(msg)
 
     async def ksp(s, *args):
         if not s.ksp_hints:
@@ -611,8 +748,8 @@ class state_machine_class():
         s.user_commands = (
                               ('?help', 'prints this message', s.user_help),
                               ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
-                              ('?top', 'leaderboard; add number to limit positions `?top 3`', s.get_top),
-                              ('?leaderboard', 'same as `?top`', s.get_top),
+                              ('?top', 'leaderboard; add number to limit positions `?top 3`', s.top_img),
+                              ('?leaderboard', 'same as `?top`', s.top_img),
                               ('?ksp', 'random ksp loading hint', s.ksp),
                           )
         
@@ -629,7 +766,8 @@ class state_machine_class():
                       ('?delete json', 'clears all you data from server', s.json_del),
                       ('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
                       ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
-                      #('?rank', 'test ranking', s.rank_img),
+                      ('?disable user', 'to hide user from leaderboard', s.disable),
+                      ('?enable user', 'to reenable user to leaderboard', s.enable),
                       )
     
     def __init__(s, client, guild_id):
@@ -653,6 +791,9 @@ sm = {}
 @client.event
 async def on_ready():
     for guild in client.guilds:
+        if DEBUG_CH:
+            if guild.id != DEBUG_CH:
+                continue
         sm[guild.id] = state_machine_class(client, guild.id)
         await sm[guild.id].update_lb()
         await sm[guild.id].update_winners()
@@ -663,7 +804,12 @@ async def on_ready():
         )
 
 @client.event
-async def on_message(message):             
+async def on_message(message):
+    if DEBUG_CH:
+        if message.guild.id != DEBUG_CH:
+            return
+    if message.author.bot:
+        return
     if message.author == client.user:
         return
     await sm[message.guild.id](message)
