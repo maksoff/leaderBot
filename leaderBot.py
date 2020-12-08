@@ -274,7 +274,8 @@ class state_machine_class():
             await s.send(message.channel, 'Select channel to post winners (e.g. `#winners-42`)')
             message = await s.wait_response(message)
             if not message:
-                return 'aborted'
+                await message.channel.send('aborted')
+                return
             channel_id = s.get_int(message.content)
             channel = client.get_channel(channel_id)
             msg = await channel.send('Here will be winners published')
