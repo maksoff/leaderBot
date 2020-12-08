@@ -27,10 +27,6 @@ def create_ebar(draw, x, y, length, diam, color):
                   bar[0][0]+diam/2, bar[0][1]], fill=color)
     draw.ellipse([bar[1][0]-diam/2, bar[1][1],
                   bar[1][0]+diam/2, bar[1][1]+diam], fill=color)
-    
-def create_earc(draw, x, y, length, diam):
-    bar = [(x+length, y+diam/2), (x+length+diam/2, y-diam/2)]
-    draw.arc(bar, 180, 0, 'black')
 
 def place_avatar(image, avatar, x, y, diam, avatar_size = avatar_size, circle=True):
     if not avatar:
@@ -175,7 +171,7 @@ def create_rank_card(user_avatar,
         "avatar":....
     },
     '''
-def create_top_card(the_top, limit):
+def create_top_card(the_top):
     if not the_top:
         return
     step = 72
@@ -185,37 +181,59 @@ def create_top_card(the_top, limit):
     
     w, h = 700, 700
 
-    font50 = ImageFont.truetype('Roboto-Medium.ttf', 50, encoding="utf-8")
-    font28 = ImageFont.truetype('Roboto-Medium.ttf', 28, encoding="utf-8")
-    font20 = ImageFont.truetype('Roboto-Medium.ttf', 20, encoding="utf-8")
+    fontB = ImageFont.truetype('Roboto-Medium.ttf', 40, encoding="utf-8")
+    fontM = ImageFont.truetype('Roboto-Medium.ttf', 28, encoding="utf-8")
+    fontS = ImageFont.truetype('Roboto-Medium.ttf', 20, encoding="utf-8")
     # creating new Image object 
     img = Image.new("RGB", (w, h)) 
 
     # create rectangle background 
     draw = ImageDraw.Draw(img) 
-    #draw.rectangle([(0, 0), (w, h)], fill =background)
 
-    max_w = max(draw.textsize(' ' + str(p.get('iRank'))+'.', font=font50)[0] for p in the_top)
-    max_wp = max(draw.textsize(str(p.get('iPoints')), font=font20)[0] for p in the_top)
+    max_w = max(draw.textsize(' ' + str(p.get('iRank'))+'.', font=fontB)[0] for p in the_top)
+    max_wp = max(draw.textsize(str(p.get('iPoints')), font=fontS)[0] for p in the_top)
+
+    max_p = max(int(p.get('iPoints')) for p in the_top)
 
     w = max_w + step + diam + bar + diam + max_wp + 5
+    user_w = w - max_w - step
     h = step * len(the_top)
-    print(max_w, max_wp, w, h)
-    print(the_top)
-    return
     
+    # creating new Image object 
+    img = Image.new("RGB", (w, h)) 
 
+    # create rectangle background 
+    draw = ImageDraw.Draw(img) 
+    draw.rectangle([(0, 0), (w, h)], fill=background)
 
-### get a font
-##fnt = ImageFont.truetype("arial.ttf", 40)
-### get a drawing context
-##d = ImageDraw.Draw(base)
-##
-### draw text, half opacity
-##d.text((10,10), "Hello", font=fnt, fill=(255,255,255,128))
-### draw text, full opacity
-##d.text((10,60), "World", font=fnt, fill=(255,255,255,255))
-##
-##out = Image.alpha_composite(base, d)
+    # add table
+    for i, p in enumerate(the_top):
+        # add nr
+        nr = ' ' + str(p.get('iRank'))+'.'
+        t_w, t_h = draw.textsize(nr, font=fontB)
+        draw.text((max_w-t_w, (step-t_h)//2 + step*i), nr,
+                  fill = "white", font = fontB)
 
-#img.show() 
+        # add avatar
+        place_avatar(img, p.get('avatar'), max_w + (step-avatar_size)//2,
+                     (step-avatar_size)//2 + i * step, diam,
+                     avatar_size = avatar_size, circle=True)
+
+        # add bar
+        create_ebar (draw, max_w + step + diam, step * i + step * 3 / 4,
+                     bar * int(p.get('iPoints')) / max_p, diam, cian)
+
+        # add score
+        t_w, t_h = draw.textsize(str(p.get('iPoints')))     
+        draw.text((max_w + step + diam + bar * int(p.get('iPoints')) / max_p + diam,
+                   int(step * i + step*3/4 - t_h)),
+                   str(p.get('iPoints')), fill = grey_text, font = fontS)
+        
+        
+    
+    # save PNG in buffer
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    return buffer
+    

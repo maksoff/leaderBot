@@ -25,6 +25,9 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 ROLE  = os.getenv('DISCORD_ROLE')
 CHANNEL = os.getenv('DISCORD_CHANNEL')
+DEBUG_CH = os.getenv('DISCORD_DEBUG_CH')
+if DEBUG_CH:
+    DEBUG_CH = int(DEBUG_CH)
 
 
 def deepcopy(temp):
@@ -501,9 +504,11 @@ class state_machine_class():
         await msg.channel.send(file=discord.File(buffer, 'rank.png'))
         return None
 
-    async def top_img(s, msg, leaderboard=False):
+    async def top_img(s, *msg, leaderboard=False):
         data = []
         limit = 5
+        if msg:
+            msg = msg[0]
         if len(msg.content.strip().split(' ')) > 1:
             try:
                 limit = int(msg.content.split(' ')[1])
@@ -536,7 +541,7 @@ class state_machine_class():
             data.append(player)
 
         
-        buffer = rankDisplay.create_top_card(data, limit)
+        buffer = rankDisplay.create_top_card(data)
         if buffer:
             await msg.channel.send(file=discord.File(buffer, 'top.png'))
         return 'Test'
@@ -653,28 +658,27 @@ class state_machine_class():
     def create_help (s, *args):
 
         s.user_commands = (
-                              #('?help', 'prints this message', s.user_help),
-                              ('?rnk', 'your rank; `?rank @user` to get @user rank', s.rank_img),
-                              ('?tp', 'leaderboard; add number to limit positions `?top 3`', s.get_top),
-                              ('?tg', 'test', s.top_img),
-                              #('?leaderboard', 'same as `?top`', s.get_top),
-                              #('?ksp', 'random ksp loading hint', s.ksp),
+                              ('?help', 'prints this message', s.user_help),
+                              ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
+                              ('?top', 'leaderboard; add number to limit positions `?top 3`', s.get_top),
+                              ('?leaderboard', 'same as `?top`', s.get_top),
+                              ('?ksp', 'random ksp loading hint', s.ksp),
                           )
         
-        s.commands = (#('?help', 'prints this message', s.admin_help),
-                      ('?png', 'bot latency', s.ping),
-                      #('?add', 'to add new submission', s.add_submission),
-                      #('?static points', 'add points (e.g. giveaways)', s.add_points),
-                      #('?update', 'force leaderboard update', s.update_all),
-                      #('?print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
-                      #('?set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
-                      #('?set winners', 'set in which channel to post winners for challenge', s.set_challenge_channel),
-                      ('?exp json', 'exports data in json', s.json_exp),
-                      ('?imp json', 'imports data from json', s.json_imp),
-                      ('?del json', 'clears all you data from server', s.json_del),
-                      #('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
-                      #('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
-                      #('?rank', 'test ranking', s.rank_img),
+        s.commands = (('?help', 'prints this message', s.admin_help),
+                      ('?ping', 'bot latency', s.ping),
+                      ('?add', 'to add new submission', s.add_submission),
+                      ('?static points', 'add points (e.g. giveaways)', s.add_points),
+                      ('?update', 'force leaderboard update', s.update_all),
+                      ('?print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
+                      ('?set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
+                      ('?set winners', 'set in which channel to post winners for challenge', s.set_challenge_channel),
+                      ('?export json', 'exports data in json', s.json_exp),
+                      ('?import json', 'imports data from json', s.json_imp),
+                      ('?delete json', 'clears all you data from server', s.json_del),
+                      ('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
+                      ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
+                      ('?ttop', 'test top', s.top_img),
                       )
     
     def __init__(s, client, guild_id):
@@ -698,9 +702,9 @@ sm = {}
 @client.event
 async def on_ready():
     for guild in client.guilds:
-        print(guild.id)
-        if guild.id != 779778238091624448:
-            continue
+        if DEBUG_CH:
+            if guild.id != DEBUG_CH:
+                continue
         sm[guild.id] = state_machine_class(client, guild.id)
         await sm[guild.id].update_lb()
         await sm[guild.id].update_winners()
@@ -712,7 +716,10 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    if message.guild.id != 779778238091624448:
+    if DEBUG_CH:
+        if message.guild.id != DEBUG_CH:
+            return
+    if message.author.bot:
         return
     if message.author == client.user:
         return
