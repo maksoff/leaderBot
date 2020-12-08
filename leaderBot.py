@@ -680,7 +680,7 @@ class state_machine_class():
         await s.get_top(msg, full_list=True)
         user_id = await s.ask_for_user_id(msg, no_creation=True)
         if not user_id:
-            return
+            return 'aborted'
         s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)['bDisabled']=True
         s.save_json()
         await msg.channel.send('Disabled.')
@@ -694,6 +694,8 @@ class state_machine_class():
         responce += '\n**Who should be reenabled?**'
         await msg.channel.send(responce)
         user_id = await s.ask_for_user_id(msg, no_creation=True)
+        if not user_id:
+            return 'aborted'
         s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)['bDisabled']=False
         s.save_json()
         await msg.channel.send('Enabled.')
