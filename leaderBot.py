@@ -71,7 +71,7 @@ class state_machine_class():
         elif val in ('no', 'n', 'false', 'f', '0', 'disable', 'off'):
             return False
 
-    async def wait_response(s, message, timeout=30):
+    async def wait_response(s, message, timeout=60):
         '''returns message or None if timeout'''
         try:
             def check(m):
@@ -278,7 +278,7 @@ class state_machine_class():
         '''asks for points or saves new point systems. None if error'''
         response = 'Available scoring systems:'
         # get all points in challenges
-        aPoints = {}
+        aPoints = set()
         aPoints.add(s.json_data.aPoint)
         for ch in s.json_data.j['aChallenge']:
             ap = ch.get('aPoints')
@@ -287,8 +287,8 @@ class state_machine_class():
         aPoints = sorted(aPoints, reverse=True)
         for i, a in enumerate(aPoints, 1):
             a = ['{:g}'.format(float(x)) for x in a]
-            response += '\n{:4}: `'.format(i) + '`, `'.join(a) + '`'
-        response += '\nEnter number, or new point sequence (e.g. `10 6 4 3.14 1`)'
+            response += '\n{:4}: `'.format(i) + '` `'.join(a) + '`'
+        response += '\nEnter number (e.g. `1`), or new point sequence (e.g. `10 6 4 3.14 1`)'
         await s.send(message.channel, response)
         message = await s.wait_response(message)
         if not message:
@@ -296,7 +296,7 @@ class state_machine_class():
         ar = message.content.split(' ')
         if len(ar)==1:
             return aPoints[int(ar[0])-1]
-        return [float(x) for x in ar]
+        return sorted([float(x) for x in ar], reverse=True)
         
 
 
@@ -318,6 +318,7 @@ class state_machine_class():
             if not change_existing_channel: return ('Done: ' if change_existing_channel else '') + sChallengeName 
         else:
             await s.send(message.channel, '**New** challenge, cool!')
+            
         try:
             await s.send(message.channel, 'Select channel to post winners (e.g. `#winners-42`)')
             message = await s.wait_response(message)
@@ -328,22 +329,28 @@ class state_machine_class():
             channel = client.get_channel(channel_id)
             msg = await channel.send('Here will be winners published')
             message_id = msg.id
+            
             await s.send(message.channel, 'Show score for this challenge in #winners? (yes/no)')
             message = await s.wait_response(message)
             if not message:
                 await message.channel.send('aborted')
                 return
             bShowScore = s.yes_no(message.content)
+            
             if sChallengeName in s.json_data.list_of_challenges():
                 sC = s.json_data.find(s.json_data.j['aChallenge'], sName=sChallengeName)
                 sC['idChannel'] = channel_id
                 sC['idMessage'] = message_id
                 sC['bShowScore'] = bShowScore
             else:
-                s.json_data.j['aChallenge'].append({'sName':sChallengeName,
-                                                     'idChannel':channel_id,
-                                                     'idMessage':message_id,
-                                                     'bShowScore': bShowScore})
+                aPoints = await s.get_points_for_channel(message)
+                if not aPoints:
+                    return
+                s.json_data.j['aChallenge'].append({'sName': sChallengeName,
+                                                    'idChannel': channel_id,
+                                                    'idMessage': message_id,
+                                                    'bShowScore': bShowScore,
+                                                    'aPoints': aPoints})
             s.save_json()
             await s.update_winners(sChallengeName=sChallengeName)
             return ('Done: ' if change_existing_channel else '') + sChallengeName 
@@ -484,7 +491,7 @@ class state_machine_class():
                 if DEBUG:
                     raise e
                 else:
-                    print(e)
+                    print('update_winners\n', e)
     
     async def update_lb(s, *args):
         try:
