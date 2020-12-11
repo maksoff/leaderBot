@@ -3,7 +3,7 @@ import json
 class json_class():
     j = None
     iVersion = 11
-    aPoint = (10, 6, 4, 2, 1)
+    aPoint = (10.0, 6.0, 4.0, 2.0, 1.0)
     oRankByChallenge = {}
 
     @staticmethod
@@ -22,8 +22,10 @@ class json_class():
             key, val = key_val
             return next((item for item in dicts if item[key] == val), None)
     
-    def getPoints(s, n):
-        return s.aPoint[n] if n < len(s.aPoint) else 0
+    def getPoints(s, n, points=None):
+        if not points:
+            points = s.aPoint
+        return points[n] if n < len(points) else 0
     
     def get_lb_message(s):
         return s.j['iLeaderboardChannel'], s.j['iLeaderboardMessage']
@@ -52,7 +54,7 @@ class json_class():
                 user = '<@{}>'.format(user)
             else:
                 user = '@' + p.get('sName')
-            responce += '{:4}. {} with **{}** points\n'.format(p['iRank'], user, p['iPoints'])
+            responce += '{}. {} with **{}** points\n'.format(p['iRank'], user, p['iPoints'])
         return responce[:-1]
 
     def list_of_challenges(s):
@@ -76,8 +78,10 @@ class json_class():
                     user = '<@{}>'.format(user)
                 else:
                     user = '@' + p.get('sName')
-                if val['iPoints'] == int(val['iPoints']):
+                if float(val['iPoints']) == int(val['iPoints']):
                     val['iPoints'] = int(val['iPoints'])
+                if float(val['fScore']) == int(val['fScore']):
+                    val['fScore'] = int(val['fScore'])
                 if ignoreScore:
                     responce += '{:4}. {} at the {}. try => **{}** points\n'.format(val['iRank'], user, val['iSubmissionId'] + 1, val['iPoints'])
                 else:
@@ -175,7 +179,8 @@ class json_class():
                         lastScore = cc['fScore']
                         iRank = i
                     cc['iRank'] = iRank
-                    cc['iPoints'] = s.getPoints(iRank - 1)*float(s.find(s.j['aChallengeType'], 'sName', ct).get('fMultiplier', 1))
+                    challenge = s.find(s.j['aChallengeType'], 'sName', ct)
+                    cc['iPoints'] = s.getPoints(iRank - 1, points=challenge.get('aPoints'))*float(challenge.get('fMultiplier', 1))
                     oS = s.find(s.j['aSubmission'], sChallengeName=rbc, sChallengeTypeName=ct, iUserID=cc['iUserID'], fScore=cc['fScore'])
                     oS['iRank'] = iRank
                     oS['iPoints'] = cc['iPoints']

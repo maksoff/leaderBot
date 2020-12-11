@@ -29,6 +29,8 @@ DEBUG_CH = os.getenv('DISCORD_DEBUG_CH')
 if DEBUG_CH:
     DEBUG_CH = int(DEBUG_CH)
 
+DEBUG = os.getenv('DISCORD_TEST')
+
 
 def deepcopy(temp):
     ret = None
@@ -79,7 +81,10 @@ class state_machine_class():
             await message.channel.send(f'`timeout {timeout}s`')
             return 
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return
                     
     async def get_message(s, ch_id, m_id):
@@ -87,7 +92,10 @@ class state_machine_class():
             channel = s.client.get_channel(ch_id)
             return await channel.fetch_message(m_id)
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return
     
     async def send(s, channel, content):
@@ -104,7 +112,10 @@ class state_machine_class():
             await msg.edit(content = content)
             return 'updated'
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return 'something wrong'
 
     ## json file functions
@@ -119,7 +130,10 @@ class state_machine_class():
                 s.json_data.load(f)
                 s.leaderboard_channel_id, s.leaderboard_message_id = s.json_data.get_lb_message()
             except Exception as e:
-                print(e)
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
                 print('wrong json')
         
     async def json_exp(s, message):
@@ -145,7 +159,10 @@ class state_machine_class():
                 s.save_json()
                 await s.update_winners()
             except Exception as e:
-                print(e)
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
                 return 'failed to save'
             return test + ' received and saved'
         return 'No file sent. Try again'
@@ -205,7 +222,8 @@ class state_machine_class():
         
         message = await s.wait_response(message)
         if not message:
-            return 'aborted'
+            await s.message.channel.send('aborted')
+            return
         
         temp = message.content.strip().split(' ')
         if len(temp) == 1:
@@ -250,14 +268,44 @@ class state_machine_class():
             return user_id
         except Exception as e:
             await s.send(message.channel, 'No user with this id found. Aborting')
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return
+
+    async def get_points_for_channel(s, message):
+        '''asks for points or saves new point systems. None if error'''
+        response = 'Available scoring systems:'
+        # get all points in challenges
+        aPoints = {}
+        aPoints.add(s.json_data.aPoint)
+        for ch in s.json_data.j['aChallenge']:
+            ap = ch.get('aPoints')
+            if ap:
+                aPoints.add(tuple(sorted(ap, reverse=True)))
+        aPoints = sorted(aPoints, reverse=True)
+        for i, a in enumerate(aPoints, 1):
+            a = ['{:g}'.format(float(x)) for x in a]
+            response += '\n{:4}: `'.format(i) + '`, `'.join(a) + '`'
+        response += '\nEnter number, or new point sequence (e.g. `10 6 4 3.14 1`)'
+        await s.send(message.channel, response)
+        message = await s.wait_response(message)
+        if not message:
+            return
+        ar = message.content.split(' ')
+        if len(ar)==1:
+            return aPoints[int(ar[0])-1]
+        return [float(x) for x in ar]
+        
 
 
     async def set_challenge_channel(s, message, change_existing_channel=True):
-        '''selection for challenge, and updating/creating of channel. Returns None in case of error or sChallengeName'''
+        '''selection for challenge, and updating/creating of channel.'''
+        '''Returns None in case of error or sChallengeName'''
+        '''also defines points system & show/hide score in #winners channel'''
         # challenges list
-        response = 'Past challenges: `' + '`, `'.join(s.json_data.list_of_challenges())
+        response = 'Past challenges: `' + '`, `'.join(s.json_data.list_of_challenges() or 'no challenges!')
         response += '`\nEnter challenge name (e.g. `42`)\n(if challenge not in the list, new challenge will be created)'
         await s.send(message.channel, response)
         # select challenge
@@ -280,19 +328,30 @@ class state_machine_class():
             channel = client.get_channel(channel_id)
             msg = await channel.send('Here will be winners published')
             message_id = msg.id
+            await s.send(message.channel, 'Show score for this challenge in #winners? (yes/no)')
+            message = await s.wait_response(message)
+            if not message:
+                await message.channel.send('aborted')
+                return
+            bShowScore = s.yes_no(message.content)
             if sChallengeName in s.json_data.list_of_challenges():
                 sC = s.json_data.find(s.json_data.j['aChallenge'], sName=sChallengeName)
                 sC['idChannel'] = channel_id
                 sC['idMessage'] = message_id
+                sC['bShowScore'] = bShowScore
             else:
                 s.json_data.j['aChallenge'].append({'sName':sChallengeName,
                                                      'idChannel':channel_id,
-                                                     'idMessage':message_id})
+                                                     'idMessage':message_id,
+                                                     'bShowScore': bShowScore})
             s.save_json()
             await s.update_winners(sChallengeName=sChallengeName)
             return ('Done: ' if change_existing_channel else '') + sChallengeName 
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return None
         return
 
@@ -338,7 +397,10 @@ class state_machine_class():
             response = await s.update_all(message)
             return response
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return 'Something really wrong'
         return 'not ready'
     
@@ -356,7 +418,10 @@ class state_machine_class():
             s.save_json()
             return await s.update_lb()
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return 'something wrong'
 
     async def set_lb(s, message):
@@ -373,7 +438,10 @@ class state_machine_class():
             s.json_data.set_lb_message(s.leaderboard_channel_id, s.leaderboard_message_id)
             s.save_json()
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return "channel doesn't exist"
         else:
             await s.update_lb()
@@ -386,7 +454,10 @@ class state_machine_class():
                 player['sName'] = user.name
                 player['iDiscriminator'] = user.discriminator
             except Exception as e:
-                print(e)
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
         s.save_json()
         return
 
@@ -400,16 +471,20 @@ class state_machine_class():
                 challenge = s.json_data.find(s.json_data.j['aChallenge'], sName=sub)
                 idChannel = challenge.get('idChannel')
                 idMessage = challenge.get('idMessage')
+                ignoreScore = not challenge.get('bShowScore', False)
                 
                 embed = discord.Embed()
                 embed.add_field(name='Submissions for this challenge',
-                    value=s.json_data.result_challenge(sub, ignoreScore=True))
+                    value=s.json_data.result_challenge(sub, ignoreScore=ignoreScore))
                 
                 if idChannel and idMessage:
                     msg = await s.get_message(idChannel, idMessage)
                     await msg.edit(content='', embed=embed)
             except Exception as e:
-                print(e)
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
     
     async def update_lb(s, *args):
         try:
@@ -428,11 +503,17 @@ class state_machine_class():
                 await s.update_lb_img()
                 return 'updated'
             except Exception as e:
-                print(e)
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
                 return 'something wrong'
             
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return 'something wrong'
 
     async def update_all(s, message):
@@ -462,7 +543,10 @@ class state_machine_class():
             name = '@' + user.name
             response = s.json_data.get_rank(user_id)
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             name = 'user not found'
             response = 'maybe invite him?'
         embed = discord.Embed()
@@ -481,7 +565,10 @@ class state_machine_class():
         try:
             user = await s.client.fetch_user(user_id)
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return 'User not found. Maybe invite him?'
 
 ##        guild = s.client.get_guild(s.guild_id)
@@ -506,14 +593,20 @@ class state_machine_class():
             avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
             user_avatar = io.BytesIO(await avatar_asset.read())
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             user_avatar = None
             
         try:
             avatar_asset = msg.guild.icon_url_as(format='png', size=AVATAR_SIZE)
             guild_avatar = io.BytesIO(await avatar_asset.read())
         except Exception as e:
-            print(e)
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             guild_avatar = None
 
         buffer = rankDisplay.create_rank_card(user_avatar,
@@ -539,19 +632,28 @@ class state_machine_class():
                 channel = client.get_channel(channel_id)
                 message_id = s.json_data.j.get('iLeaderboardImage')
                 if message_id:
-                    message = await channel.fetch_message(message_id)
-                    await message.delete()
+                    try:
+                        message = await channel.fetch_message(message_id)
+                        await message.delete()
+                    except:
+                        ...
                 buffer = await s.get_top_img(0)
-                message = await channel.send(content = 'click to enlarge', file=discord.File(buffer, 'lb.png'))
+                message = await channel.send(content = 'updated leaderboard', file=discord.File(buffer, 'lb.png'))
                 s.json_data.j['iLeaderboardImage'] = message.id
                 s.save_json()
                 return 'updated'
             except Exception as e:
-                raise e
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
                 return 'something wrong'
 
         except Exception as e:
-            raise e
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return 'something wrong'
 
     async def get_top_img(s, limit):
@@ -574,7 +676,10 @@ class state_machine_class():
                 avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
                 user_avatar = io.BytesIO(await avatar_asset.read())
             except Exception as e:
-                print(e)
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
                 user_avatar = None
 
             player = deepcopy(player)
