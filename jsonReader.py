@@ -3,7 +3,7 @@ import json
 class json_class():
     j = None
     iVersion = 11
-    aPoint = (10, 6, 4, 2, 1)
+    aPoint = (10.0, 6.0, 4.0, 2.0, 1.0)
     oRankByChallenge = {}
 
     @staticmethod
@@ -22,8 +22,10 @@ class json_class():
             key, val = key_val
             return next((item for item in dicts if item[key] == val), None)
     
-    def getPoints(s, n):
-        return s.aPoint[n] if n < len(s.aPoint) else 0
+    def getPoints(s, n, points=None):
+        if not points:
+            points = s.aPoint
+        return points[n] if n < len(points) else 0
     
     def get_lb_message(s):
         return s.j['iLeaderboardChannel'], s.j['iLeaderboardMessage']
@@ -45,12 +47,14 @@ class json_class():
     def result_leaderboard(s):
         responce = '**Actual ranking**\n'
         for p in sorted(s.j['aPlayer'], key = lambda i: i['iPoints'], reverse = True):
+            if p.get('bDisabled'):
+                continue
             user = p.get('iID', None)
             if user:
                 user = '<@{}>'.format(user)
             else:
                 user = '@' + p.get('sName')
-            responce += '{:4}. {} with **{}** points\n'.format(p['iRank'], user, p['iPoints'])
+            responce += '{}. {} with **{}** points\n'.format(p['iRank'], user, p['iPoints'])
         return responce[:-1]
 
     def list_of_challenges(s):
@@ -74,8 +78,10 @@ class json_class():
                     user = '<@{}>'.format(user)
                 else:
                     user = '@' + p.get('sName')
-                if val['iPoints'] == int(val['iPoints']):
+                if float(val['iPoints']) == int(val['iPoints']):
                     val['iPoints'] = int(val['iPoints'])
+                if float(val['fScore']) == int(val['fScore']):
+                    val['fScore'] = int(val['fScore'])
                 if ignoreScore:
                     responce += '{:4}. {} at the {}. try => **{}** points\n'.format(val['iRank'], user, val['iSubmissionId'] + 1, val['iPoints'])
                 else:
@@ -108,11 +114,10 @@ class json_class():
         if player:
             rank = player.get('iRank', None)
             points = player.get('iPoints', None)
-        if player and rank and points:
-            
+        if player and rank and points:    
             return 'Ranked **{}**{} (out of {} members) with **{}** points'.format(rank, s.suffix(rank), len(s.j['aPlayer']), points)
         else:
-            return 'You need to earn some points. Submit some challenges!'
+            return 'Still no points. Submit some challenges!'
 
         
     def get_top(s, limit = 10):
@@ -121,6 +126,8 @@ class json_class():
         if not players:
             return 'no submissions'
         for player in players:
+            if player.get('bDisabled'):
+                continue
             user = player.get('iID', None)
             if user:
                 user = '<@{}>'.format(user)
@@ -128,7 +135,9 @@ class json_class():
                 user = '@' + player.get('sName')
             rank = player.get('iRank')
             points = player.get('iPoints')
-            if rank > limit: break
+            if limit:
+                if rank > limit:
+                    break
             if player and rank and points:
                 responce += '\n**{:4}.** {} with **{}** points'.format(rank, user, points)
         return responce
@@ -170,7 +179,8 @@ class json_class():
                         lastScore = cc['fScore']
                         iRank = i
                     cc['iRank'] = iRank
-                    cc['iPoints'] = s.getPoints(iRank - 1)*float(s.find(s.j['aChallengeType'], 'sName', ct).get('fMultiplier', 1))
+                    challenge = s.find(s.j['aChallengeType'], 'sName', ct)
+                    cc['iPoints'] = s.getPoints(iRank - 1, points=challenge.get('aPoints'))*float(challenge.get('fMultiplier', 1))
                     oS = s.find(s.j['aSubmission'], sChallengeName=rbc, sChallengeTypeName=ct, iUserID=cc['iUserID'], fScore=cc['fScore'])
                     oS['iRank'] = iRank
                     oS['iPoints'] = cc['iPoints']
@@ -183,7 +193,11 @@ class json_class():
         
         curRank = None
         lastPoints = None
-        for i, p in enumerate(s.j['aPlayer'], 1):
+        i = 0
+        for p in s.j['aPlayer']:
+            if p.get('bDisabled'):
+                continue
+            i += 1
             if p['iPoints'] != lastPoints:
                 lastPoints = p['iPoints']
                 curRank = i
