@@ -46,6 +46,21 @@ def deepcopy(temp):
         return str(temp)
     return ret
 
+
+def deepcopy_nostring(temp):
+    ret = None
+    if type(temp) is dict:
+        ret = {}
+        for key, val in temp.items():
+            ret[key] = deepcopy_nostring(val)
+    elif type(temp) is list:
+        ret = []
+        for val in temp:
+            ret.append(deepcopy_nostring(val))
+    else:
+        return temp
+    return ret
+
 class state_machine_class():
     guild_id = None
     leaderboard_channel_id = None
@@ -121,8 +136,9 @@ class state_machine_class():
     ## json file functions
           
     def save_json(s):
-        with open(s.json_path, 'w') as f:
-            f.write(s.json_data.dump())
+        if s.json_data.dump():
+            with open(s.json_path, 'w') as f:
+                f.write(s.json_data.dump())
             
     def open_json(s):
         with open(s.json_path, 'r') as f:
@@ -293,7 +309,7 @@ class state_machine_class():
         message = await s.wait_response(message)
         if not message:
             return
-        ar = message.content.split(' ')
+        ar = message.content.strip().split(' ')
         if len(ar)==1:
             return aPoints[int(ar[0])-1]
         return sorted([float(x) for x in ar], reverse=True)
@@ -627,6 +643,76 @@ class state_machine_class():
         await msg.channel.send(file=discord.File(buffer, 'rank.png'))
         return None
 
+    async def activity_img(s, message):
+        try:
+            try:
+##                channel_id = s.leaderboard_channel_id
+##                if not channel_id:
+##                    return 'please configure `?set leaderboard`'
+##                channel = client.get_channel(channel_id)
+##                message_id = s.json_data.j.get('iLeaderboardImage')
+##                if message_id:
+##                    try:
+##                        message = await channel.fetch_message(message_id)
+##                        await message.delete()
+##                    except:
+##                        ...
+                buffer = await s.get_activity_img()
+                message = await message.channel.send(content = 'Activity graph. one **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'activity.png'))
+                return
+##                s.json_data.j['iLeaderboardImage'] = message.id
+##                s.save_json()
+##                return 'updated'
+            except Exception as e:
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
+                return 'something wrong'
+
+        except Exception as e:
+            if DEBUG:
+                raise e
+            else:
+                print(e)
+            return 'something wrong'
+
+    async def get_activity_img(s, *args):
+        s.json_data.calculate_rating()
+        # get not disabled players with submissions
+        players = sorted(s.json_data.j['aPlayer'], key=lambda x: float(x.get('iPoints')), reverse=True)
+        players = list(filter(lambda x: (float(x.get('iPoints', 0)) - float(x.get('iStaticPoints', 0)) > 0) and not x.get('bDisabled', False), players))
+        if not players:
+            return
+        players = deepcopy_nostring(players) # YES!
+        lChallenges = list(s.json_data.list_of_challenges())
+        dMaxPoints = {}
+        for p in players:
+            # get submissions matrix
+            p['aSubmissions'] = []
+            for ch in lChallenges:
+                points = sum(float(x.get('iPoints', 0)) for x in s.json_data.j['aSubmission']
+                             if x.get('iUserID') == p.get('iID') and x.get('sChallengeName') == ch)
+                if dMaxPoints.get(ch, 0) < points:
+                    dMaxPoints[ch] = points # max points for challenge
+                p['aSubmissions'].append((ch, points))
+
+            #get avatar     
+            try:   
+                user_id = p.get('iID', None)
+                user = await s.client.fetch_user(user_id)
+                AVATAR_SIZE = 128
+                avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
+                user_avatar = io.BytesIO(await avatar_asset.read())
+            except Exception as e:
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
+                user_avatar = None
+            p['avatar'] = user_avatar
+        buffer = rankDisplay.create_activity_card(players, dMaxPoints)
+        return buffer
     
     
     async def update_lb_img(s, *args):
@@ -864,6 +950,7 @@ class state_machine_class():
                               ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
                               ('?top', 'leaderboard; add number to limit positions `?top 3`', s.top_img),
                               ('?leaderboard', 'same as `?top`', s.top_img),
+                              ('?activity', 'displays activity of players', s.activity_img),
                               ('?ksp', 'random ksp loading hint', s.ksp),
                           )
         
