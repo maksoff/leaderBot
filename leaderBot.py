@@ -293,7 +293,7 @@ class state_machine_class():
         message = await s.wait_response(message)
         if not message:
             return
-        ar = message.content.split(' ')
+        ar = message.content.strip().split(' ')
         if len(ar)==1:
             return aPoints[int(ar[0])-1]
         return sorted([float(x) for x in ar], reverse=True)
@@ -627,6 +627,85 @@ class state_machine_class():
         await msg.channel.send(file=discord.File(buffer, 'rank.png'))
         return None
 
+    async def activity_img(s, message):
+        try:
+            try:
+##                channel_id = s.leaderboard_channel_id
+##                if not channel_id:
+##                    return 'please configure `?set leaderboard`'
+##                channel = client.get_channel(channel_id)
+##                message_id = s.json_data.j.get('iLeaderboardImage')
+##                if message_id:
+##                    try:
+##                        message = await channel.fetch_message(message_id)
+##                        await message.delete()
+##                    except:
+##                        ...
+                buffer = await s.get_activity_img()
+                message = await message.channel.send(content = 'activity', file=discord.File(buffer, 'activity.png'))
+                return
+##                s.json_data.j['iLeaderboardImage'] = message.id
+##                s.save_json()
+##                return 'updated'
+            except Exception as e:
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
+                return 'something wrong'
+
+        except Exception as e:
+            if DEBUG:
+                raise e
+            else:
+                print(e)
+            return 'something wrong'
+
+    async def get_activity_img(s, *args):
+        s.json_data.calculate_rating()
+        # get not disabled players with submissions
+        players = sorted(s.json_data.j['aPlayer'], key=lambda x: float(x.get('iPoints')), reverse=True)
+        players = list(filter(lambda x: (float(x.get('iPoints', 0)) - float(x.get('iStaticPoints', 0)) > 0) and not x.get('bDisabled', False), players))
+        if not players:
+            return
+        lChallenges = s.json_data.list_of_challenges()
+        dChallenges = {}
+        for p in players:
+            p['sSubmissions'] = []
+            for ch in lChallenges:
+                points = sum(float(x.get('iPoints', 0)) for x in s.json_data.j['aSubmission']
+                             if x.get('iUserID') == p.get('iID') and x.get('sChallengeName') == ch)
+                if dChallenges.get(ch, 0) < points:
+                    dChallenges[ch] = points # max points for challenge
+                p['aSubmissions'].append({ch: points})
+        print(json.dumps(players, indent = 4))
+        return
+        data = []
+        for player in players:
+            if player.get('bDisabled'):
+                continue
+            if limit:
+                if player.get('iRank') > limit:
+                    break
+            user_id = player.get('iID', None)
+            user = await s.client.fetch_user(user_id)
+            #get avatar & channel icon    
+            AVATAR_SIZE = 128
+            try:
+                avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
+                user_avatar = io.BytesIO(await avatar_asset.read())
+            except Exception as e:
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
+                user_avatar = None
+
+            player = deepcopy(player)
+            player['avatar'] = user_avatar
+            data.append(player)
+        buffer = rankDisplay.create_top_card(data)
+        return buffer
     
     
     async def update_lb_img(s, *args):
@@ -865,6 +944,7 @@ class state_machine_class():
                               ('?top', 'leaderboard; add number to limit positions `?top 3`', s.top_img),
                               ('?leaderboard', 'same as `?top`', s.top_img),
                               ('?ksp', 'random ksp loading hint', s.ksp),
+                              ('?test', '', s.get_activity_img),
                           )
         
         s.commands = (('?help', 'prints this message', s.admin_help),
