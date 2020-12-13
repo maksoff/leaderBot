@@ -164,10 +164,11 @@ def create_activity_card(players, dMaxPoints):
         return
     avatar_size = 64
     step = 68
-    dy = 5
+    dy = 1
     dx = 1
     w = 800
     h = step * len(players)
+    min_trans = 10
     fontM = ImageFont.truetype('Roboto-Medium.ttf', 28, encoding="utf-8")
     
     # creating new Image object 
@@ -185,6 +186,7 @@ def create_activity_card(players, dMaxPoints):
     max_w = max(draw.textsize(' ' + str(p.get('iRank'))+'.', font=fontM)[0] for p in players)
     rest_w = w - max_w - step
     act_w = rest_w // (len(dMaxPoints) + 1)
+    real_w = act_w * (len(dMaxPoints) + 1) + max_w + step
 
     
     # add table
@@ -202,13 +204,18 @@ def create_activity_card(players, dMaxPoints):
 
         # add bars
         for j, (ch, points) in enumerate(p.get('aSubmissions')):
+            big_coord = [(max_w+step+j*act_w, step*i),
+                         (max_w+step+(j+1)*act_w, step*(i+1))]
             coord = [(max_w+step+j*act_w+dx, step*i+dy),
                      (max_w+step+(j+1)*act_w-dx, step*(i+1)-dy)]
-            transp = hex(int(points / (dMaxPoints.get(ch) or points or 1) * 255))[2:]
+            drw.rectangle(big_coord, fill=grey)
+            drw.rectangle(coord, fill=background)
+            transp = hex(int(min_trans + points / (dMaxPoints.get(ch) or points or 1) * (255 - min_trans)))[2:]
             if points:
                 drw.rectangle(coord, fill=cian+transp)
                 
     img = Image.alpha_composite(img, rect)
+    img = img.crop((0, 0, real_w+1, h+1))
     
     # save PNG in buffer
     buffer = io.BytesIO()

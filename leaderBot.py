@@ -657,7 +657,9 @@ class state_machine_class():
 ##                        await message.delete()
 ##                    except:
 ##                        ...
+                msg = await message.channel.send('Consulting Picasso...')
                 buffer = await s.get_activity_img()
+                await msg.delete()
                 message = await message.channel.send(content = 'Activity graph. one **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'activity.png'))
                 return
 ##                s.json_data.j['iLeaderboardImage'] = message.id
@@ -798,7 +800,10 @@ class state_machine_class():
             content = f"Full leaderboard: <#{s.leaderboard_channel_id}>\n**Top {limit}**"
             if limit > 7:
                 content += " (click to enlarge)"
+
+        m = await msg.channel.send('Consulting Dali...')
         buffer = await s.get_top_img(limit)
+        await m.delete()
         if buffer:
             await msg.channel.send(content=content, file=discord.File(buffer, 'top.png'))
         else:
