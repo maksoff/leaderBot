@@ -168,6 +168,7 @@ def create_activity_card(players, dMaxPoints):
     dx = 1
     w = 800
     h = step * len(players)
+    w = int(h * 4 / 3)
     min_trans = 20
     fontM = ImageFont.truetype('Roboto-Medium.ttf', 28, encoding="utf-8")
     
@@ -248,9 +249,13 @@ def create_top_card(the_top):
 
     max_p = max(int(p.get('iPoints')) for p in the_top)
 
-    w = max_w + step + diam + bar + diam + max_wp + diam//2
-    user_w = w - max_w - step - diam
+    #w = max_w + step + diam + bar + diam + max_wp + diam//2
+    #user_w = w - max_w - step - diam
     h = step * len(the_top)
+    
+    w = int(h * 4 / 3)
+    bar = w - (max_w + step + diam + diam + max_wp + diam//2)
+    user_w = w - max_w - step - diam
     
     # creating new Image object 
     img = Image.new("RGB", (w, h)) 
