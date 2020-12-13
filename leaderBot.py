@@ -660,7 +660,7 @@ class state_machine_class():
                 msg = await message.channel.send('Consulting Picasso...')
                 buffer = await s.get_activity_img()
                 await msg.delete()
-                message = await message.channel.send(content = 'Activity graph. one **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'activity.png'))
+                message = await message.channel.send(content = 'Activity graph. One **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'activity.png'))
                 return
 ##                s.json_data.j['iLeaderboardImage'] = message.id
 ##                s.save_json()
@@ -725,6 +725,8 @@ class state_machine_class():
                 if not channel_id:
                     return 'please configure `?set leaderboard`'
                 channel = client.get_channel(channel_id)
+
+                # leaderboard image
                 message_id = s.json_data.j.get('iLeaderboardImage')
                 if message_id:
                     try:
@@ -735,6 +737,19 @@ class state_machine_class():
                 buffer = await s.get_top_img(0)
                 message = await channel.send(content = 'updated leaderboard', file=discord.File(buffer, 'lb.png'))
                 s.json_data.j['iLeaderboardImage'] = message.id
+
+                # activity image
+                message_id = s.json_data.j.get('iActivityImage')
+                if message_id:
+                    try:
+                        message = await channel.fetch_message(message_id)
+                        await message.delete()
+                    except:
+                        ...
+                buffer = await s.get_activity_img()
+                message = await channel.send(content = 'Activity graph. One **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'actual.png'))
+                s.json_data.j['iActivityImage'] = message.id
+                
                 s.save_json()
                 return 'updated'
             except Exception as e:
@@ -758,7 +773,7 @@ class state_machine_class():
             return
         data = []
         for player in players:
-            if player.get('bDisabled'):
+            if player.get('bDisabled') or (limit == 0 and (float(player.get('iStaticPoints', 0)) - float(player.get('iPoints', 0))) == 0):
                 continue
             if limit:
                 if player.get('iRank') > limit:
