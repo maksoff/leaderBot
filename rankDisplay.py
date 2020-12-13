@@ -168,7 +168,7 @@ def create_activity_card(players, dMaxPoints):
     dx = 1
     w = 800
     h = step * len(players)
-    min_trans = 10
+    min_trans = 20
     fontM = ImageFont.truetype('Roboto-Medium.ttf', 28, encoding="utf-8")
     
     # creating new Image object 
