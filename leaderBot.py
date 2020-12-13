@@ -46,6 +46,21 @@ def deepcopy(temp):
         return str(temp)
     return ret
 
+
+def deepcopy_nostring(temp):
+    ret = None
+    if type(temp) is dict:
+        ret = {}
+        for key, val in temp.items():
+            ret[key] = deepcopy_nostring(val)
+    elif type(temp) is list:
+        ret = []
+        for val in temp:
+            ret.append(deepcopy_nostring(val))
+    else:
+        return temp
+    return ret
+
 class state_machine_class():
     guild_id = None
     leaderboard_channel_id = None
@@ -121,8 +136,9 @@ class state_machine_class():
     ## json file functions
           
     def save_json(s):
-        with open(s.json_path, 'w') as f:
-            f.write(s.json_data.dump())
+        if s.json_data.dump():
+            with open(s.json_path, 'w') as f:
+                f.write(s.json_data.dump())
             
     def open_json(s):
         with open(s.json_path, 'r') as f:
@@ -642,7 +658,7 @@ class state_machine_class():
 ##                    except:
 ##                        ...
                 buffer = await s.get_activity_img()
-                message = await message.channel.send(content = 'activity', file=discord.File(buffer, 'activity.png'))
+                message = await message.channel.send(content = 'Activity graph. one **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'activity.png'))
                 return
 ##                s.json_data.j['iLeaderboardImage'] = message.id
 ##                s.save_json()
@@ -668,30 +684,24 @@ class state_machine_class():
         players = list(filter(lambda x: (float(x.get('iPoints', 0)) - float(x.get('iStaticPoints', 0)) > 0) and not x.get('bDisabled', False), players))
         if not players:
             return
-        lChallenges = s.json_data.list_of_challenges()
-        dChallenges = {}
+        players = deepcopy_nostring(players) # YES!
+        lChallenges = list(s.json_data.list_of_challenges())
+        dMaxPoints = {}
         for p in players:
-            p['sSubmissions'] = []
+            # get submissions matrix
+            p['aSubmissions'] = []
             for ch in lChallenges:
                 points = sum(float(x.get('iPoints', 0)) for x in s.json_data.j['aSubmission']
                              if x.get('iUserID') == p.get('iID') and x.get('sChallengeName') == ch)
-                if dChallenges.get(ch, 0) < points:
-                    dChallenges[ch] = points # max points for challenge
-                p['aSubmissions'].append({ch: points})
-        print(json.dumps(players, indent = 4))
-        return
-        data = []
-        for player in players:
-            if player.get('bDisabled'):
-                continue
-            if limit:
-                if player.get('iRank') > limit:
-                    break
-            user_id = player.get('iID', None)
-            user = await s.client.fetch_user(user_id)
-            #get avatar & channel icon    
-            AVATAR_SIZE = 128
-            try:
+                if dMaxPoints.get(ch, 0) < points:
+                    dMaxPoints[ch] = points # max points for challenge
+                p['aSubmissions'].append((ch, points))
+
+            #get avatar     
+            try:   
+                user_id = p.get('iID', None)
+                user = await s.client.fetch_user(user_id)
+                AVATAR_SIZE = 128
                 avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
                 user_avatar = io.BytesIO(await avatar_asset.read())
             except Exception as e:
@@ -700,11 +710,8 @@ class state_machine_class():
                 else:
                     print(e)
                 user_avatar = None
-
-            player = deepcopy(player)
-            player['avatar'] = user_avatar
-            data.append(player)
-        buffer = rankDisplay.create_top_card(data)
+            p['avatar'] = user_avatar
+        buffer = rankDisplay.create_activity_card(players, dMaxPoints)
         return buffer
     
     
@@ -943,8 +950,8 @@ class state_machine_class():
                               ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
                               ('?top', 'leaderboard; add number to limit positions `?top 3`', s.top_img),
                               ('?leaderboard', 'same as `?top`', s.top_img),
+                              ('?activity', 'displays activity of players', s.activity_img),
                               ('?ksp', 'random ksp loading hint', s.ksp),
-                              ('?test', '', s.get_activity_img),
                           )
         
         s.commands = (('?help', 'prints this message', s.admin_help),

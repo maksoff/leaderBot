@@ -64,7 +64,6 @@ def place_avatar(image, avatar, x, y, diam, avatar_size = avatar_size, circle=Tr
 
     image.paste(img, (x, y), mask_image)
 
-
 def create_rank_card(user_avatar,
                      guild_avatar,
                      user_name,
@@ -160,17 +159,64 @@ def create_rank_card(user_avatar,
     buffer.seek(0)
     return buffer
 
-    '''
-    {
-        "iPoints": 176,
-        "iRank": 1,
-        "iStaticPoints": 4.0,
-        "sName": "maksoff",
-        "iID": 740118933809528872,
-        "iDiscriminator": "8999"
-        "avatar":....
-    },
-    '''
+def create_activity_card(players, dMaxPoints):
+    if (not players) or (not dMaxPoints):
+        return
+    avatar_size = 64
+    step = 68
+    dy = 5
+    dx = 1
+    w = 800
+    h = step * len(players)
+    fontM = ImageFont.truetype('Roboto-Medium.ttf', 28, encoding="utf-8")
+    
+    # creating new Image object 
+    img = Image.new("RGBA", (w, h)) 
+
+    # create rectangle background
+    draw = ImageDraw.Draw(img) 
+    draw.rectangle([(0, 0), (w, h)], fill=background)
+
+    # transparent image for rectangles
+    rect = Image.new("RGBA", (w, h))
+    drw = ImageDraw.Draw(rect)
+
+    # find max values
+    max_w = max(draw.textsize(' ' + str(p.get('iRank'))+'.', font=fontM)[0] for p in players)
+    rest_w = w - max_w - step
+    act_w = rest_w // (len(dMaxPoints) + 1)
+
+    
+    # add table
+    for i, p in enumerate(players):
+        # add nr
+        nr = ' ' + str(p.get('iRank'))+'.'
+        t_w, t_h = draw.textsize(nr, font=fontM)
+        draw.text((max_w-t_w, (step-t_h)//2 + step*i), nr,
+                  fill = "white", font = fontM)
+
+        # add avatar
+        place_avatar(img, p.get('avatar'), max_w + (step-avatar_size)//2,
+                     (step-avatar_size)//2 + i * step, diam,
+                     avatar_size = avatar_size, circle=True)
+
+        # add bars
+        for j, (ch, points) in enumerate(p.get('aSubmissions')):
+            coord = [(max_w+step+j*act_w+dx, step*i+dy),
+                     (max_w+step+(j+1)*act_w-dx, step*(i+1)-dy)]
+            transp = hex(int(points / (dMaxPoints.get(ch) or points or 1) * 255))[2:]
+            if points:
+                drw.rectangle(coord, fill=cian+transp)
+                
+    img = Image.alpha_composite(img, rect)
+    
+    # save PNG in buffer
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    return buffer
+
+
 def create_top_card(the_top):
     if not the_top:
         return
