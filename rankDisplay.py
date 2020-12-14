@@ -170,6 +170,8 @@ def create_activity_card(players, dMaxPoints):
     w = int(h * 4 / 3)
     if w < 800:
         w = 800
+    if w > 1800:
+        w = 1800
     min_trans = 20
     fontM = ImageFont.truetype('Roboto-Medium.ttf', 28, encoding="utf-8")
     
@@ -257,6 +259,8 @@ def create_top_card(the_top):
     w = int(h * 2 / 3)
     if w < 700:
         w = 700
+    if w > 1800:
+        w = 1800
     bar = w - (max_w + step + diam + diam + max_wp + diam//2)
     user_w = w - max_w - step - diam
     
