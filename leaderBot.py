@@ -1033,7 +1033,13 @@ class state_machine_class():
                 response = await f(message)
                 break
 
-        if (client.user in message.mentions) and not message.mention_everyone:
+        # check if role or bot is mentioned
+        if (((s.client.user in message.mentions) or
+             (s.client.user in [member
+                                for role in message.role_mentions
+                                for member in role.members])
+             )
+                    and not message.mention_everyone):
             await s.mentioned(message)
             
         if response:
