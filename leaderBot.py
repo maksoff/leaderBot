@@ -1,5 +1,7 @@
 # maksoff - KSP leaderbot (automagically calculates the rating and etc.)
-# ideas - graph of progress
+
+# beautify fScore output
+# activity card
 
 import io
 import os
@@ -22,8 +24,8 @@ check_role = False
 check_channel = True
 
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-ROLE  = os.getenv('DISCORD_ROLE')
+TOKEN   = os.getenv('DISCORD_TOKEN')
+ROLE    = os.getenv('DISCORD_ROLE')
 CHANNEL = os.getenv('DISCORD_CHANNEL')
 DEBUG_CH = os.getenv('DISCORD_DEBUG_CH')
 if DEBUG_CH:
@@ -86,7 +88,7 @@ class state_machine_class():
         elif val in ('no', 'n', 'false', 'f', '0', 'disable', 'off'):
             return False
 
-    async def wait_response(s, message, timeout=60):
+    async def wait_response(s, message, timeout=120):
         '''returns message or None if timeout'''
         try:
             def check(m):
@@ -470,6 +472,53 @@ class state_machine_class():
             await s.update_lb()
             return 'placeholder created'
 
+    async def set_mention_ch(s, message):
+        await s.send(message.channel, f'In which channel should be posted <@{client.user.id}> mentions?')
+        msg = await s.wait_response(message)
+        if not msg:
+            return 'cancelled'
+        try:
+            channel_id = s.get_int(msg.content)
+            channel = client.get_channel(channel_id)
+            if channel:
+                s.json_data.j['iMentionsChannel'] = channel.id
+                
+                text = ''
+                await message.channel.send('Who should be mentioned? Enter `@users`, `@roles` or `empty` for empty')
+                msg = await s.wait_response(message)
+                if msg.content != 'empty':
+                    text = str(msg.content)
+                s.json_data.j['iMentionsText'] = text
+                
+                text = ''
+                await message.channel.send('In which channels bot should **react** to mentions (separate multiple with *space*)?\n' +
+                                           'e.g. `miss test` for sub**miss**ion and **miss**ions and **test**\n' +
+                                           'or `*` for no filter')
+                msg = await s.wait_response(message)
+                if msg.content != '*':
+                    text = str(msg.content)
+                s.json_data.j['iMentionsChIncluded'] = text
+                
+                text = ''
+                await message.channel.send('In which channels bot should **ignore** mentions (separate multiple with *space*)?\n' +
+                                           'e.g. `admin anno` for **admin** and **anno**ucements and **test**\n' +
+                                           'or `*` for no filter')
+                msg = await s.wait_response(message)
+                if msg.content != '*':
+                    text = str(msg.content)
+                s.json_data.j['iMentionsChExcluded'] = text
+                s.save_json()
+            else:
+                return "channel doesn't exist"
+        except Exception as e:
+            if DEBUG:
+                raise e
+            else:
+                print(e)
+            return "channel doesn't exist"
+        else:
+            return 'Ok, saved'
+
     async def update_usernames(s, *args):
         for player in s.json_data.j['aPlayer']:
             try:
@@ -646,25 +695,11 @@ class state_machine_class():
     async def activity_img(s, message):
         try:
             try:
-##                channel_id = s.leaderboard_channel_id
-##                if not channel_id:
-##                    return 'please configure `?set leaderboard`'
-##                channel = client.get_channel(channel_id)
-##                message_id = s.json_data.j.get('iLeaderboardImage')
-##                if message_id:
-##                    try:
-##                        message = await channel.fetch_message(message_id)
-##                        await message.delete()
-##                    except:
-##                        ...
                 msg = await message.channel.send('Consulting Picasso...')
                 buffer = await s.get_activity_img()
                 await msg.delete()
                 message = await message.channel.send(content = 'Activity graph. One **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'activity.png'))
                 return
-##                s.json_data.j['iLeaderboardImage'] = message.id
-##                s.save_json()
-##                return 'updated'
             except Exception as e:
                 if DEBUG:
                     raise e
@@ -926,6 +961,70 @@ class state_machine_class():
 
     async def ping(s, *args):
         return 'Pong! {}ms'.format(int(s.client.latency*1000))
+
+    async def mentioned(s, message):
+        # will be supported in 1.6 await message.channel.send('Okay', reference=message)
+
+        # check if channel exists
+        channel_id = s.json_data.j.get('iMentionsChannel')
+        text = s.json_data.j.get('iMentionsText')
+        
+        if channel_id:
+            try:
+                channel = client.get_channel(channel_id)
+            except:
+                return
+            if not channel:
+                return
+        else:
+            return
+
+
+        inc_ch = s.json_data.j.get('iMentionsChIncluded', '').split()
+        exc_ch = s.json_data.j.get('iMentionsChExcluded', '').split()
+
+        chk_ch = message.channel.name
+        
+        if exc_ch and any(x in chk_ch for x in exc_ch):
+            return
+        if inc_ch and not any(x in chk_ch for x in inc_ch):
+            return
+
+        # send confirmation
+        part_1 = ('submission written down',
+                  'all logged',
+                  'this is marked now',
+                  'okay, noted',
+                  'recorded this',
+                  'evidence registered',
+                  'submission reported',
+                  'copy what',
+                  'roger',
+                  )
+        part_2 = ('Kadmins will be notified ASAP! Or tomorrow...',
+                  'Kadmins are on the Jool orbit with only Ion engines. They will be notified as soon they are back',
+                  'Kadmins chilling on Eeloo. Your submission will be send with the next post-ship (ETA: 4 years 189 days)',
+                  'Kadmins now tanning on Moho. Because of Kerbol activity message can be corrupte#12!$30<42< `C`R`C` eRr0r',
+                  'Kadmins gone to Val. Or to Vall? As soon they are back, all be updated',
+                  'Relax, read a book. Kadmins will update all soon',
+                  '.--. .-.. . .- ... . / .-- .- .. -',
+                  "Kadmins are at meeting! Or sleeping. Don't know, but all be updated soon",
+                  "Kadmins are stuck on Eve. Please send help. And snacks.",
+                  "Kadmins installed RSS & RO. They are lost now.")
+        user_id = message.author.id
+        await message.channel.send(f'<@{user_id}> {random.choice(part_1)}. {random.choice(part_2)}')
+
+        # add embed to channel
+        embed = discord.Embed(title='New mention!')
+        embed.add_field(name='user', value=f'<@{message.author.id}>')
+        embed.add_field(name='user ID', value=f'{message.author.id}')
+        embed.add_field(name='channel', value=f'<#{message.channel.id}>')
+        embed.add_field(name='message', value=f'[jump]({message.jump_url})')
+        embed.add_field(name='message text', value=f'{message.content}')
+        #embed.remove_author()
+        await channel.send(content=text, embed=embed)
+        
+        return
             
     async def __call__(s, message):
         response = ''
@@ -957,11 +1056,24 @@ class state_machine_class():
         if response:
             await s.send(message.channel, response)
             return
-        
+
+        # check if role or bot is mentioned
+        if (((s.client.user in message.mentions) or
+             (s.client.user in [member
+                                for role in message.role_mentions
+                                for member in role.members])
+             )
+                    and not message.mention_everyone):
+            await s.mentioned(message)
+            return
+
+        # good bot
         if 'good' in message.content.lower() and 'bot' in message.content.lower():
             if len(message.content) == 8:
                 await message.channel.send('Thanks!')
                 return
+            
+        return
             
     def create_help (s, *args):
 
@@ -982,6 +1094,7 @@ class state_machine_class():
                       ('?print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
                       ('?set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
                       ('?set winners', 'set in which channel to post winners for challenge', s.set_challenge_channel),
+                      ('?set mentions', f'set channel where <@{s.client.user.id}> mentions will be posted', s.set_mention_ch),
                       ('?export json', 'exports data in json', s.json_exp),
                       ('?import json', 'imports data from json', s.json_imp),
                       ('?delete json', 'clears all you data from server', s.json_del),
