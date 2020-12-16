@@ -492,7 +492,7 @@ class leaderBot_class():
                 
                 text = ''
                 await message.channel.send('In which channels bot should **react** to mentions (separate multiple with *space*)?\n' +
-                                           'e.g. `miss test` for sub**miss**ion and **miss**ions and **test**\n' +
+                                           'e.g. `miss test` for sub**miss**ion, **miss**ions and **test**\n' +
                                            'or `*` for no filter')
                 msg = await s.wait_response(message)
                 if msg.content != '*':
@@ -501,7 +501,7 @@ class leaderBot_class():
                 
                 text = ''
                 await message.channel.send('In which channels bot should **ignore** mentions (separate multiple with *space*)?\n' +
-                                           'e.g. `admin anno` for **admin** and **anno**ucements and **test**\n' +
+                                           'e.g. `admin anno` for **admin** and **anno**ucements\n' +
                                            'or `*` for no filter')
                 msg = await s.wait_response(message)
                 if msg.content != '*':
