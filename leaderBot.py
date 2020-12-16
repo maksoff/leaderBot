@@ -1,5 +1,8 @@
 # maksoff - KSP leaderbot (automagically calculates the rating and etc.)
 
+# beautify fScore output
+# activity card
+
 import io
 import os
 import time
@@ -21,8 +24,8 @@ check_role = False
 check_channel = True
 
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-ROLE  = os.getenv('DISCORD_ROLE')
+TOKEN   = os.getenv('DISCORD_TOKEN')
+ROLE    = os.getenv('DISCORD_ROLE')
 CHANNEL = os.getenv('DISCORD_CHANNEL')
 DEBUG_CH = os.getenv('DISCORD_DEBUG_CH')
 if DEBUG_CH:
@@ -479,12 +482,31 @@ class state_machine_class():
             channel = client.get_channel(channel_id)
             if channel:
                 s.json_data.j['iMentionsChannel'] = channel.id
+                
                 text = ''
                 await message.channel.send('Who should be mentioned? Enter `@users`, `@roles` or `empty` for empty')
                 msg = await s.wait_response(message)
                 if msg.content != 'empty':
                     text = str(msg.content)
                 s.json_data.j['iMentionsText'] = text
+                
+                text = ''
+                await message.channel.send('In which channels bot should **react** to mentions (separate multiple with *space*)?\n' +
+                                           'e.g. `miss test` for sub**miss**ion and **miss**ions and **test**\n' +
+                                           'or `*` for no filter')
+                msg = await s.wait_response(message)
+                if msg.content != '*':
+                    text = str(msg.content)
+                s.json_data.j['iMentionsChIncluded'] = text
+                
+                text = ''
+                await message.channel.send('In which channels bot should **ignore** mentions (separate multiple with *space*)?\n' +
+                                           'e.g. `admin anno` for **admin** and **anno**ucements and **test**\n' +
+                                           'or `*` for no filter')
+                msg = await s.wait_response(message)
+                if msg.content != '*':
+                    text = str(msg.content)
+                s.json_data.j['iMentionsChExcluded'] = text
                 s.save_json()
             else:
                 return "channel doesn't exist"
@@ -673,25 +695,11 @@ class state_machine_class():
     async def activity_img(s, message):
         try:
             try:
-##                channel_id = s.leaderboard_channel_id
-##                if not channel_id:
-##                    return 'please configure `?set leaderboard`'
-##                channel = client.get_channel(channel_id)
-##                message_id = s.json_data.j.get('iLeaderboardImage')
-##                if message_id:
-##                    try:
-##                        message = await channel.fetch_message(message_id)
-##                        await message.delete()
-##                    except:
-##                        ...
                 msg = await message.channel.send('Consulting Picasso...')
                 buffer = await s.get_activity_img()
                 await msg.delete()
                 message = await message.channel.send(content = 'Activity graph. One **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'activity.png'))
                 return
-##                s.json_data.j['iLeaderboardImage'] = message.id
-##                s.save_json()
-##                return 'updated'
             except Exception as e:
                 if DEBUG:
                     raise e
@@ -960,6 +968,7 @@ class state_machine_class():
         # check if channel exists
         channel_id = s.json_data.j.get('iMentionsChannel')
         text = s.json_data.j.get('iMentionsText')
+        
         if channel_id:
             try:
                 channel = client.get_channel(channel_id)
@@ -968,6 +977,17 @@ class state_machine_class():
             if not channel:
                 return
         else:
+            return
+
+
+        inc_ch = s.json_data.j.get('iMentionsChIncluded', '').split()
+        exc_ch = s.json_data.j.get('iMentionsChExcluded', '').split()
+
+        chk_ch = message.channel.name
+        
+        if exc_ch and any(x in chk_ch for x in exc_ch):
+            return
+        if inc_ch and not any(x in chk_ch for x in inc_ch):
             return
 
         # send confirmation
@@ -1032,6 +1052,10 @@ class state_machine_class():
             if message.content.lower().startswith(n):
                 response = await f(message)
                 break
+            
+        if response:
+            await s.send(message.channel, response)
+            return
 
         # check if role or bot is mentioned
         if (((s.client.user in message.mentions) or
@@ -1041,15 +1065,15 @@ class state_machine_class():
              )
                     and not message.mention_everyone):
             await s.mentioned(message)
-            
-        if response:
-            await s.send(message.channel, response)
             return
-        
+
+        # good bot
         if 'good' in message.content.lower() and 'bot' in message.content.lower():
             if len(message.content) == 8:
                 await message.channel.send('Thanks!')
                 return
+            
+        return
             
     def create_help (s, *args):
 
