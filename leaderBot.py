@@ -63,7 +63,7 @@ def deepcopy_nostring(temp):
         return temp
     return ret
 
-class state_machine_class():
+class leaderBot_class():
     guild_id = None
     leaderboard_channel_id = None
     leaderboard_message_id = None
@@ -1120,7 +1120,7 @@ class state_machine_class():
 client = discord.Client()
 print('client created')
 
-sm = {}
+leaderBot = {}
 
 @client.event
 async def on_ready():
@@ -1128,9 +1128,9 @@ async def on_ready():
         if DEBUG_CH:
             if guild.id != DEBUG_CH:
                 continue
-        sm[guild.id] = state_machine_class(client, guild.id)
-        await sm[guild.id].update_lb()
-        await sm[guild.id].update_winners()
+        leaderBot[guild.id] = leaderBot_class(client, guild.id)
+        await leaderBot[guild.id].update_lb()
+        await leaderBot[guild.id].update_winners()
         await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='your ?rank'))
         print(
             f'{client.user} is connected to the following guild:\n'
@@ -1146,7 +1146,7 @@ async def on_message(message):
         return
     if message.author == client.user:
         return
-    await sm[message.guild.id](message)
+    await leaderBot[message.guild.id](message)
 
 print('ready, steady, go')
 client.run(TOKEN)
