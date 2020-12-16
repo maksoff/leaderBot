@@ -1,5 +1,15 @@
 import json
 
+def beautify(tmp):
+    tmp = f'{tmp:.3f}'.split('.')
+    tmp[0] = ''.join([x if (i%3 or i == 0) else x + '\u202F' for i, x in enumerate(tmp[0][::-1])][::-1])
+    if len(tmp) == 2:
+        while tmp[1] and tmp[1][-1] == '0':
+            tmp[1] = tmp[1][:-1]
+        if not tmp[1]:
+            del tmp[1]
+    return '.'.join(tmp)
+
 class json_class():
     j = None
     iVersion = 11
@@ -79,9 +89,16 @@ class json_class():
                 else:
                     user = '@' + p.get('sName')
                 if ignoreScore:
-                    responce += '{:4}. {} at the {}. try => **{:g}** points\n'.format(val['iRank'], user, val['iSubmissionId'] + 1, val['iPoints'])
+                    responce += '{:4}. {} at the {}. try => **{}** points\n'.format(val['iRank'],
+                                                                                    user,
+                                                                                    val['iSubmissionId'] + 1,
+                                                                                    beautify(val['iPoints']))
                 else:
-                    responce += '{:4}. {} with {:g} at the {}. try => **{:g}** points\n'.format(val['iRank'], user, val['fScore'], val['iSubmissionId'] + 1, val['iPoints'])
+                    responce += '{:4}. {} with {} at the {}. try => **{}** points\n'.format(val['iRank'],
+                                                                                            user,
+                                                                                            beautify(val['fScore']),
+                                                                                            val['iSubmissionId'] + 1,
+                                                                                            beautify(val['iPoints']))
         return responce[:-1]
 
     def print_all(s):
