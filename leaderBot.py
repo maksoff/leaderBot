@@ -598,10 +598,14 @@ class leaderBot_class():
         try:
             for l in s.json_data.list_of_challenges():
                 if s.json_data.result_challenge(l):
-                    await msg.channel.send(s.json_data.result_challenge(l))
+                    await msg.channel.send(s.json_data.result_challenge(l, ignoreScore=False))
             await msg.channel.send(s.json_data.result_leaderboard())                       
             return '*** Done ***'
-        except:
+        except Exception as e:
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return 'no/corrupt json'
 
     async def get_rank(s, msg):

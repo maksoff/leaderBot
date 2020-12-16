@@ -1,7 +1,9 @@
 import json
 
 def beautify(tmp):
-    tmp = f'{tmp:.3f}'.split('.')
+    if type(tmp) != str:
+        tmp = f'{tmp:.3f}'
+    tmp = tmp.split('.')
     tmp[0] = ''.join([x if (i%3 or i == 0) else x + '\u202F' for i, x in enumerate(tmp[0][::-1])][::-1])
     if len(tmp) == 2:
         while tmp[1] and tmp[1][-1] == '0':
