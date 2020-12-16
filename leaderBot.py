@@ -484,9 +484,9 @@ class leaderBot_class():
                 s.json_data.j['iMentionsChannel'] = channel.id
                 
                 text = ''
-                await message.channel.send('Who should be mentioned? Enter `@users`, `@roles` or `empty` for empty')
+                await message.channel.send('Who should be mentioned? Enter `@users`, `@roles` or `*` for empty')
                 msg = await s.wait_response(message)
-                if msg.content != 'empty':
+                if msg.content != '*':
                     text = str(msg.content)
                 s.json_data.j['iMentionsText'] = text
                 
