@@ -77,6 +77,7 @@ class json_class():
     
     def result_challenge(s, ChallengeName, ignoreScore=True):
         responce = ''
+        resp = []
         if not ChallengeName in s.oRankByChallenge:
             return 'Still no submissions in challenge **{}**'.format(ChallengeName)
         for key, value in s.oRankByChallenge[ChallengeName].items():
@@ -102,6 +103,36 @@ class json_class():
                                                                                             val['iSubmissionId'] + 1,
                                                                                             beautify(val['iPoints']))
         return responce[:-1]
+    
+    def result_challenge_embed(s, ChallengeName, ignoreScore=True):
+        r_list = []
+        if not ChallengeName in s.oRankByChallenge:
+            return [{'name':f'Challenge {ChallengeName}',
+                     'value':'Still no submissions'}]
+        for key, value in s.oRankByChallenge[ChallengeName].items():
+            challengeType = s.find(s.j['aChallengeType'], sName=key)
+            responce = ''
+            value.sort(key=lambda x: x['iRank'])
+            for val in value:
+                user = '<@{}>'.format(val['iUserID'])
+                if ignoreScore:
+                    responce += '{}. {} at the {}. try => **{}** points\n'.format(val['iRank'],
+                                                                                    user,
+                                                                                    val['iSubmissionId'] + 1,
+                                                                                    beautify(val['iPoints']))
+                else:
+                    responce += '{}. {} with {} at the {}. try => **{}** points\n'.format(val['iRank'],
+                                                                                            user,
+                                                                                            beautify(val['fScore']),
+                                                                                            val['iSubmissionId'] + 1,
+                                                                                            beautify(val['iPoints']))
+            r_list.append({'name':'Modus **{}**'.format(challengeType.get('sNick', key)),
+                           'value':responce,
+                           'index':s.j['aChallengeType'].index(challengeType),
+                           'fMultiplier':challengeType.get('fMultiplier', 1)})
+            
+        r_list.sort(key = lambda x: (x['fMultiplier'], x['index']))
+        return r_list
 
     def print_all(s):
         result = ''

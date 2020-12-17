@@ -9,6 +9,7 @@
 # try to create submission from embed (role react?)
 # leaderboard ?help -> add image
 # create channels for new submissions
+# winners
 
 import io
 import os
@@ -540,7 +541,7 @@ class leaderBot_class():
         s.save_json()
         return
 
-    async def update_winners(s, *args, sChallengeName=None):
+    async def update_winners_old(s, *args, sChallengeName=None):
         if sChallengeName:
             sub = [sChallengeName]
         else:
@@ -564,6 +565,36 @@ class leaderBot_class():
                     raise e
                 else:
                     print('update_winners\n', e)
+
+    
+    async def update_winners(s, *args, sChallengeName=None):
+        if sChallengeName:
+            sub = [sChallengeName]
+        else:
+            sub = s.json_data.list_of_challenges()
+        for sub in sub:
+            try:
+                challenge = s.json_data.find(s.json_data.j['aChallenge'], sName=sub)
+                idChannel = challenge.get('idChannel')
+                idMessage = challenge.get('idMessage')
+                ignoreScore = not challenge.get('bShowScore', False)
+                
+                embed = discord.Embed(title='Submissions for challenge **{}**'.format(sub))
+                r_list = s.json_data.result_challenge_embed(sub, ignoreScore=ignoreScore)
+                for item in r_list:
+                    embed.add_field(name=item['name'],
+                                    value=item['value'],
+                                    inline=False)
+                
+                if idChannel and idMessage:
+                    msg = await s.get_message(idChannel, idMessage)
+                    await msg.edit(content='', embed=embed)
+            except Exception as e:
+                if DEBUG:
+                    raise e
+                else:
+                    print('update_winners\n', e)
+                    
     
     async def update_lb(s, *args):
         try:
@@ -603,9 +634,14 @@ class leaderBot_class():
             
     async def print_lb(s, msg):
         try:
-            for l in s.json_data.list_of_challenges():
-                if s.json_data.result_challenge(l):
-                    await msg.channel.send(s.json_data.result_challenge(l, ignoreScore=False))
+            for sub in s.json_data.list_of_challenges():
+                embed = discord.Embed(title='Submissions for challenge **{}**'.format(sub))
+                r_list = s.json_data.result_challenge_embed(sub, ignoreScore=False)
+                for item in r_list:
+                    embed.add_field(name=item['name'],
+                                    value=item['value'],
+                                    inline=False)
+                await msg.channel.send(embed=embed)
             await msg.channel.send(s.json_data.result_leaderboard())                       
             return '*** Done ***'
         except Exception as e:
