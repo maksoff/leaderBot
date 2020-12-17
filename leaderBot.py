@@ -1,7 +1,14 @@
 # maksoff - KSP leaderbot (automagically calculates the rating and etc.)
 
-# beautify fScore output
+### beautify fScore output
+# TODO: #
 # activity card
+# sort winners
+# activity (sum of last 3 challenges)
+# hyperkerbalnaut role - automatic
+# try to create submission from embed (role react?)
+# leaderboard ?help -> add image
+# create channels for new submissions
 
 import io
 import os
