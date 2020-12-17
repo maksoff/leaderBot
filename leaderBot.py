@@ -1,7 +1,15 @@
 # maksoff - KSP leaderbot (automagically calculates the rating and etc.)
 
-# beautify fScore output
+### beautify fScore output
+# TODO: #
 # activity card
+# sort winners
+# activity (sum of last 3 challenges)
+# hyperkerbalnaut role - automatic
+# try to create submission from embed (role react?)
+# leaderboard ?help -> add image
+# create channels for new submissions
+# winners
 
 import io
 import os
@@ -63,7 +71,7 @@ def deepcopy_nostring(temp):
         return temp
     return ret
 
-class state_machine_class():
+class leaderBot_class():
     guild_id = None
     leaderboard_channel_id = None
     leaderboard_message_id = None
@@ -484,15 +492,15 @@ class state_machine_class():
                 s.json_data.j['iMentionsChannel'] = channel.id
                 
                 text = ''
-                await message.channel.send('Who should be mentioned? Enter `@users`, `@roles` or `empty` for empty')
+                await message.channel.send('Who should be mentioned? Enter `@users`, `@roles` or `*` for empty')
                 msg = await s.wait_response(message)
-                if msg.content != 'empty':
+                if msg.content != '*':
                     text = str(msg.content)
                 s.json_data.j['iMentionsText'] = text
                 
                 text = ''
                 await message.channel.send('In which channels bot should **react** to mentions (separate multiple with *space*)?\n' +
-                                           'e.g. `miss test` for sub**miss**ion and **miss**ions and **test**\n' +
+                                           'e.g. `miss test` for sub**miss**ion, **miss**ions and **test**\n' +
                                            'or `*` for no filter')
                 msg = await s.wait_response(message)
                 if msg.content != '*':
@@ -501,7 +509,7 @@ class state_machine_class():
                 
                 text = ''
                 await message.channel.send('In which channels bot should **ignore** mentions (separate multiple with *space*)?\n' +
-                                           'e.g. `admin anno` for **admin** and **anno**ucements and **test**\n' +
+                                           'e.g. `admin anno` for **admin** and **anno**ucements\n' +
                                            'or `*` for no filter')
                 msg = await s.wait_response(message)
                 if msg.content != '*':
@@ -533,7 +541,7 @@ class state_machine_class():
         s.save_json()
         return
 
-    async def update_winners(s, *args, sChallengeName=None):
+    async def update_winners_old(s, *args, sChallengeName=None):
         if sChallengeName:
             sub = [sChallengeName]
         else:
@@ -557,6 +565,36 @@ class state_machine_class():
                     raise e
                 else:
                     print('update_winners\n', e)
+
+    
+    async def update_winners(s, *args, sChallengeName=None):
+        if sChallengeName:
+            sub = [sChallengeName]
+        else:
+            sub = s.json_data.list_of_challenges()
+        for sub in sub:
+            try:
+                challenge = s.json_data.find(s.json_data.j['aChallenge'], sName=sub)
+                idChannel = challenge.get('idChannel')
+                idMessage = challenge.get('idMessage')
+                ignoreScore = not challenge.get('bShowScore', False)
+                
+                embed = discord.Embed(title='Submissions for challenge **{}**'.format(sub))
+                r_list = s.json_data.result_challenge_embed(sub, ignoreScore=ignoreScore)
+                for item in r_list:
+                    embed.add_field(name=item['name'],
+                                    value=item['value'],
+                                    inline=False)
+                
+                if idChannel and idMessage:
+                    msg = await s.get_message(idChannel, idMessage)
+                    await msg.edit(content='', embed=embed)
+            except Exception as e:
+                if DEBUG:
+                    raise e
+                else:
+                    print('update_winners\n', e)
+                    
     
     async def update_lb(s, *args):
         try:
@@ -596,12 +634,21 @@ class state_machine_class():
             
     async def print_lb(s, msg):
         try:
-            for l in s.json_data.list_of_challenges():
-                if s.json_data.result_challenge(l):
-                    await msg.channel.send(s.json_data.result_challenge(l))
+            for sub in s.json_data.list_of_challenges():
+                embed = discord.Embed(title='Submissions for challenge **{}**'.format(sub))
+                r_list = s.json_data.result_challenge_embed(sub, ignoreScore=False)
+                for item in r_list:
+                    embed.add_field(name=item['name'],
+                                    value=item['value'],
+                                    inline=False)
+                await msg.channel.send(embed=embed)
             await msg.channel.send(s.json_data.result_leaderboard())                       
             return '*** Done ***'
-        except:
+        except Exception as e:
+            if DEBUG:
+                raise e
+            else:
+                print(e)
             return 'no/corrupt json'
 
     async def get_rank(s, msg):
@@ -1120,7 +1167,7 @@ class state_machine_class():
 client = discord.Client()
 print('client created')
 
-sm = {}
+leaderBot = {}
 
 @client.event
 async def on_ready():
@@ -1128,9 +1175,9 @@ async def on_ready():
         if DEBUG_CH:
             if guild.id != DEBUG_CH:
                 continue
-        sm[guild.id] = state_machine_class(client, guild.id)
-        await sm[guild.id].update_lb()
-        await sm[guild.id].update_winners()
+        leaderBot[guild.id] = leaderBot_class(client, guild.id)
+        await leaderBot[guild.id].update_lb()
+        await leaderBot[guild.id].update_winners()
         await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='your ?rank'))
         print(
             f'{client.user} is connected to the following guild:\n'
@@ -1146,7 +1193,7 @@ async def on_message(message):
         return
     if message.author == client.user:
         return
-    await sm[message.guild.id](message)
+    await leaderBot[message.guild.id](message)
 
 print('ready, steady, go')
 client.run(TOKEN)
