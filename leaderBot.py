@@ -261,7 +261,11 @@ class leaderBot_class():
         
         temp = message.content.strip().split(' ')
         if len(temp) == 1:
-            return s.json_data.j['aChallengeType'][int(temp[0])-1]['sName']
+            try:
+                return s.json_data.j['aChallengeType'][int(temp[0])-1]['sName']
+            except:
+                await s.send(message.channel, 'wrong index')
+                return
         elif len(temp) == 4:
             s.json_data.j['aChallengeType'].append({'sName':temp[0],
                                                     'sNick':temp[1],
@@ -419,11 +423,14 @@ class leaderBot_class():
                         ss.get('iUserID') == user_id):
                     iSubmissionId += 1
             
-            embed = discord.Embed()
-            embed.add_field(name='Submissions for this challenge',
-                value=s.json_data.result_challenge(sChallengeName, ignoreScore=False))
-            #embed.remove_author()
+            embed = discord.Embed(title='Submissions for challenge **{}**'.format(sChallengeName))
+            r_list = s.json_data.result_challenge_embed(sChallengeName, ignoreScore=False)
+            for item in r_list:
+                embed.add_field(name=item['name'],
+                                value=item['value'],
+                                inline=False)
             await message.channel.send(embed=embed)
+            
             await s.send(message.channel, 'Enter score (e.g. `3.14`):')
             message = await s.wait_response(message)
             if not message:
@@ -650,7 +657,11 @@ class leaderBot_class():
                                     value=item['value'],
                                     inline=False)
                 await msg.channel.send(embed=embed)
-            await msg.channel.send(s.json_data.result_leaderboard())                       
+                
+            name, value = s.json_data.result_leaderboard().split('\n', 1)
+            embed = discord.Embed()
+            embed.add_field(name=name, value=value)
+            await msg.channel.send(embed=embed)                       
             return '*** Done ***'
         except Exception as e:
             if DEBUG:
