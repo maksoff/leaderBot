@@ -76,6 +76,7 @@ class json_class():
             return []
     
     def result_challenge(s, ChallengeName, ignoreScore=True):
+        '''depreciated'''
         responce = ''
         resp = []
         if not ChallengeName in s.oRankByChallenge:
@@ -187,6 +188,47 @@ class json_class():
             if player and rank and points:
                 responce += '\n**{:4}.** {} with **{}** points'.format(rank, user, points)
         return responce
+
+    def get_active(s, limit=7):
+        responce = []
+        full_ch = 3 #how many challenges with full score
+        half_ch = 3
+        full_points = 10 #how many points for full score challenge
+        half_points = 5
+        full_list = list(s.list_of_challenges())[-full_ch:]
+        half_list = list(s.list_of_challenges())[-full_ch-half_ch:-full_ch]
+        for sub in s.j.get('aSubmission', []):
+            player = s.find(s.j.get('aPlayer'), iID=sub.get('iUserID'))
+            if player.get('bDisabled', False):
+                continue
+            points = 0
+            if sub.get('sChallengeName') in full_list:
+                points = full_points
+            if sub.get('sChallengeName') in half_list:
+                points = half_points
+            if not points:
+                continue
+            points += sub.get('iSubmissionId', 0) * 2
+            item = s.find(responce, iID=sub.get('iUserID'))
+            if item:
+                item['iPoints'] = item.get('iPoints', 0) + points
+            else:
+                responce.append({'iID':sub.get('iUserID'),
+                                 'iPoints':points,
+                                 'iDiscriminator':player.get('iDiscriminator'),
+                                 'sName':player.get('sName')})
+        responce.sort(key=lambda x: x.get('iPoints', 0), reverse=True)
+        last_rank = 0
+        last_points = None
+        for i, item in enumerate(responce, 1):
+            if item['iPoints'] != last_points:
+                last_rank = i
+            item['iRank'] = last_rank
+
+        responce = [x for x in responce if x.get('iRank') <= limit]
+        return responce
+            
+        
         
     
     def calculate_rating(s):

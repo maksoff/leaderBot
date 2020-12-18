@@ -945,6 +945,52 @@ class leaderBot_class():
         embed.add_field(name='TOP '+str(limit), value=response)
         await msg.channel.send(embed=embed)
 
+
+    async def act_img(s, *msg):
+        limit = 7
+        if msg:
+            msg = msg[0]
+        if len(msg.content.strip().split(' ')) > 1:
+            try:
+                limit = int(msg.content.split(' ')[1])
+            except:
+                ...
+        if limit == 0:
+            return await s.activity_img(msg)
+                
+        m = await msg.channel.send('Consulting Alphonse Mucha...')
+        buffer = await s.get_act_img(limit=limit)
+        await m.delete()
+        content=(f'**Activity top {limit}**\n' +
+                '*10 points for each submission in last 3 weeks, 5 points for older 3 weeks, additional points for multiple attempts*\n'+
+                f"Full leaderboard: <#{s.leaderboard_channel_id}>")
+        if buffer:
+            await msg.channel.send(content=content, file=discord.File(buffer, 'activity_top.png'))
+        else:
+            return "no submissions found"
+        return
+
+    async def get_act_img(s, *args, limit=7):
+        data = s.json_data.get_active(limit=limit)
+        for item in data:
+            user_id = item.get('iID', None)
+            user = await s.client.fetch_user(user_id)
+            #get avatar & channel icon    
+            AVATAR_SIZE = 128
+            try:
+                avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
+                user_avatar = io.BytesIO(await avatar_asset.read())
+            except Exception as e:
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
+                user_avatar = None
+
+            item['avatar'] = user_avatar
+        buffer = rankDisplay.create_top_card(data, color_scheme=1)
+        return buffer
+
     async def post(s, *args):
         return '***'
         data = None
@@ -1148,7 +1194,7 @@ class leaderBot_class():
                               ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
                               ('?top', 'leaderboard; add number to limit positions `?top 3`', s.top_img),
                               ('?leaderboard', 'same as `?top`', s.top_img),
-                              ('?activity', 'displays activity of players', s.activity_img),
+                              ('?activity', 'activity rank; add number to limit positions `?activity 3`', s.act_img),
                               ('?ksp', 'random ksp loading hint', s.ksp),
                           )
         
