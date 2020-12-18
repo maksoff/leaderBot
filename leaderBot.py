@@ -3,15 +3,14 @@
 ### beautify fScore output
 ### cancel input
 ### sort winners
+### activity card
+### activity (sum of last 3 challenges)
 
 # TODO: #
-# activity card
-# activity (sum of last 3 challenges)
 # hyperkerbalnaut role - automatic
 # try to create submission from embed (role react?)
 # leaderboard ?help -> add image
 # create channels for new submissions
-# winners
 # change prefix
 # ?about ?invite
 
@@ -100,11 +99,16 @@ class leaderBot_class():
         elif val in ('no', 'n', 'false', 'f', '0', 'disable', 'off'):
             return False
 
-    async def wait_response(s, message, timeout=120):
+    async def wait_response(s, message, timeout=120, **kwargs):
         '''returns message or None if timeout'''
+
+        # if from reaction - parse author_id
+        author_id = kwargs.get('author_id')
+        if not author_id:
+            author_id = message.author.id
         try:
             def check(m):
-                return (m.author.id == message.author.id) and (m.channel == message.channel)
+                return (m.author.id == author_id) and (m.channel == message.channel)
             msg = await client.wait_for('message', timeout=timeout, check=check)
             if msg.content == 'cancel':
                 await message.channel.send(f'`canceled`')
@@ -246,7 +250,7 @@ class leaderBot_class():
                 '\>' if bold else '   ')
         return response
 
-    async def ask_for_challenge_type(s, message, sChallengeName):
+    async def ask_for_challenge_type(s, message, sChallengeName, **kwargs):
         ''' returns sChallengeTypeName, if new - creates'''
         response = s.get_challenge_types(sChallengeName)
         response += '\n\nEnter number of existing type (e.g. `1`)'
@@ -254,9 +258,8 @@ class leaderBot_class():
         response += '\n(e.g. `extra_x3 impossible lower 3.14`)'
         await s.send(message.channel, response)
         
-        message = await s.wait_response(message)
+        message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait responce - add author_id in case start from reaction
         if not message:
-            await message.channel.send('aborted')
             return
         
         temp = message.content.strip().split(' ')
@@ -277,11 +280,11 @@ class leaderBot_class():
             await s.send(message.channel, 'Wrong parameter count')
             return 
 
-    async def ask_for_user_id(s, message, no_creation=False):
+    async def ask_for_user_id(s, message, no_creation=False, **kwargs):
         '''returns user_id or None if failed, creates user if new'''
         await s.send(message.channel, 'Please enter user (e.g. @best_user) or user id:')
         
-        message = await s.wait_response(message)
+        message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait_responce - if from react author_id supplied
         if not message:
             return
         
@@ -338,7 +341,7 @@ class leaderBot_class():
         
 
 
-    async def set_challenge_channel(s, message, change_existing_channel=True):
+    async def set_challenge_channel(s, message, change_existing_channel=True, **kwargs):
         '''selection for challenge, and updating/creating of channel.'''
         '''Returns None in case of error or sChallengeName'''
         '''also defines points system & show/hide score in #winners channel'''
@@ -347,7 +350,7 @@ class leaderBot_class():
         response += '`\nEnter challenge name (e.g. `42`)\n(if challenge not in the list, new challenge will be created)'
         await s.send(message.channel, response)
         # select challenge
-        message = await s.wait_response(message)
+        message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait_responce, author_id should be sent in case of start from reaction
         if not message:
             return
         sChallengeName = message.content
@@ -400,18 +403,30 @@ class leaderBot_class():
             return None
         return
 
-    async def add_submission(s, message):
+    async def add_submission(s, message, **kwargs):
         await s.send(message.channel, '__Type `cancel` at any time to... wait for it... *cancel*__\nFor which challenge is this submission?')
+
+        # if started from react - author_id for wait_for
+        author_id = kwargs.get('author_id')
+
         # select challenge
-        sChallengeName = await s.set_challenge_channel(message, change_existing_channel=False)
+        if kwargs.get('sChallengeName'):
+            sChallengeName = kwargs.get('sChallengeName')
+            await s.send(message.channel, f'> __Auto__ challenge name: **{sChallengeName}**')
+        else:
+            sChallengeName = await s.set_challenge_channel(message, change_existing_channel=False, author_id=author_id)
         if not sChallengeName:
-            return 'aborted'
+            return 'unknown challenge name'
         # select user
-        user_id = await s.ask_for_user_id(message)
+        if kwargs.get('iID'):
+            user_id = kwargs.get('iID')
+            await s.send(message.channel, f'> __Auto__ user <@{user_id}> *(maybe only ID shown)*')
+        else:
+            user_id = await s.ask_for_user_id(message, author_id=author_id)
         if not user_id:
             return 'wrong id - aborted'
         # select challenge type
-        sChallengeTypeName = await s.ask_for_challenge_type(message, sChallengeName)
+        sChallengeTypeName = await s.ask_for_challenge_type(message, sChallengeName, author_id=author_id)
         if not sChallengeName:
             return 'wrong challenge type - aborted'
         # add score
@@ -432,7 +447,7 @@ class leaderBot_class():
             await message.channel.send(embed=embed)
             
             await s.send(message.channel, 'Enter score (e.g. `3.14`):')
-            message = await s.wait_response(message)
+            message = await s.wait_response(message, author_id=author_id)
             if not message:
                 return 'aborted'
             fScore = float(message.content)
@@ -1126,18 +1141,62 @@ class leaderBot_class():
         user_id = message.author.id
         await message.channel.send(f'<@{user_id}> {random.choice(part_1)}. {random.choice(part_2)}')
 
+        # try to find the challenge
+        category_id = message.channel.category_id
+        challenge = {}
+        for ch in s.json_data.j.get('aChallenge')[::-1]:
+            ch_id = ch.get('idChannel')
+            ch_comp = s.client.get_channel(ch_id)
+            if ch_comp and category_id == ch_comp.category_id:
+                challenge = ch
+                break
+        ch_name = challenge.get('sName')
+        ch_winners = challenge.get('idChannel')
+
         # add embed to channel
         embed = discord.Embed(title='New mention!')
         embed.add_field(name='user', value=f'<@{message.author.id}>')
         embed.add_field(name='user ID', value=f'{message.author.id}')
         embed.add_field(name='channel', value=f'<#{message.channel.id}>')
         embed.add_field(name='message', value=f'[jump]({message.jump_url})')
-        embed.add_field(name='message text', value=f'{message.content}')
-        #embed.remove_author()
-        await channel.send(content=text, embed=embed)
-        
-        return
+
+        if ch_name:
+            embed.add_field(name='challenge', value=f'{ch_name}')
+        if ch_winners:
+            embed.add_field(name='#winners', value=f'<#{ch_winners}>')
+
             
+        embed.add_field(name='message text', value=f'{message.content}', inline=False)
+        
+        msg = await channel.send(content=text, embed=embed)
+        
+        accept = await msg.add_reaction('✅')
+        decline = await msg.add_reaction('❌')
+        
+        def check(reaction, user):
+            return ((s.client.user == msg.author) and
+                    (str(reaction.emoji) in ('✅', '❌')) and
+                    (reaction.count > 1))
+        
+        try:
+            reaction, user = await client.wait_for('reaction_add', check=check)
+        except Exception as e:
+            if DEBUG:
+                raise (e)
+            else:
+                print(e)
+                
+        if str(reaction.emoji) == '❌':
+            await msg.clear_reactions()
+            return
+        await msg.clear_reactions()
+                
+        responce = await s.add_submission(msg, iID=message.author.id, sChallengeName=ch_name, author_id=user.id)
+
+        if responce:
+            await s.send(msg.channel, responce)
+
+                
     async def __call__(s, message):
         response = ''
         
