@@ -1,15 +1,19 @@
 # maksoff - KSP leaderbot (automagically calculates the rating and etc.)
 
 ### beautify fScore output
+### cancel input
+### sort winners
+
 # TODO: #
 # activity card
-# sort winners
 # activity (sum of last 3 challenges)
 # hyperkerbalnaut role - automatic
 # try to create submission from embed (role react?)
 # leaderboard ?help -> add image
 # create channels for new submissions
 # winners
+# change prefix
+# ?about ?invite
 
 import io
 import os
@@ -101,7 +105,11 @@ class leaderBot_class():
         try:
             def check(m):
                 return (m.author.id == message.author.id) and (m.channel == message.channel)
-            return await client.wait_for('message', timeout=timeout, check=check)
+            msg = await client.wait_for('message', timeout=timeout, check=check)
+            if msg.content == 'cancel':
+                await message.channel.send(f'`canceled`')
+                return
+            return msg
         except asyncio.TimeoutError:
             await message.channel.send(f'`timeout {timeout}s`')
             return 
@@ -248,12 +256,16 @@ class leaderBot_class():
         
         message = await s.wait_response(message)
         if not message:
-            await s.message.channel.send('aborted')
+            await message.channel.send('aborted')
             return
         
         temp = message.content.strip().split(' ')
         if len(temp) == 1:
-            return s.json_data.j['aChallengeType'][int(temp[0])-1]['sName']
+            try:
+                return s.json_data.j['aChallengeType'][int(temp[0])-1]['sName']
+            except:
+                await s.send(message.channel, 'wrong index')
+                return
         elif len(temp) == 4:
             s.json_data.j['aChallengeType'].append({'sName':temp[0],
                                                     'sNick':temp[1],
@@ -389,11 +401,11 @@ class leaderBot_class():
         return
 
     async def add_submission(s, message):
-        await s.send(message.channel, 'For which challenge is this submission?')
+        await s.send(message.channel, '__Type `cancel` at any time to... wait for it... *cancel*__\nFor which challenge is this submission?')
         # select challenge
         sChallengeName = await s.set_challenge_channel(message, change_existing_channel=False)
         if not sChallengeName:
-            return 'Something wrong'
+            return 'aborted'
         # select user
         user_id = await s.ask_for_user_id(message)
         if not user_id:
@@ -411,11 +423,14 @@ class leaderBot_class():
                         ss.get('iUserID') == user_id):
                     iSubmissionId += 1
             
-            embed = discord.Embed()
-            embed.add_field(name='Submissions for this challenge',
-                value=s.json_data.result_challenge(sChallengeName, ignoreScore=False))
-            #embed.remove_author()
+            embed = discord.Embed(title='Submissions for challenge **{}**'.format(sChallengeName))
+            r_list = s.json_data.result_challenge_embed(sChallengeName, ignoreScore=False)
+            for item in r_list:
+                embed.add_field(name=item['name'],
+                                value=item['value'],
+                                inline=False)
             await message.channel.send(embed=embed)
+            
             await s.send(message.channel, 'Enter score (e.g. `3.14`):')
             message = await s.wait_response(message)
             if not message:
@@ -642,7 +657,11 @@ class leaderBot_class():
                                     value=item['value'],
                                     inline=False)
                 await msg.channel.send(embed=embed)
-            await msg.channel.send(s.json_data.result_leaderboard())                       
+                
+            name, value = s.json_data.result_leaderboard().split('\n', 1)
+            embed = discord.Embed()
+            embed.add_field(name=name, value=value)
+            await msg.channel.send(embed=embed)                       
             return '*** Done ***'
         except Exception as e:
             if DEBUG:
