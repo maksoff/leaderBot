@@ -28,7 +28,7 @@ def create_ebar(draw, x, y, length, diam, color):
     draw.ellipse([bar[1][0]-diam/2, bar[1][1],
                   bar[1][0]+diam/2, bar[1][1]+diam], fill=color)
 
-def place_avatar(image, avatar, x, y, diam, avatar_size = avatar_size, circle=True):
+def place_avatar(image, avatar, x, y, diam, avatar_size = avatar_size, circle=True, background=background):
     if not avatar:
         return
     avatar.seek(0)
@@ -228,7 +228,18 @@ def create_activity_card(players, dMaxPoints):
     return buffer
 
 
-def create_top_card(the_top):
+def create_top_card(the_top, color_scheme=0):
+    if color_scheme == 1:
+        background = "#40444B"
+        grey = "#484B4E"
+        grey_text = "#808486"
+        cian = "#F1C40F"
+    else:
+        background = "#23272A"
+        grey = "#484B4E"
+        grey_text = "#808486"
+        cian = "#62D3F5"
+         
     if not the_top:
         return
     step = 72
@@ -282,7 +293,7 @@ def create_top_card(the_top):
         # add avatar
         place_avatar(img, p.get('avatar'), max_w + (step-avatar_size)//2,
                      (step-avatar_size)//2 + i * step, diam,
-                     avatar_size = avatar_size, circle=True)
+                     avatar_size = avatar_size, circle=True, background=background)
 
         # add bar
         create_ebar (draw, max_w + step + diam, step * i + step * 3 / 4,
