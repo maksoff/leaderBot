@@ -46,10 +46,6 @@ if DEBUG_CH:
 
 DEBUG = os.getenv('DISCORD_TEST')
 
-if DEBUG:
-    import timer
-    stopwatch = timer.Timer(precision=3)
-
 
 def deepcopy(temp):
     '''deepcopy for json - with integer encapsulating'''
@@ -150,23 +146,18 @@ class leaderBot_class():
         if not update and user_id in s.avatar_cache:
             return s.avatar_cache[user_id].get('avatar_asset')
 
-        stopwatch.start('fetch user')
         if not user:
             user = await s.client.fetch_user(user_id)
-        stopwatch.stop('fetch user')
 
         # if in cache and hash not changed return saved thingy
         if user_id in s.avatar_cache:
-            if DEBUG: stopwatch.start('check cache')
             if user.avatar == s.avatar_cache[user_id].get('hash'):
-                if DEBUG: stopwatch.stop('check cache')
                 return s.avatar_cache[user_id].get('avatar_asset')
         else:
             s.avatar_cache[user_id] = {}
             
         if not user: # wrong id ?
             return
-        if DEBUG: stopwatch.start('save in cache')
         # nothing found - get avatar   
         AVATAR_SIZE = 128
         try:
@@ -181,8 +172,6 @@ class leaderBot_class():
 
         s.avatar_cache[user_id]['hash'] = user.avatar
         s.avatar_cache[user_id]['avatar_asset'] = user_avatar
-
-        if DEBUG: stopwatch.stop('save in cache')
 
         return user_avatar
     
@@ -843,7 +832,6 @@ class leaderBot_class():
             return 'something wrong'
 
     async def get_activity_img(s, *args):
-        if DEBUG: stopwatch.start('get_activity_img')
         s.json_data.calculate_rating()
         # get not disabled players with submissions
         players = sorted(s.json_data.j['aPlayer'], key=lambda x: float(x.get('iPoints')), reverse=True)
@@ -869,7 +857,6 @@ class leaderBot_class():
             pp['avatar'] = await s.get_avatar(p.get('iID', None))
             players_prepared.append(pp)
         buffer = rankDisplay.create_activity_card(players_prepared, dMaxPoints)
-        if DEBUG: stopwatch.stop('get_activity_img')
         return buffer
     
     
@@ -923,17 +910,10 @@ class leaderBot_class():
             return 'something wrong'
 
     async def get_top_img(s, limit):
-        if DEBUG:
-            stopwatch.start('get_top_img')
-            stopwatch.start('rating calculation')
         s.json_data.calculate_rating()
-        if DEBUG:
-            stopwatch.stop('rating calculation')
         players = sorted(s.json_data.j['aPlayer'], key=lambda x: float(x.get('iPoints')), reverse=True)
         if not players:
             return
-        if DEBUG:
-            stopwatch.start('prepare players')
         data = []
 
         for player in players:
@@ -942,7 +922,6 @@ class leaderBot_class():
             if limit:
                 if player.get('iRank') > limit:
                     break
-            if DEBUG: stopwatch.start('deepc0py')
 
             data.append({'iRank':player.get('iRank'),
                          'sName':player.get('sName'),
@@ -950,15 +929,8 @@ class leaderBot_class():
                          'iPoints':player.get('iPoints'),
                          'avatar':await s.get_avatar(player.get('iID'))
                          })
-            if DEBUG: stopwatch.stop('deepc0py')
             await s.get_avatar(player['iID'])
-        if DEBUG:
-            stopwatch.stop('prepare players')
-            stopwatch.start('get_image')
         buffer = rankDisplay.create_top_card(data)
-        if DEBUG:
-            stopwatch.stop('get_image')
-            stopwatch.stop('get_top_img')
         return buffer
         
 
@@ -978,15 +950,9 @@ class leaderBot_class():
             content = f"Full leaderboard: <#{s.leaderboard_channel_id}>\n**Top {limit}**"
             if limit > 7:
                 content += " (click to enlarge)"
-        if DEBUG:
-            stopwatch.reset()
-            stopwatch.start('top_img')
         m = await msg.channel.send('Consulting Dali...')
         buffer = await s.get_top_img(limit)
         await m.delete(delay=3)
-        if DEBUG:
-            stopwatch.stop('top_img')
-            print(stopwatch)
         if buffer:
             await msg.channel.send(content=content, file=discord.File(buffer, 'top.png'))
         else:
