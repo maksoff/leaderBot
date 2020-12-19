@@ -5,10 +5,11 @@
 ### sort winners
 ### activity card
 ### activity (sum of last 3 challenges)
+### try to create submission from embed (role react?)
+### hash avatars
 
 # TODO: #
 # hyperkerbalnaut role - automatic
-# try to create submission from embed (role react?)
 # leaderboard ?help -> add image
 # create channels for new submissions
 # change prefix
@@ -43,6 +44,10 @@ if DEBUG_CH:
     DEBUG_CH = int(DEBUG_CH)
 
 DEBUG = os.getenv('DISCORD_TEST')
+
+if DEBUG:
+    import timer
+    stopwatch = timer.Timer()
 
 
 def deepcopy(temp):
@@ -110,7 +115,7 @@ class leaderBot_class():
             def check(m):
                 return (m.author.id == author_id) and (m.channel == message.channel)
             msg = await client.wait_for('message', timeout=timeout, check=check)
-            if msg.content == 'cancel':
+            if msg.content.lower() == 'cancel':
                 await message.channel.send(f'`canceled`')
                 return
             return msg
@@ -134,6 +139,39 @@ class leaderBot_class():
             else:
                 print(e)
             return
+
+    async def get_avatar(s, user_id):
+        if not hasattr(s, 'avatar_cache'):
+            s.avatar_cache={}
+
+        user = await s.client.fetch_user(user_id)
+
+        # if in cache and hash not changed return saved thingy
+        if user_id in s.avatar_cache:
+            if user.avatar == s.avatar_cache[user_id].get('hash'):
+                return s.avatar_cache[user_id].get('avatar_asset')
+        else:
+            s.avatar_cache[user_id] = {}
+            
+        if not user: # wrong id ?
+            return
+        
+        # nothing found - get avatar   
+        AVATAR_SIZE = 128
+        try:
+            avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
+            user_avatar = io.BytesIO(await avatar_asset.read())
+        except Exception as e:
+            if DEBUG:
+                raise e
+            else:
+                print(e)
+            user_avatar = None
+
+        s.avatar_cache[user_id]['hash'] = user.avatar
+        s.avatar_cache[user_id]['avatar_asset'] = user_avatar
+
+        return user_avatar
     
     async def send(s, channel, content):
         content = str(content)
@@ -364,7 +402,6 @@ class leaderBot_class():
             await s.send(message.channel, 'Select channel to post winners (e.g. `#winners-42`)')
             message = await s.wait_response(message)
             if not message:
-                await message.channel.send('aborted')
                 return
             channel_id = s.get_int(message.content)
             channel = client.get_channel(channel_id)
@@ -374,7 +411,6 @@ class leaderBot_class():
             await s.send(message.channel, 'Show score for this challenge in #winners? (yes/no)')
             message = await s.wait_response(message)
             if not message:
-                await message.channel.send('aborted')
                 return
             bShowScore = s.yes_no(message.content)
             
@@ -412,7 +448,9 @@ class leaderBot_class():
         # select challenge
         if kwargs.get('sChallengeName'):
             sChallengeName = kwargs.get('sChallengeName')
-            await s.send(message.channel, f'> __Auto__ challenge name: **{sChallengeName}**')
+            embed = discord.Embed()
+            embed.add_field(name='Auto challenge name', value=f'Challenge **{sChallengeName}**')
+            await message.channel.send(embed=embed)
         else:
             sChallengeName = await s.set_challenge_channel(message, change_existing_channel=False, author_id=author_id)
         if not sChallengeName:
@@ -420,14 +458,17 @@ class leaderBot_class():
         # select user
         if kwargs.get('iID'):
             user_id = kwargs.get('iID')
-            await s.send(message.channel, f'> __Auto__ user <@{user_id}> *(maybe only ID shown)*')
+            author_name = kwargs.get('author_name')
+            embed = discord.Embed()
+            embed.add_field(name='Auto user', value=f'**@{author_name}** id: **{user_id}**')
+            await message.channel.send(embed=embed)
         else:
             user_id = await s.ask_for_user_id(message, author_id=author_id)
         if not user_id:
             return 'wrong id - aborted'
         # select challenge type
         sChallengeTypeName = await s.ask_for_challenge_type(message, sChallengeName, author_id=author_id)
-        if not sChallengeName:
+        if not sChallengeTypeName:
             return 'wrong challenge type - aborted'
         # add score
         try:
@@ -740,17 +781,8 @@ class leaderBot_class():
         # find max points
         max_points = max(player.get('iPoints') for player in s.json_data.j['aPlayer'])
 
-        #get avatar & channel icon    
-        AVATAR_SIZE = 128
-        try:
-            avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
-            user_avatar = io.BytesIO(await avatar_asset.read())
-        except Exception as e:
-            if DEBUG:
-                raise e
-            else:
-                print(e)
-            user_avatar = None
+        #get avatar & channel icon
+        user_avatar = await s.get_avatar(user_id)
             
         try:
             avatar_asset = msg.guild.icon_url_as(format='png', size=AVATAR_SIZE)
@@ -816,19 +848,7 @@ class leaderBot_class():
                 p['aSubmissions'].append((ch, points))
 
             #get avatar     
-            try:   
-                user_id = p.get('iID', None)
-                user = await s.client.fetch_user(user_id)
-                AVATAR_SIZE = 128
-                avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
-                user_avatar = io.BytesIO(await avatar_asset.read())
-            except Exception as e:
-                if DEBUG:
-                    raise e
-                else:
-                    print(e)
-                user_avatar = None
-            p['avatar'] = user_avatar
+            p['avatar'] = await s.get_avatar(p.get('iID', None))
         buffer = rankDisplay.create_activity_card(players, dMaxPoints)
         return buffer
     
@@ -883,10 +903,17 @@ class leaderBot_class():
             return 'something wrong'
 
     async def get_top_img(s, limit):
+        if DEBUG:
+            stopwatch.start('get_top_img')
+            stopwatch.start('rating calculation')
         s.json_data.calculate_rating()
+        if DEBUG:
+            stopwatch.stop('rating calculation')
         players = sorted(s.json_data.j['aPlayer'], key=lambda x: float(x.get('iPoints')), reverse=True)
         if not players:
             return
+        if DEBUG:
+            stopwatch.start('prepare players')
         data = []
         for player in players:
             if player.get('bDisabled') or (limit == 0 and (float(player.get('iStaticPoints', 0)) - float(player.get('iPoints', 0))) == 0):
@@ -894,28 +921,20 @@ class leaderBot_class():
             if limit:
                 if player.get('iRank') > limit:
                     break
-            user_id = player.get('iID', None)
-            user = await s.client.fetch_user(user_id)
-            #get avatar & channel icon    
-            AVATAR_SIZE = 128
-            try:
-                avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
-                user_avatar = io.BytesIO(await avatar_asset.read())
-            except Exception as e:
-                if DEBUG:
-                    raise e
-                else:
-                    print(e)
-                user_avatar = None
-
             player = deepcopy(player)
-            player['avatar'] = user_avatar
+            player['avatar'] = await s.get_avatar(player.get('iID', None))
             data.append(player)
+        if DEBUG:
+            stopwatch.stop('prepare players')
+            stopwatch.start('get_image')
         buffer = rankDisplay.create_top_card(data)
+        if DEBUG:
+            stopwatch.stop('get_image')
         return buffer
         
 
     async def top_img(s, *msg, leaderboard=False, content=None):
+        print(s.avatar_cache)
         limit = 7
         if msg:
             msg = msg[0]
@@ -931,10 +950,14 @@ class leaderBot_class():
             content = f"Full leaderboard: <#{s.leaderboard_channel_id}>\n**Top {limit}**"
             if limit > 7:
                 content += " (click to enlarge)"
-
+        if DEBUG:
+            stopwatch.start('top_img')
         m = await msg.channel.send('Consulting Dali...')
         buffer = await s.get_top_img(limit)
         await m.delete()
+        if DEBUG:
+            stopwatch.stop('top_img')
+            print(stopwatch)
         if buffer:
             await msg.channel.send(content=content, file=discord.File(buffer, 'top.png'))
         else:
@@ -1174,7 +1197,8 @@ class leaderBot_class():
         decline = await msg.add_reaction('❌')
         
         def check(reaction, user):
-            return ((s.client.user == msg.author) and
+            return ((reaction.message.id == msg.id) and
+                    (s.client.user == msg.author) and
                     (str(reaction.emoji) in ('✅', '❌')) and
                     (reaction.count > 1))
         
@@ -1191,7 +1215,11 @@ class leaderBot_class():
             return
         await msg.clear_reactions()
                 
-        responce = await s.add_submission(msg, iID=message.author.id, sChallengeName=ch_name, author_id=user.id)
+        responce = await s.add_submission(msg,
+                                          iID=message.author.id,
+                                          author_name=message.author.display_name,
+                                          sChallengeName=ch_name,
+                                          author_id=user.id)
 
         if responce:
             await s.send(msg.channel, responce)
