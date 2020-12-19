@@ -17,6 +17,7 @@
 
 import io
 import os
+import copy
 import time
 import asyncio
 
@@ -47,10 +48,11 @@ DEBUG = os.getenv('DISCORD_TEST')
 
 if DEBUG:
     import timer
-    stopwatch = timer.Timer()
+    stopwatch = timer.Timer(precision=3)
 
 
 def deepcopy(temp):
+    '''deepcopy for json - with integer encapsulating'''
     ret = None
     if type(temp) is dict:
         ret = {}
@@ -66,6 +68,8 @@ def deepcopy(temp):
 
 
 def deepcopy_nostring(temp):
+    return copy.deepcopy(temp)
+
     ret = None
     if type(temp) is dict:
         ret = {}
@@ -89,6 +93,7 @@ class leaderBot_class():
     client = None
 
     ksp_hints = None
+    avatar_cache={}
     
     ## assistant functions
 
@@ -140,22 +145,27 @@ class leaderBot_class():
                 print(e)
             return
 
-    async def get_avatar(s, user_id):
-        if not hasattr(s, 'avatar_cache'):
-            s.avatar_cache={}
+    async def get_avatar(s, user_id, update=False):
 
+        if not update and user_id in s.avatar_cache:
+            return s.avatar_cache[user_id].get('avatar_asset')
+
+        stopwatch.start('fetch user')
         user = await s.client.fetch_user(user_id)
+        stopwatch.stop('fetch user')
 
         # if in cache and hash not changed return saved thingy
         if user_id in s.avatar_cache:
+            if DEBUG: stopwatch.start('check cache')
             if user.avatar == s.avatar_cache[user_id].get('hash'):
+                if DEBUG: stopwatch.stop('check cache')
                 return s.avatar_cache[user_id].get('avatar_asset')
         else:
             s.avatar_cache[user_id] = {}
             
         if not user: # wrong id ?
             return
-        
+        if DEBUG: stopwatch.start('save in cache')
         # nothing found - get avatar   
         AVATAR_SIZE = 128
         try:
@@ -170,6 +180,8 @@ class leaderBot_class():
 
         s.avatar_cache[user_id]['hash'] = user.avatar
         s.avatar_cache[user_id]['avatar_asset'] = user_avatar
+
+        if DEBUG: stopwatch.stop('save in cache')
 
         return user_avatar
     
@@ -810,7 +822,7 @@ class leaderBot_class():
             try:
                 msg = await message.channel.send('Consulting Picasso...')
                 buffer = await s.get_activity_img()
-                await msg.delete()
+                await msg.delete(delay=3)
                 message = await message.channel.send(content = 'Activity graph. One **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'activity.png'))
                 return
             except Exception as e:
@@ -828,28 +840,33 @@ class leaderBot_class():
             return 'something wrong'
 
     async def get_activity_img(s, *args):
+        if DEBUG: stopwatch.start('get_activity_img')
         s.json_data.calculate_rating()
         # get not disabled players with submissions
         players = sorted(s.json_data.j['aPlayer'], key=lambda x: float(x.get('iPoints')), reverse=True)
         players = list(filter(lambda x: (float(x.get('iPoints', 0)) - float(x.get('iStaticPoints', 0)) > 0) and not x.get('bDisabled', False), players))
         if not players:
             return
-        players = deepcopy_nostring(players) # YES!
         lChallenges = list(s.json_data.list_of_challenges())
         dMaxPoints = {}
+        players_prepared = []
         for p in players:
             # get submissions matrix
-            p['aSubmissions'] = []
+            pp = {}
+            pp['aSubmissions'] = []
+            pp['iRank'] = p.get('iRank')
             for ch in lChallenges:
                 points = sum(float(x.get('iPoints', 0)) for x in s.json_data.j['aSubmission']
                              if x.get('iUserID') == p.get('iID') and x.get('sChallengeName') == ch)
                 if dMaxPoints.get(ch, 0) < points:
                     dMaxPoints[ch] = points # max points for challenge
-                p['aSubmissions'].append((ch, points))
+                pp['aSubmissions'].append((ch, points))
 
             #get avatar     
-            p['avatar'] = await s.get_avatar(p.get('iID', None))
-        buffer = rankDisplay.create_activity_card(players, dMaxPoints)
+            pp['avatar'] = await s.get_avatar(p.get('iID', None))
+            players_prepared.append(pp)
+        buffer = rankDisplay.create_activity_card(players_prepared, dMaxPoints)
+        if DEBUG: stopwatch.stop('get_activity_img')
         return buffer
     
     
@@ -915,26 +932,34 @@ class leaderBot_class():
         if DEBUG:
             stopwatch.start('prepare players')
         data = []
+
         for player in players:
             if player.get('bDisabled') or (limit == 0 and (float(player.get('iStaticPoints', 0)) - float(player.get('iPoints', 0))) == 0):
                 continue
             if limit:
                 if player.get('iRank') > limit:
                     break
-            player = deepcopy(player)
-            player['avatar'] = await s.get_avatar(player.get('iID', None))
-            data.append(player)
+            if DEBUG: stopwatch.start('deepc0py')
+
+            data.append({'iRank':player.get('iRank'),
+                         'sName':player.get('sName'),
+                         'iDiscriminator':player.get('iDiscriminator'),
+                         'iPoints':player.get('iPoints'),
+                         'avatar':await s.get_avatar(player.get('iID'))
+                         })
+            if DEBUG: stopwatch.stop('deepc0py')
+            await s.get_avatar(player['iID'])
         if DEBUG:
             stopwatch.stop('prepare players')
             stopwatch.start('get_image')
         buffer = rankDisplay.create_top_card(data)
         if DEBUG:
             stopwatch.stop('get_image')
+            stopwatch.stop('get_top_img')
         return buffer
         
 
     async def top_img(s, *msg, leaderboard=False, content=None):
-        print(s.avatar_cache)
         limit = 7
         if msg:
             msg = msg[0]
@@ -951,10 +976,11 @@ class leaderBot_class():
             if limit > 7:
                 content += " (click to enlarge)"
         if DEBUG:
+            stopwatch.reset()
             stopwatch.start('top_img')
         m = await msg.channel.send('Consulting Dali...')
         buffer = await s.get_top_img(limit)
-        await m.delete()
+        await m.delete(delay=3)
         if DEBUG:
             stopwatch.stop('top_img')
             print(stopwatch)
@@ -998,7 +1024,7 @@ class leaderBot_class():
                 
         m = await msg.channel.send('Consulting Alphonse Mucha...')
         buffer = await s.get_act_img(limit=limit)
-        await m.delete()
+        await m.delete(delay=3)
         content=(f'**Activity top {limit}**\n' +
                 '*10 points for each submission in last 3 weeks, 5 points for older 3 weeks, additional points for multiple attempts*\n'+
                 f"Full leaderboard: <#{s.leaderboard_channel_id}>")
@@ -1157,7 +1183,7 @@ class leaderBot_class():
                   'Kadmins now tanning on Moho. Because of Kerbol activity message can be corrupte#12!$30<42< `C`R`C` eRr0r',
                   'Kadmins gone to Val. Or to Vall? As soon they are back, all be updated',
                   'Relax, read a book. Kadmins will update all soon',
-                  '.--. .-.. . .- ... . / .-- .- .. -',
+                  '   .--. .-.. . .- ... . / .-- .- .. -',
                   "Kadmins are at meeting! Or sleeping. Don't know, but all be updated soon",
                   "Kadmins are stuck on Eve. Please send help. And snacks.",
                   "Kadmins installed RSS & RO. They are lost now.")
@@ -1192,14 +1218,17 @@ class leaderBot_class():
         embed.add_field(name='message text', value=f'{message.content}', inline=False)
         
         msg = await channel.send(content=text, embed=embed)
+
+        accept = '✅'
+        decline = '❌'
         
-        accept = await msg.add_reaction('✅')
-        decline = await msg.add_reaction('❌')
+        await msg.add_reaction(accept)
+        await msg.add_reaction(decline)
         
         def check(reaction, user):
             return ((reaction.message.id == msg.id) and
                     (s.client.user == msg.author) and
-                    (str(reaction.emoji) in ('✅', '❌')) and
+                    (str(reaction.emoji) in (accept, decline)) and
                     (reaction.count > 1))
         
         try:
@@ -1210,7 +1239,7 @@ class leaderBot_class():
             else:
                 print(e)
                 
-        if str(reaction.emoji) == '❌':
+        if str(reaction.emoji) == decline:
             await msg.clear_reactions()
             return
         await msg.clear_reactions()
