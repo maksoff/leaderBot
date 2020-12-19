@@ -145,13 +145,14 @@ class leaderBot_class():
                 print(e)
             return
 
-    async def get_avatar(s, user_id, update=False):
+    async def get_avatar(s, user_id, update=False, user = None):
 
         if not update and user_id in s.avatar_cache:
             return s.avatar_cache[user_id].get('avatar_asset')
 
         stopwatch.start('fetch user')
-        user = await s.client.fetch_user(user_id)
+        if not user:
+            user = await s.client.fetch_user(user_id)
         stopwatch.stop('fetch user')
 
         # if in cache and hash not changed return saved thingy
@@ -614,6 +615,7 @@ class leaderBot_class():
         for player in s.json_data.j['aPlayer']:
             try:
                 user = await s.client.fetch_user(player.get('iID'))
+                await s.get_avatar(user.id, update=True, user=user) # update avatar too
                 player['sName'] = user.name
                 player['iDiscriminator'] = user.discriminator
             except Exception as e:
@@ -681,6 +683,7 @@ class leaderBot_class():
     
     async def update_lb(s, *args):
         try:
+            await s.update_usernames() # update usernames & avatars
             s.json_data.calculate_rating()
             s.save_json()
             await s.post()
@@ -794,7 +797,7 @@ class leaderBot_class():
         max_points = max(player.get('iPoints') for player in s.json_data.j['aPlayer'])
 
         #get avatar & channel icon
-        user_avatar = await s.get_avatar(user_id)
+        user_avatar = await s.get_avatar(user_id, update=True, user=user)
             
         try:
             avatar_asset = msg.guild.icon_url_as(format='png', size=AVATAR_SIZE)
@@ -1077,7 +1080,6 @@ class leaderBot_class():
                 data = ''
 
         if data == None:    
-            await s.update_usernames()
             payload = deepcopy(s.json_data.j)            
             payload['iGuildID'] = s.guild_id
             data = json.dumps(payload)
