@@ -789,6 +789,7 @@ class leaderBot_class():
         user_avatar = await s.get_avatar(user_id, update=True, user=user)
             
         try:
+            AVATAR_SIZE = 128
             avatar_asset = msg.guild.icon_url_as(format='png', size=AVATAR_SIZE)
             guild_avatar = io.BytesIO(await avatar_asset.read())
         except Exception as e:
