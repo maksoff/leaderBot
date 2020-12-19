@@ -93,15 +93,17 @@ class json_class():
                 else:
                     user = '@' + p.get('sName')
                 if ignoreScore:
-                    responce += '{:4}. {} at the {}. try => **{}** points\n'.format(val['iRank'],
+                    responce += '{:4}. {} at the {}{} try => **{}** points\n'.format(val['iRank'],
                                                                                     user,
                                                                                     val['iSubmissionId'] + 1,
+                                                                                    s.suffix(val['iSubmissionId'] + 1),
                                                                                     beautify(val['iPoints']))
                 else:
-                    responce += '{:4}. {} with {} at the {}. try => **{}** points\n'.format(val['iRank'],
+                    responce += '{:4}. {} with {} at the {}{} try => **{}** points\n'.format(val['iRank'],
                                                                                             user,
                                                                                             beautify(val['fScore']),
                                                                                             val['iSubmissionId'] + 1,
+                                                                                            s.suffix(val['iSubmissionId'] + 1),
                                                                                             beautify(val['iPoints']))
         return responce[:-1]
     
@@ -117,20 +119,22 @@ class json_class():
             for val in value:
                 user = '<@{}>'.format(val['iUserID'])
                 if ignoreScore:
-                    responce += '{}. {} at the {}. try => **{}** points\n'.format(val['iRank'],
+                    responce += '{}. {} at the {}{} try => **{}** points\n'.format(val['iRank'],
                                                                                     user,
                                                                                     val['iSubmissionId'] + 1,
+                                                                                    s.suffix(val['iSubmissionId'] + 1),
                                                                                     beautify(val['iPoints']))
                 else:
-                    responce += '{}. {} with {} at the {}. try => **{}** points\n'.format(val['iRank'],
+                    responce += '{}. {} with {} at the {}{} try => **{}** points\n'.format(val['iRank'],
                                                                                             user,
                                                                                             beautify(val['fScore']),
                                                                                             val['iSubmissionId'] + 1,
+                                                                                            s.suffix(val['iSubmissionId'] + 1),
                                                                                             beautify(val['iPoints']))
             r_list.append({'name':'Modus **{}**'.format(challengeType.get('sNick', key)),
                            'value':responce,
                            'index':s.j['aChallengeType'].index(challengeType),
-                           'fMultiplier':challengeType.get('fMultiplier', 1)})
+                           'fMultiplier':float(challengeType.get('fMultiplier', 1))})
             
         r_list.sort(key = lambda x: (x['fMultiplier'], x['index']))
         return r_list
@@ -258,6 +262,7 @@ class json_class():
         for rbc, o in s.oRankByChallenge.items():
             for ct, c in o.items():
                 bD = s.find(s.j['aChallengeType'], 'sName', ct)['bHigherScore']
+                bSpecial = s.find(s.j['aChallengeType'], 'sName', ct).get('bSpecial', False)
                 c.sort(key=lambda x: float(x['fScore']), reverse=bD)
                 
                 iRank = None
@@ -268,7 +273,17 @@ class json_class():
                         iRank = i
                     cc['iRank'] = iRank
                     challenge = s.find(s.j['aChallenge'], 'sName', rbc)
-                    cc['iPoints'] = s.getPoints(iRank - 1, points=challenge.get('aPoints'))*float(s.find(s.j['aChallengeType'], 'sName', ct).get('fMultiplier', 1))
+                    if bSpecial: # special counting
+                        iScore = int(cc['fScore']) # expected 1, 2, 3, ...
+                        aPoints = challenge.get('aPoints', s.aPoint)
+                        if bD:
+                            iScore = len(aPoints) - iScore # transform to index 
+                        else:
+                            iScore -= 1 # transform to index
+                        if iScore < 0: iScore = 0
+                        cc['iPoints'] = aPoints[iScore] if iScore < len(aPoints) else 0
+                    else:
+                        cc['iPoints'] = s.getPoints(iRank - 1, points=challenge.get('aPoints'))*float(s.find(s.j['aChallengeType'], 'sName', ct).get('fMultiplier', 1))
                     oS = s.find(s.j['aSubmission'], sChallengeName=rbc, sChallengeTypeName=ct, iUserID=cc['iUserID'], fScore=cc['fScore'])
                     oS['iRank'] = iRank
                     oS['iPoints'] = cc['iPoints']

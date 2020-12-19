@@ -135,10 +135,7 @@ class leaderBot_class():
             channel = s.client.get_channel(ch_id)
             return await channel.fetch_message(m_id)
         except Exception as e:
-            if DEBUG:
-                raise e
-            else:
-                print(e)
+            print(e)
             return
 
     async def get_avatar(s, user_id, update=False, user = None):
@@ -283,11 +280,12 @@ class leaderBot_class():
             bold = False
             if s.json_data.find(s.json_data.j['aSubmission'], sChallengeName=sChallengeName, sChallengeTypeName=chl.get('sName')):
                 bold = True
-            response += '\n{5}**{0:3}**. `{1}`; display name: **{2}**, *{3}* score wins, multiplier **{4}**'.format(
+            response += '\n{5}**{0:3}**. `{1}`; display name: **{2}**, *{3}* score wins, multiplier **{4}**{6}'.format(
                 i, chl.get('sName'), chl.get('sNick', chl.get('sName')),
                 '*higher*' if chl.get('bHigherScore') else 'lower',
                 chl.get('fMultiplier', 1),
-                '\>' if bold else '   ')
+                '\>' if bold else '   ',
+                '; points[score] (special)' if chl.get('bSpecial') else '')
         return response
 
     async def ask_for_challenge_type(s, message, sChallengeName, **kwargs):
@@ -295,6 +293,9 @@ class leaderBot_class():
         response = s.get_challenge_types(sChallengeName)
         response += '\n\nEnter number of existing type (e.g. `1`)'
         response += '\nor create new type in format `unique_name display_name lower/higher multiplier`'
+        response += ' - `lower/higher` = which score wins, `multiplier` = points multiplier'
+        response += '\n||add optional `=` at the end, if points = points[score]. e.g for *higher_wins*, '
+        response += 'and points system = [50, 40, 30, 20, 10], if score=`4` player gets `40` points||'
         response += '\n(e.g. `extra_x3 impossible lower 3.14`)'
         await s.send(message.channel, response)
         
@@ -314,6 +315,14 @@ class leaderBot_class():
                                                     'sNick':temp[1],
                                                     'bHigherScore':temp[2][0] == 'h',
                                                     'fMultiplier':float(temp[3].replace(',','.'))})
+            s.save_json()
+            return temp[0]
+        elif len(temp) == 5 and temp[4] == '=':
+            s.json_data.j['aChallengeType'].append({'sName':temp[0],
+                                                    'sNick':temp[1],
+                                                    'bHigherScore':temp[2][0] == 'h',
+                                                    'fMultiplier':float(temp[3].replace(',','.')),
+                                                    'bSpecial':True})
             s.save_json()
             return temp[0]
         else:
@@ -662,7 +671,8 @@ class leaderBot_class():
                 
                 if idChannel and idMessage:
                     msg = await s.get_message(idChannel, idMessage)
-                    await msg.edit(content='', embed=embed)
+                    if msg:
+                        await msg.edit(content='', embed=embed)
             except Exception as e:
                 if DEBUG:
                     raise e
@@ -1162,12 +1172,16 @@ class leaderBot_class():
         # try to find the challenge
         category_id = message.channel.category_id
         challenge = {}
-        for ch in s.json_data.j.get('aChallenge')[::-1]:
+        for ch in s.json_data.j.get('aChallenge'):
             ch_id = ch.get('idChannel')
             ch_comp = s.client.get_channel(ch_id)
             if ch_comp and category_id == ch_comp.category_id:
-                challenge = ch
-                break
+                if challenge:
+                    challenge = {} # multiple challenges in this category found, can't decide
+                    break
+                else:
+                    challenge = ch
+                    
         ch_name = challenge.get('sName')
         ch_winners = challenge.get('idChannel')
 
