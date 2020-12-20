@@ -130,6 +130,53 @@ class leaderBot_class():
             else:
                 print(e)
             return
+        
+    async def ask_for_reaction(s, message, **kwargs):
+        '''kwargs: mode ('yn' or 'ynd'), timeout, return_user (True/False)'''
+        '''returns None if timeout, 'yes', 'no', 'delete' '''
+        yes = '✅'
+        no = '⛔'
+        delete = '❌'
+
+        arr = {yes:'yes', no:'no', delete:'delete'}
+
+        mode = kwargs.get('mode', 'yn')
+        timeout = kwargs.get('timeout')
+        author_id = kwargs.get('author_id')
+        
+        if mode == 'yn':
+            arr.pop(no)
+        elif mode != 'ynd':
+            print('wrong mode for ask_for_reaction')
+            return # wrong mode
+
+        for i in arr:
+            await message.add_reaction(i)
+        
+        def check(reaction, user):
+            return ((reaction.message.id == message.id) and
+                    (s.client.user == message.author) and
+                    (str(reaction.emoji) in arr) and
+                    (reaction.count > 1) and
+                    ((not author_id) or (author_id == user.id)))
+        
+        try:
+            reaction, user = await client.wait_for('reaction_add', check=check, timeout=timeout)
+        except asyncio.TimeoutError:
+            await message.clear_reactions()
+            await message.channel.send(f'`timeout {timeout}s`')
+            return 
+        except Exception as e:
+            await message.clear_reactions()
+            if DEBUG:
+                raise (e)
+            else:
+                print(e)
+                return
+                
+        await message.clear_reactions()
+        return arr[reaction.emoji], user
+
                     
     async def get_message(s, ch_id, m_id):
         try:
@@ -387,9 +434,11 @@ class leaderBot_class():
         ar = message.content.strip().split(' ')
         if len(ar)==1:
             return aPoints[int(ar[0])-1]
-        return sorted([float(x) for x in ar], reverse=True)
-        
-
+        try:
+            return sorted([float(x) for x in ar], reverse=True)
+        except:
+            await s.send(message.channel, 'aborted. Should be numbers! like `20 10 3.14 2.71 1.41`')
+            return
 
     async def set_challenge_channel(s, message, change_existing_channel=True, **kwargs):
         '''selection for challenge, and updating/creating of channel.'''
@@ -458,26 +507,35 @@ class leaderBot_class():
         author_id = kwargs.get('author_id')
 
         # select challenge
-        if kwargs.get('sChallengeName'):
-            sChallengeName = kwargs.get('sChallengeName')
+        sChallengeName = kwargs.get('sChallengeName')
+        if sChallengeName:
             embed = discord.Embed()
             embed.add_field(name='Auto challenge name', value=f'Challenge **{sChallengeName}**')
-            await message.channel.send(embed=embed)
-        else:
+            msg = await message.channel.send(content='Correct?', embed=embed)
+            react, _ = await s.ask_for_reaction(msg, mode='yn', timeout=60, author_id=author_id)
+            if react != 'yes':
+                sChallengeName = None
+                     
+        if (not sChallengeName) or (not (sChallengeName in s.json_data.list_of_challenges())):
             sChallengeName = await s.set_challenge_channel(message, change_existing_channel=False, author_id=author_id)
-        if not sChallengeName:
-            return 'unknown challenge name'
+            if not sChallengeName:
+                return 'unknown challenge name'
+            
         # select user
-        if kwargs.get('iID'):
-            user_id = kwargs.get('iID')
+        user_id = kwargs.get('iID')
+        if user_id:
             author_name = kwargs.get('author_name')
             embed = discord.Embed()
             embed.add_field(name='Auto user', value=f'**@{author_name}** id: **{user_id}**')
-            await message.channel.send(embed=embed)
-        else:
-            user_id = await s.ask_for_user_id(message, author_id=author_id)
+            msg = await message.channel.send(content='Correct?', embed=embed)
+            react, _ = await s.ask_for_reaction(msg, mode='yn', timeout=60, author_id=author_id)
+            if react != 'yes':
+                user_id = None
+            
         if not user_id:
-            return 'wrong id - aborted'
+            user_id = await s.ask_for_user_id(message, author_id=author_id)
+            if not user_id:
+                return 'wrong id - aborted'
         # select challenge type
         sChallengeTypeName = await s.ask_for_challenge_type(message, sChallengeName, author_id=author_id)
         if not sChallengeTypeName:
@@ -1118,52 +1176,6 @@ class leaderBot_class():
     async def ping(s, *args):
         return 'Pong! {}ms'.format(int(s.client.latency*1000))
 
-    async def ask_for_reaction(s, message, **kwargs):
-        '''kwargs: mode ('yn' or 'ynd'), timeout, return_user (True/False)'''
-        '''returns None if timeout, 'yes', 'no', 'delete' '''
-        yes = '✅'
-        no = '⛔' # denied
-        delete = '❌'
-
-        arr = {yes:'yes', no:'no', delete:'delete'}
-
-        mode = kwargs.get('mode', 'yn')
-        timeout = kwargs.get('timeout')
-        author_id = kwargs.get('author_id')
-        
-        if mode == 'yn':
-            arr.pop(no)
-        elif mode != 'ynd':
-            print('wrong mode for ask_for_reaction')
-            return # wrong mode
-
-        for i in arr:
-            await message.add_reaction(i)
-        
-        def check(reaction, user):
-            return ((reaction.message.id == message.id) and
-                    (s.client.user == message.author) and
-                    (str(reaction.emoji) in arr) and
-                    (reaction.count > 1) and
-                    ((not author_id) or (author_id == user.id)))
-        
-        try:
-            reaction, user = await client.wait_for('reaction_add', check=check, timeout=timeout)
-        except asyncio.TimeoutError:
-            await message.clear_reactions()
-            await message.channel.send(f'`timeout {timeout}s`')
-            return 
-        except Exception as e:
-            await message.clear_reactions()
-            if DEBUG:
-                raise (e)
-            else:
-                print(e)
-                return
-                
-        await message.clear_reactions()
-        return arr[reaction.emoji], user
-
     async def mentioned(s, message):
         # will be supported in 1.6 await message.channel.send('Okay', reference=message)
 
@@ -1281,7 +1293,7 @@ class leaderBot_class():
                 if message_r.content == '*':
                     response = 'Okay, no message sent'
                     break
-                message_r = await message.channel.send(f'<@{message.author.id}>, sorry, your submission is declined\n{message_r.content}')
+                message_r = await message.channel.send(f'<@{message.author.id}>, *sorry, your submission is declined*\n{message_r.content}')
                 embed = discord.Embed()
                 embed.add_field(name='Decline message sent', value=f'[jump]({message_r.jump_url})')
                 break
