@@ -32,7 +32,6 @@ import rankDisplay
 
 import json
 
-
 check_role = False
 check_channel = True
 
@@ -183,7 +182,8 @@ class leaderBot_class():
             channel = s.client.get_channel(ch_id)
             return await channel.fetch_message(m_id)
         except Exception as e:
-            print(e)
+            if DEBUG:
+                print(e)
             return
 
     async def get_avatar(s, user_id, update=False, user = None):
@@ -668,7 +668,7 @@ class leaderBot_class():
         else:
             return 'Ok, saved'
 
-    async def update_usernames(s, *args):
+    async def update_usernames_not_async(s, *args):
         for player in s.json_data.j['aPlayer']:
             try:
                 user = await s.client.fetch_user(player.get('iID'))
@@ -680,6 +680,23 @@ class leaderBot_class():
                     raise e
                 else:
                     print(e)
+        s.save_json()
+        print(t)
+        return
+
+    async def update_usernames(s, *args):
+        async def update_player(player):
+            try:
+                user = await s.client.fetch_user(player.get('iID'))
+                await s.get_avatar(user.id, update=True, user=user) # update avatar too
+                player['sName'] = user.name
+                player['iDiscriminator'] = user.discriminator
+            except Exception as e:
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
+        asyncio.gather(*(asyncio.ensure_future(update_player(player)) for player in s.json_data.j['aPlayer']))
         s.save_json()
         return
 
@@ -714,7 +731,8 @@ class leaderBot_class():
             sub = [sChallengeName]
         else:
             sub = s.json_data.list_of_challenges()
-        for sub in sub:
+
+        async def update_win(sub):
             try:
                 challenge = s.json_data.find(s.json_data.j['aChallenge'], sName=sub)
                 idChannel = challenge.get('idChannel')
@@ -732,11 +750,17 @@ class leaderBot_class():
                     msg = await s.get_message(idChannel, idMessage)
                     if msg:
                         await msg.edit(content='', embed=embed)
+                    else:
+                        del challenge['idChannel']
+                        del challenge['idMessage']
+                        
             except Exception as e:
                 if DEBUG:
                     raise e
                 else:
                     print('update_winners\n', e)
+        asyncio.gather(*(asyncio.ensure_future(update_win(sub)) for sub in sub))
+        return
                     
     
     async def update_lb(s, *args):
