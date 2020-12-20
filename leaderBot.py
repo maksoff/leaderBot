@@ -27,7 +27,7 @@ import random
 import discord
 from dotenv import load_dotenv
 
-from jsonReader import json_class
+from jsonReader import json_class, beautify
 import rankDisplay
 
 import json
@@ -505,6 +505,7 @@ class leaderBot_class():
 
         # if started from react - author_id for wait_for
         author_id = kwargs.get('author_id')
+        ret_points = kwargs.get('ret_points')
 
         # select challenge
         sChallengeName = kwargs.get('sChallengeName')
@@ -519,7 +520,8 @@ class leaderBot_class():
         if (not sChallengeName) or (not (sChallengeName in s.json_data.list_of_challenges())):
             sChallengeName = await s.set_challenge_channel(message, change_existing_channel=False, author_id=author_id)
             if not sChallengeName:
-                return 'unknown challenge name'
+                await s.send(message.channel, 'unknown challenge name')
+                return
             
         # select user
         user_id = kwargs.get('iID')
@@ -535,11 +537,14 @@ class leaderBot_class():
         if not user_id:
             user_id = await s.ask_for_user_id(message, author_id=author_id)
             if not user_id:
-                return 'wrong id - aborted'
+                await s.send(message.channel, 'wrong id - aborted')
+                return
+            
         # select challenge type
         sChallengeTypeName = await s.ask_for_challenge_type(message, sChallengeName, author_id=author_id)
         if not sChallengeTypeName:
-            return 'wrong challenge type - aborted'
+            await s.send(message.channel, 'wrong challenge type - aborted')
+            return
         # add score
         try:
             iSubmissionId = 0
@@ -560,7 +565,8 @@ class leaderBot_class():
             await s.send(message.channel, 'Enter score (e.g. `3.14`):')
             message = await s.wait_response(message, author_id=author_id)
             if not message:
-                return 'aborted'
+                await s.send(message.channel, 'aborted')
+                return
             fScore = float(message.content)
             s.json_data.j['aSubmission'].append({'iUserID':user_id,
                                                  'sChallengeName':sChallengeName,
@@ -569,14 +575,25 @@ class leaderBot_class():
                                                  'fScore':fScore})
             #s.json_data.calculate_rating()
             response = await s.update_all(message)
-            return response
+            await s.send(message.channel, response)
+            if ret_points:
+                rSubmission = s.json_data.find(s.json_data.j['aSubmission'], {'iUserID':user_id,
+                                                                              'sChallengeName':sChallengeName,
+                                                                              'sChallengeTypeName':sChallengeTypeName,
+                                                                              'iSubmissionId':iSubmissionId,
+                                                                              'fScore':fScore})
+                newPlayer = (1 == len([1 for x in s.json_data.j['aSubmission'] if x.get('iUserID') == user_id]))
+                sTypeName = s.json_data.find(s.json_data.j['aChallengeType'], sName=sChallengeTypeName).get('sNick')
+                return rSubmission, newPlayer, sTypeName
+            return
         except Exception as e:
             if DEBUG:
                 raise e
             else:
                 print(e)
-            return 'Something really wrong'
-        return 'not ready'
+            await s.send(message.channel, 'Something really wrong')
+            return
+        return
     
     async def add_points(s, message):
         user_id = await s.ask_for_user_id(message)
@@ -753,12 +770,12 @@ class leaderBot_class():
                     else:
                         del challenge['idChannel']
                         del challenge['idMessage']
-                        
             except Exception as e:
                 if DEBUG:
                     raise e
                 else:
                     print('update_winners\n', e)
+                    
         asyncio.gather(*(asyncio.ensure_future(update_win(sub)) for sub in sub))
         return
                     
@@ -845,14 +862,15 @@ class leaderBot_class():
         #embed.remove_author()
         await msg.channel.send(embed=embed)
 
-    async def rank_img(s, msg):
+    async def rank_img(s, msg, user_id=None):
         # find user.id and user
-        message = msg.content.strip().split(' ')
-        if len(message) == 1:
-            user_id = msg.author.id
-        else:
-            user_id = s.get_int(message[1])
-            
+        if not user_id:
+            message = msg.content.strip().split(' ')
+            if len(message) == 1:
+                user_id = msg.author.id
+            else:
+                user_id = s.get_int(message[1])
+                
         try:
             user = await s.client.fetch_user(user_id)
         except Exception as e:
@@ -900,6 +918,8 @@ class leaderBot_class():
                                               max_points,
                                               rank,
                                               len(s.json_data.j['aPlayer']))
+        if user_id:
+            return buffer
         await msg.channel.send(file=discord.File(buffer, 'rank.png'))
         return None
 
@@ -1301,12 +1321,38 @@ class leaderBot_class():
                 else:
                     continue
             elif reaction == 'yes':
-                response = await s.add_submission(msg,
-                                                  iID=message.author.id,
-                                                  author_name=message.author.display_name,
-                                                  sChallengeName=ch_name,
-                                                  author_id=user.id)
-                # add here confirmation message
+                rSubmission, newPlayer, sTypeName = await s.add_submission(msg,
+                                                                           iID=message.author.id,
+                                                                           author_name=message.author.display_name,
+                                                                           sChallengeName=ch_name,
+                                                                           author_id=user.id,
+                                                                           ret_points=True)
+                
+                modus = s.json_data.find(s.json_data.j['aChallengeType'], sName=rSubmission.get('sChallengeTypeName')).get('sNick')
+                win_ch_id = s.json_data.find(s.json_data.j['aChallenge'], sName=rSubmission.get('sChallengeName')).get('idChannel')
+
+                user_id = rSubmission.get('iUserID')
+
+                leaderboard_ch = f"<#{s.leaderboard_channel_id}>" if s.leaderboard_channel_id else 'leaderboard'
+                winners_ch = f"<#{win_ch_id}>" if win_ch_id else 'challenge winners'
+                newPlayerWelcome = '\n**Welcome to the challenges by the way**' if newPlayer else ''
+                iPoints = rSubmission.get('iPoints')
+                if iPoints and iPoints > 0:
+                    buffer = await s.rank_img(msg, user_id=user_id)
+                    message_r = await message.channel.send(f"<@{user_id}>, **yay!** You got " +
+                                                           f"**{beautify(iPoints)}** points " +
+                                                           f"and the **{rSubmission.get('iRank')}**{s.json_data.suffix(rSubmission.get('iRank'))} place "+
+                                                           f"in modus **{modus}**." +
+                                                           f"\n{winners_ch} and {leaderboard_ch} are updated" +
+                                                           newPlayerWelcome +
+                                                           f"\nYour actual rank:", file=discord.File(buffer, 'rank.png'))
+                else:
+                    message_r = await message.channel.send(f"<@{user_id}> your submission counted, but you got no points :pensive: " +
+                                                           f"\nCheck {winners_ch} and {leaderboard_ch}" +
+                                                           newPlayerWelcome)
+                embed = discord.Embed()
+                embed.add_field(name='Accept message sent', value=f'[jump]({message_r.jump_url})')
+                await channel.send(embed=embed)
                 break
             elif reaction == 'no':
                 message_r = await channel.send('Please enter the reason, why this submission is declined, or `*` for no message')
@@ -1320,6 +1366,7 @@ class leaderBot_class():
                 message_r = await message.channel.send(f'<@{message.author.id}>, *sorry, your submission is declined*\n{message_r.content}')
                 embed = discord.Embed()
                 embed.add_field(name='Decline message sent', value=f'[jump]({message_r.jump_url})')
+                await channel.send(embed=embed)
                 break
             else:
                 print('mentioned - None reaction')
@@ -1327,6 +1374,8 @@ class leaderBot_class():
 
         if response:
             await s.send(msg.channel, response)
+            
+        return
 
                 
     async def __call__(s, message):
