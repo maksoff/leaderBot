@@ -1129,21 +1129,7 @@ class leaderBot_class():
     async def get_act_img(s, *args, limit=7):
         data = s.json_data.get_active(limit=limit)
         for item in data:
-            user_id = item.get('iID', None)
-            user = await s.client.fetch_user(user_id)
-            #get avatar & channel icon    
-            AVATAR_SIZE = 128
-            try:
-                avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
-                user_avatar = io.BytesIO(await avatar_asset.read())
-            except Exception as e:
-                if DEBUG:
-                    raise e
-                else:
-                    print(e)
-                user_avatar = None
-
-            item['avatar'] = user_avatar
+            item['avatar'] = await s.get_avatar(item.get('iID'))
         buffer = rankDisplay.create_top_card(data, color_scheme=1)
         return buffer
 
