@@ -1129,7 +1129,7 @@ class leaderBot_class():
     async def get_act_img(s, *args, limit=7):
         data = s.json_data.get_active(limit=limit)
         for item in data:
-            item['avatar'] = await s.get_avatar(item.get('iID', None))
+            item['avatar'] = await s.get_avatar(item.get('iID'))
         buffer = rankDisplay.create_top_card(data, color_scheme=1)
         return buffer
 

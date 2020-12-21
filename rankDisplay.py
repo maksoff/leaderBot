@@ -189,8 +189,8 @@ def create_activity_card(players, dMaxPoints):
     # find max values
     max_w = max(draw.textsize(' ' + str(p.get('iRank'))+'.', font=fontM)[0] for p in players)
     rest_w = w - max_w - step
-    act_w = rest_w // (len(dMaxPoints) + 1)
-    real_w = act_w * (len(dMaxPoints) + 1) + max_w + step
+    act_w = rest_w // (len(dMaxPoints))
+    real_w = act_w * (len(dMaxPoints)) + max_w + step
 
     
     # add table
@@ -207,7 +207,10 @@ def create_activity_card(players, dMaxPoints):
                      avatar_size = avatar_size, circle=True)
 
         # add bars
-        for j, (ch, points) in enumerate(p.get('aSubmissions')):
+        j = 0
+        for ch, points in p.get('aSubmissions'):
+            if ch not in dMaxPoints:
+                continue
             big_coord = [(max_w+step+j*act_w, step*i),
                          (max_w+step+(j+1)*act_w, step*(i+1))]
             coord = [(max_w+step+j*act_w+dx, step*i+dy),
@@ -217,6 +220,7 @@ def create_activity_card(players, dMaxPoints):
             transp = hex(int(min_trans + points / (dMaxPoints.get(ch) or points or 1) * (255 - min_trans)))[2:]
             if points:
                 drw.rectangle(coord, fill=cian+transp)
+            j += 1
                 
     img = Image.alpha_composite(img, rect)
     img = img.crop((0, 0, real_w+1, h+1))
