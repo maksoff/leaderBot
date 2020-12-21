@@ -342,14 +342,14 @@ class leaderBot_class():
             last_challenge_types.add(submission['sChallengeTypeName'])
 
         for submission in s.json_data.j.get('aSubmission', []):
-            if submission['aChallengeName'] == sChallengeName:
+            if submission['sChallengeName'] == sChallengeName:
                 used_challenge_types.add(submission['sChallengeTypeName'])
         return last_challenge_types, used_challenge_types
 
     async def ask_for_challenge_type(s, message, sChallengeName, **kwargs):
         ''' returns sChallengeTypeName, if new - creates'''
         if s.json_data.j.get('aChallengeType'):
-            last, used = get_used_challenges(sChallengeName)
+            last, used = s.get_used_challenges(sChallengeName)
             # at first, short version of list
             if last | used: # maybe list is empty (fresh json?)
                 accept_list = []
@@ -357,13 +357,13 @@ class leaderBot_class():
                 for i, chl in enumerate(s.json_data.j.get('aChallengeType', []), 1):
                     if chl.get('sName') in (last | used):
                         accept_list.append(str(i))
-                        response += ('\n' + ('\> ' if bold else '    ') +
+                        response += ('\n' + ('\> ' if (chl.get('sName') in used) else '    ') +
                                      f"{i}. " +
                                      f"`{chl.get('sNick', chl.get('sName'))}` " +
                                      ('*higher*' if chl.get('bHigherScore') else 'lower') +
                                      f" score wins, multiplier **{chl.get('fMultiplier', 1)}**" +
                                      ('; __place=score__' if chl.get('bSpecial') else ''))
-                response += 'Enter number of existing type (e.g. `1`) or `0` to view all types / create new'
+                response += '\n\nEnter number of existing type (e.g. `1`) or `0` to view all types / create new'
 
                 await s.send(message.channel, response)
                 message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait response - add author_id in case start from reaction
@@ -380,13 +380,13 @@ class leaderBot_class():
             # short list too short, try full list now
             response = 'All types (`>` = used in this challenge):'
             for i, chl in enumerate(s.json_data.j.get('aChallengeType', []), 1):
-                response += ('\n' + ('\> ' if bold else '    ') +
+                response += ('\n' + ('\> ' if (chl.get('sName') in used) else '    ') +
                              f"{i}. " +
                              f"`{chl.get('sNick', chl.get('sName'))}` " +
                              ('*higher*' if chl.get('bHigherScore') else 'lower') +
                              f" score wins, multiplier **{chl.get('fMultiplier', 1)}**" +
                              ('; __place=score__' if chl.get('bSpecial') else ''))
-            response += 'Enter number of existing type (e.g. `1`) or `0` to create new'
+            response += '\n\nEnter number of existing type (e.g. `1`) or `0` to create new'
             
             await s.send(message.channel, response)
             message = await s.wait_response(message, author_id=kwargs.get('author_id'))
@@ -401,8 +401,9 @@ class leaderBot_class():
         response = 'Create new type in format `name lower/higher multiplier`'
         response += '\n `lower/higher` = which score wins, `multiplier` = points multiplier'
         response += '\n(e.g. `hard lower 3.14`)'
-        response += '\n>*add optional parameter `=` at the end, for `place = score`*'  
-        response += '\n>e.g for `higher` & points system `30`, `20`, `10`, score=`3`: player gets `30 x multiplier` points'
+        response += '\n> *add optional parameter `=` at the end, for `place = score`*'  
+        response += '\n> e.g for `higher` & points system `30`, `20`, `10`, score=`3`: player gets `30 x multiplier` points'
+        await s.send(message.channel, response)
         while True:
             message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait response - add author_id in case start from reaction
             if not message:
@@ -429,65 +430,6 @@ class leaderBot_class():
                 return sName
             else:
                 await s.send(message.channel, 'Wrong parameter count, try again or `cancel`')
-            
-        
-    
-    def get_challenge_types(s, sChallengeName):
-        '''depreciated'''
-        response = 'You already have following challenge types (`>` = used in this challenge):'
-        for i, chl in enumerate(s.json_data.j['aChallengeType'], 1):
-            bold = False
-            if s.json_data.find(s.json_data.j['aSubmission'], sChallengeName=sChallengeName, sChallengeTypeName=chl.get('sName')):
-                bold = True
-            response += '\n{5}**{0:3}**. `{1}`; display name: **{2}**, *{3}* score wins, multiplier **{4}**{6}'.format(
-                i, chl.get('sName'), chl.get('sNick', chl.get('sName')),
-                '*higher*' if chl.get('bHigherScore') else 'lower',
-                chl.get('fMultiplier', 1),
-                '\>' if bold else '   ',
-                '; points[score] (special)' if chl.get('bSpecial') else '')
-        return response
-
-    async def ask_for_challenge_type_(s, message, sChallengeName, **kwargs):
-        ''' depreciated '''
-        ''' returns sChallengeTypeName, if new - creates'''
-        response = s.get_challenge_types(sChallengeName)
-        response += '\n\nEnter number of existing type (e.g. `1`)'
-        response += '\nor create new type in format `unique_name display_name lower/higher multiplier`'
-        response += ' - `lower/higher` = which score wins, `multiplier` = points multiplier'
-        response += '\n||add optional `=` at the end, if points = points[score]. e.g for *higher_wins*, '
-        response += 'and points system = [50, 40, 30, 20, 10], if score=`4` player gets `40` points||'
-        response += '\n(e.g. `extra_x3 impossible lower 3.14`)'
-        await s.send(message.channel, response)
-        
-        message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait response - add author_id in case start from reaction
-        if not message:
-            return
-        
-        temp = message.content.strip().split(' ')
-        if len(temp) == 1:
-            try:
-                return s.json_data.j['aChallengeType'][int(temp[0])-1]['sName']
-            except:
-                await s.send(message.channel, 'wrong index')
-                return
-        elif len(temp) == 4:
-            s.json_data.j['aChallengeType'].append({'sName':temp[0],
-                                                    'sNick':temp[1],
-                                                    'bHigherScore':temp[2][0] == 'h',
-                                                    'fMultiplier':float(temp[3].replace(',','.'))})
-            s.save_json()
-            return temp[0]
-        elif len(temp) == 5 and temp[4] == '=':
-            s.json_data.j['aChallengeType'].append({'sName':temp[0],
-                                                    'sNick':temp[1],
-                                                    'bHigherScore':temp[2][0] == 'h',
-                                                    'fMultiplier':float(temp[3].replace(',','.')),
-                                                    'bSpecial':True})
-            s.save_json()
-            return temp[0]
-        else:
-            await s.send(message.channel, 'Wrong parameter count')
-            return 
 
     async def ask_for_user_id(s, message, no_creation=False, **kwargs):
         '''returns user_id or None if failed, creates user if new'''
