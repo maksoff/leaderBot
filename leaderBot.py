@@ -188,8 +188,13 @@ class leaderBot_class():
 
     async def get_avatar(s, user_id, update=False, user = None):
 
+        if user:
+            user_id = user.id
+
         if not update and user_id in s.avatar_cache:
-            return s.avatar_cache[user_id].get('avatar_asset')
+            avatar_asset = s.avatar_cache[user_id].get('avatar_asset')
+            if avatar_asset:
+                return avatar_asset
 
         if not user:
             user = await s.client.fetch_user(user_id)
@@ -197,7 +202,9 @@ class leaderBot_class():
         # if in cache and hash not changed return saved thingy
         if user_id in s.avatar_cache:
             if user.avatar == s.avatar_cache[user_id].get('hash'):
-                return s.avatar_cache[user_id].get('avatar_asset')
+                avatar_asset = s.avatar_cache[user_id].get('avatar_asset')
+                if avatar_asset:
+                    return avatar_asset
         else:
             s.avatar_cache[user_id] = {}
             
@@ -862,7 +869,8 @@ class leaderBot_class():
         #embed.remove_author()
         await msg.channel.send(embed=embed)
 
-    async def rank_img(s, msg, user_id=None):
+    async def rank_img(s, msg, **kwargs):
+        user_id = kwargs.get('user_id')
         # find user.id and user
         if not user_id:
             message = msg.content.strip().split(' ')
@@ -918,7 +926,7 @@ class leaderBot_class():
                                               max_points,
                                               rank,
                                               len(s.json_data.j['aPlayer']))
-        if user_id:
+        if kwargs.get('user_id'):
             return buffer
         await msg.channel.send(file=discord.File(buffer, 'rank.png'))
         return None
@@ -1037,13 +1045,14 @@ class leaderBot_class():
                 if player.get('iRank') > limit:
                     break
 
+            avatar = await s.get_avatar(player['iID'])
+
             data.append({'iRank':player.get('iRank'),
                          'sName':player.get('sName'),
                          'iDiscriminator':player.get('iDiscriminator'),
                          'iPoints':player.get('iPoints'),
-                         'avatar':await s.get_avatar(player.get('iID'))
+                         'avatar':avatar
                          })
-            await s.get_avatar(player['iID'])
         buffer = rankDisplay.create_top_card(data)
         return buffer
         
