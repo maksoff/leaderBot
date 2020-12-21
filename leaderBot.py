@@ -1335,7 +1335,7 @@ class leaderBot_class():
 
                 leaderboard_ch = f"<#{s.leaderboard_channel_id}>" if s.leaderboard_channel_id else 'leaderboard'
                 winners_ch = f"<#{win_ch_id}>" if win_ch_id else 'challenge winners'
-                newPlayerWelcome = '\n**Welcome to the challenges by the way**' if newPlayer else ''
+                newPlayerWelcome = '\n:tada: **Welcome to the challenges by the way! :tada:**' if newPlayer else ''
                 iPoints = rSubmission.get('iPoints')
                 if iPoints and iPoints > 0:
                     buffer = await s.rank_img(msg, user_id=user_id)
