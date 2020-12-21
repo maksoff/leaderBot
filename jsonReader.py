@@ -13,7 +13,11 @@ def beautify(tmp):
     return '.'.join(tmp)
 
 class json_class():
-    j = None
+    j = {}
+    j['aChallenge'] = []
+    j['aChallengeType'] = []
+    j['aPlayer'] = []
+    j['aSubmission'] = []
     iVersion = 11
     aPoint = (10.0, 6.0, 4.0, 2.0, 1.0)
     oRankByChallenge = {}
@@ -40,7 +44,7 @@ class json_class():
         return points[n] if n < len(points) else 0
     
     def get_lb_message(s):
-        return s.j['iLeaderboardChannel'], s.j['iLeaderboardMessage']
+        return s.j.get('iLeaderboardChannel'), s.j.get('iLeaderboardMessage')
     
     def set_lb_message(s, ch, msg):
         s.j['iLeaderboardChannel'] = ch
@@ -58,7 +62,9 @@ class json_class():
         
     def result_leaderboard(s):
         responce = '**Actual ranking**\n'
-        for p in sorted(s.j['aPlayer'], key = lambda i: i['iPoints'], reverse = True):
+        if not s.j.get('aPlayer'):
+            return responce + 'no submissions'
+        for p in sorted(s.j.get('aPlayer', []), key = lambda i: i['iPoints'], reverse = True):
             if p.get('bDisabled'):
                 continue
             user = p.get('iID', None)
@@ -70,6 +76,8 @@ class json_class():
         return responce[:-1]
 
     def list_of_challenges(s):
+        if not s.j.get('aChallenge'):
+            return []
         try:
             return (i['sName'] for i in s.j['aChallenge'])
         except:
@@ -86,7 +94,7 @@ class json_class():
             responce += 'Challenge **{}** in modus **{}**\n'.format(ChallengeName, modus)
             value.sort(key=lambda x: x['iRank'])
             for val in value:
-                p = s.find(s.j['aPlayer'], iID=val['iUserID'])
+                p = s.find(s.j.get('aPlayer', []), iID=val['iUserID'])
                 user = p.get('iID', None)
                 if user:
                     user = '<@{}>'.format(user)
@@ -161,19 +169,19 @@ class json_class():
             return 'th'
 
     def get_rank(s, user_id):
-        player = s.find(s.j['aPlayer'], iID=user_id)
+        player = s.find(s.j.get('aPlayer', []), iID=user_id)
         if player:
             rank = player.get('iRank', None)
             points = player.get('iPoints', None)
         if player and rank and points:    
-            return 'Ranked **{}**{} (out of {} members) with **{}** points'.format(rank, s.suffix(rank), len(s.j['aPlayer']), points)
+            return 'Ranked **{}**{} (out of {} members) with **{}** points'.format(rank, s.suffix(rank), len(s.j.get('aPlayer', [])), points)
         else:
             return 'Still no points. Submit some challenges!'
 
         
     def get_top(s, limit = 10):
         responce = ''
-        players = sorted(s.j['aPlayer'], key=lambda x: float(x.get('iPoints')), reverse=True)
+        players = sorted(s.j.get('aPlayer', []), key=lambda x: float(x.get('iPoints')), reverse=True)
         if not players:
             return 'no submissions'
         for player in players:
@@ -237,7 +245,7 @@ class json_class():
     
     def calculate_rating(s):
         s.oRankByChallenge = {}
-        for sub in s.j['aSubmission']:
+        for sub in s.j.get('aSubmission', []):
             if not sub['sChallengeName'] in s.oRankByChallenge:
                 s.oRankByChallenge[sub['sChallengeName']] = {}
             if not sub['sChallengeTypeName'] in s.oRankByChallenge[sub['sChallengeName']]:
@@ -252,7 +260,7 @@ class json_class():
             else:
                 oRCT.append(sub.copy())
                 
-        for cc in s.j['aSubmission']:
+        for cc in s.j.get('aSubmission', []):
             try:
                 del cc['iRank']
                 del cc['iPoints']
@@ -284,20 +292,23 @@ class json_class():
                         cc['iPoints'] = aPoints[iScore] if iScore < len(aPoints) else 0
                     else:
                         cc['iPoints'] = s.getPoints(iRank - 1, points=challenge.get('aPoints'))*float(s.find(s.j['aChallengeType'], 'sName', ct).get('fMultiplier', 1))
-                    oS = s.find(s.j['aSubmission'], sChallengeName=rbc, sChallengeTypeName=ct, iUserID=cc['iUserID'], fScore=cc['fScore'])
+                    oS = s.find(s.j.get('aSubmission', []), sChallengeName=rbc, sChallengeTypeName=ct, iUserID=cc['iUserID'], fScore=cc['fScore'])
                     oS['iRank'] = iRank
                     oS['iPoints'] = cc['iPoints']
 
-        for p in s.j['aPlayer']:
-            p['iPoints'] = p.get('iStaticPoints', 0) + sum(x.get('iPoints', 0) for x in s.j['aSubmission'] if x['iUserID'] == p['iID'])
+        for p in s.j.get('aPlayer', []):
+            p['iPoints'] = p.get('iStaticPoints', 0) + sum(x.get('iPoints', 0) for x in s.j.get('aSubmission', []) if x['iUserID'] == p['iID'])
             if p['iPoints'] == int(p['iPoints']): p['iPoints'] = int(p['iPoints'])
-                
+            
+        if not s.j.get('aPlayer'):
+            return
+        
         s.j['aPlayer'].sort(key=lambda x: float(x['iPoints']), reverse=True)
         
         curRank = None
         lastPoints = None
         i = 0
-        for p in s.j['aPlayer']:
+        for p in s.j.get('aPlayer', []):
             if p.get('bDisabled'):
                 continue
             i += 1

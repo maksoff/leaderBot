@@ -386,20 +386,23 @@ class leaderBot_class():
 
     async def ask_for_user_id(s, message, no_creation=False, **kwargs):
         '''returns user_id or None if failed, creates user if new'''
-        await s.send(message.channel, 'Please enter user (e.g. @best_user) or user id:')
-        
-        message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait_response - if from react author_id supplied
-        if not message:
-            return
+
+        user_id = kwargs.get('user_id')
+        if not user_id:
+            await s.send(message.channel, 'Please enter user (e.g. @best_user) or user id:')
+            message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait_response - if from react author_id supplied
+            if not message:
+                return
         
         try:
-            user_id = s.get_int(message.content)
+            if not user_id:
+                user_id = s.get_int(message.content)
             user = await s.client.fetch_user(user_id)
             if user.bot:
                 await s.send(message.channel, "No bots, please. *aborted*")
                 return
             user_id = user.id
-            player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
+            player = s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)
             if player:
                 await s.send(message.channel,  'Existing user')
             else:
@@ -425,7 +428,7 @@ class leaderBot_class():
         # get all points in challenges
         aPoints = set()
         aPoints.add(s.json_data.aPoint)
-        for ch in s.json_data.j['aChallenge']:
+        for ch in s.json_data.j.get('aChallenge', []):
             ap = ch.get('aPoints')
             if ap:
                 aPoints.add(tuple(sorted(ap, reverse=True)))
@@ -452,8 +455,11 @@ class leaderBot_class():
         '''Returns None in case of error or sChallengeName'''
         '''also defines points system & show/hide score in #winners channel'''
         # challenges list
-        response = 'Past challenges: `' + '`, `'.join(s.json_data.list_of_challenges() or 'no challenges!')
-        response += '`\nEnter challenge name (e.g. `42`)\n(if challenge not in the list, new challenge will be created)'
+        if s.json_data.list_of_challenges():
+            response = 'Past challenges: `' + '`, `'.join(s.json_data.list_of_challenges()) + '`'
+        else:
+            response = '**Time to create new challenge!**'
+        response += '\nEnter challenge name (e.g. `42`)\n(if challenge not in the list, new challenge will be created)'
         await s.send(message.channel, response)
         # select challenge
         message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait_response, author_id should be sent in case of start from reaction
@@ -541,8 +547,8 @@ class leaderBot_class():
             if react != 'yes':
                 user_id = None
             
-        if not user_id:
-            user_id = await s.ask_for_user_id(message, author_id=author_id)
+        if not (user_id and s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)):
+            user_id = await s.ask_for_user_id(message, author_id=author_id, user_id=user_id)
             if not user_id:
                 await s.send(message.channel, 'wrong id - aborted')
                 return
@@ -606,7 +612,7 @@ class leaderBot_class():
         user_id = await s.ask_for_user_id(message)
         if not user_id:
             return 'cancelled'
-        player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
+        player = s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)
         await s.send(message.channel, 'How many points? (e.g. `2.5`)')
         message = await s.wait_response(message)
         if not message:
@@ -693,7 +699,7 @@ class leaderBot_class():
             return 'Ok, saved'
 
     async def update_usernames_not_async(s, *args):
-        for player in s.json_data.j['aPlayer']:
+        for player in s.json_data.j.get('aPlayer', []):
             try:
                 user = await s.client.fetch_user(player.get('iID'))
                 await s.get_avatar(user.id, update=True, user=user) # update avatar too
@@ -720,7 +726,7 @@ class leaderBot_class():
                     raise e
                 else:
                     print(e)
-        asyncio.gather(*(asyncio.ensure_future(update_player(player)) for player in s.json_data.j['aPlayer']))
+        asyncio.gather(*(asyncio.ensure_future(update_player(player)) for player in s.json_data.j.get('aPlayer', [])))
         s.save_json()
         return
 
@@ -798,8 +804,11 @@ class leaderBot_class():
             
             embed = discord.Embed()
             embed.add_field(name=name, value=value)
-            
+            if not (s.leaderboard_channel_id and s.leaderboard_message_id):
+                return '`?set leaderboard` required'
             msg = await s.get_message(s.leaderboard_channel_id, s.leaderboard_message_id)
+            if not msg:
+                return '`?set leaderboard` required'
             try:
                 await msg.edit(content='', embed=embed)
                 await s.update_lb_img()
@@ -894,15 +903,17 @@ class leaderBot_class():
 ##        print(member)
 
         # get player info from json
-        player = s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)
+        player = s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)
         if player:
             rank = player.get('iRank', None)
             points = player.get('iPoints', None)
         if not (player and rank and points):
+            if kwargs.get('user_id'):
+                return
             return 'You need to earn some points. Submit some challenges!'
 
         # find max points
-        max_points = max(player.get('iPoints') for player in s.json_data.j['aPlayer'])
+        max_points = max(player.get('iPoints') for player in s.json_data.j.get('aPlayer', []))
 
         #get avatar & channel icon
         user_avatar = await s.get_avatar(user_id, update=True, user=user)
@@ -925,7 +936,7 @@ class leaderBot_class():
                                               points,
                                               max_points,
                                               rank,
-                                              len(s.json_data.j['aPlayer']))
+                                              len(s.json_data.j.get('aPlayer', [])))
         if kwargs.get('user_id'):
             return buffer
         await msg.channel.send(file=discord.File(buffer, 'rank.png'))
@@ -956,7 +967,7 @@ class leaderBot_class():
     async def get_activity_img(s, *args):
         s.json_data.calculate_rating()
         # get not disabled players with submissions
-        players = sorted(s.json_data.j['aPlayer'], key=lambda x: float(x.get('iPoints')), reverse=True)
+        players = sorted(s.json_data.j.get('aPlayer', []), key=lambda x: float(x.get('iPoints')), reverse=True)
         players = list(filter(lambda x: (float(x.get('iPoints', 0)) - float(x.get('iStaticPoints', 0)) > 0) and not x.get('bDisabled', False), players))
         if not players:
             return
@@ -1000,6 +1011,8 @@ class leaderBot_class():
                     except:
                         ...
                 buffer = await s.get_top_img(0)
+                if not buffer:
+                    return
                 message = await channel.send(content = 'updated leaderboard', file=discord.File(buffer, 'lb.png'))
                 s.json_data.j['iLeaderboardImage'] = message.id
 
@@ -1012,6 +1025,8 @@ class leaderBot_class():
                     except:
                         ...
                 buffer = await s.get_activity_img()
+                if not buffer:
+                    return
                 message = await channel.send(content = 'Activity graph. One **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'actual.png'))
                 s.json_data.j['iActivityImage'] = message.id
                 
@@ -1033,7 +1048,7 @@ class leaderBot_class():
 
     async def get_top_img(s, limit):
         s.json_data.calculate_rating()
-        players = sorted(s.json_data.j['aPlayer'], key=lambda x: float(x.get('iPoints')), reverse=True)
+        players = sorted(s.json_data.j.get('aPlayer', []), key=lambda x: float(x.get('iPoints')), reverse=True)
         if not players:
             return
         data = []
@@ -1187,14 +1202,14 @@ class leaderBot_class():
         user_id = await s.ask_for_user_id(msg, no_creation=True)
         if not user_id:
             return 'aborted'
-        s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)['bDisabled']=True
+        s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)['bDisabled']=True
         s.save_json()
         await msg.channel.send('Disabled.')
         return await s.update_all(msg)
 
     async def enable(s, msg):
         response = 'Disabled players:'
-        for p in s.json_data.j['aPlayer']:
+        for p in s.json_data.j.get('aPlayer', []):
             if p.get('bDisabled'):
                 response += f'\n<@{p.get("iID")}>'
         response += '\n**Who should be reenabled?**'
@@ -1202,7 +1217,7 @@ class leaderBot_class():
         user_id = await s.ask_for_user_id(msg, no_creation=True)
         if not user_id:
             return 'aborted'
-        s.json_data.find(s.json_data.j['aPlayer'], iID=user_id)['bDisabled']=False
+        s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)['bDisabled']=False
         s.save_json()
         await msg.channel.send('Enabled.')
         return await s.update_all(msg)
@@ -1220,7 +1235,7 @@ class leaderBot_class():
 
         # check if channel exists
         channel_id = s.json_data.j.get('iMentionsChannel')
-        text = s.json_data.j.get('iMentionsText')
+        text = s.json_data.j.get('iMentionsText', '')
         
         if channel_id:
             try:
@@ -1270,7 +1285,7 @@ class leaderBot_class():
         # try to find the challenge
         category_id = message.channel.category_id
         challenge = {}
-        for ch in s.json_data.j.get('aChallenge'):
+        for ch in s.json_data.j.get('aChallenge', []):
             ch_id = ch.get('idChannel')
             ch_comp = s.client.get_channel(ch_id)
             if ch_comp and category_id == ch_comp.category_id:
@@ -1316,12 +1331,16 @@ class leaderBot_class():
                 else:
                     continue
             elif reaction == 'yes':
-                rSubmission, newPlayer, sTypeName = await s.add_submission(msg,
-                                                                           iID=message.author.id,
-                                                                           author_name=message.author.display_name,
-                                                                           sChallengeName=ch_name,
-                                                                           author_id=user.id,
-                                                                           ret_points=True)
+                try:
+                    rSubmission, newPlayer, sTypeName = await s.add_submission(msg,
+                                                                               iID=message.author.id,
+                                                                               author_name=message.author.display_name,
+                                                                               sChallengeName=ch_name,
+                                                                               author_id=user.id,
+                                                                               ret_points=True)
+                except:
+                    await channel.send('`canceled`')
+                    break
                 
                 modus = s.json_data.find(s.json_data.j['aChallengeType'], sName=rSubmission.get('sChallengeTypeName')).get('sNick')
                 win_ch_id = s.json_data.find(s.json_data.j['aChallenge'], sName=rSubmission.get('sChallengeName')).get('idChannel')
@@ -1462,7 +1481,8 @@ class leaderBot_class():
             s.open_json()
             print ('json loaded')
         else:
-            print('no json found')
+            s.save_json()
+            print('no json found - empty created')
 
 client = discord.Client()
 print('client created')
