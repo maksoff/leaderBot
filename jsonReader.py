@@ -41,6 +41,8 @@ class json_class():
     def getPoints(s, n, points=None):
         if not points:
             points = s.aPoint
+        if len(points) == 1:
+            return points[0]
         return points[n] if n < len(points) else 0
     
     def get_lb_message(s):
