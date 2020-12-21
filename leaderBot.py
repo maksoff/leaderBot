@@ -1442,7 +1442,6 @@ class leaderBot_class():
         return
             
     def create_help (s, *args):
-
         s.user_commands = (
                               ('?help', 'prints this message', s.user_help),
                               ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
@@ -1496,8 +1495,6 @@ async def on_ready():
             if guild.id != DEBUG_CH:
                 continue
         leaderBot[guild.id] = leaderBot_class(client, guild.id)
-        await leaderBot[guild.id].update_lb()
-        await leaderBot[guild.id].update_winners()
         await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='your ?rank'))
         print(
             f'{client.user} is connected to the following guild:\n'
