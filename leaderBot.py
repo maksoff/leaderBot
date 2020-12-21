@@ -372,10 +372,9 @@ class leaderBot_class():
                 
                 if message.content.strip() in accept_list:
                     try:
-                        return s.json_data.j['aChallengeType'][int(temp[0])-1]['sName']
+                        return s.json_data.j['aChallengeType'][int(message.content.strip())-1]['sName']
                     except:
                         await s.send(message.channel, 'wrong index')
-                        return
                 
             # short list too short, try full list now
             response = 'All types (`>` = used in this challenge):'
@@ -620,6 +619,8 @@ class leaderBot_class():
                         ss.get('sChallengeTypeName') == sChallengeTypeName and
                         ss.get('iUserID') == user_id):
                     iSubmissionId += 1
+
+            # TODO don't ask for score if all gets the same
             
             embed = discord.Embed(title='Submissions for challenge **{}**'.format(sChallengeName))
             r_list = s.json_data.result_challenge_embed(sChallengeName, ignoreScore=False)
