@@ -63,9 +63,9 @@ class json_class():
         s.calculate_rating()
         
     def result_leaderboard(s):
-        responce = '**Actual ranking**\n'
+        response = '**Actual ranking**\n'
         if not s.j.get('aPlayer'):
-            return responce + 'no submissions'
+            return response + 'no submissions'
         for p in sorted(s.j.get('aPlayer', []), key = lambda i: i['iPoints'], reverse = True):
             if p.get('bDisabled'):
                 continue
@@ -74,8 +74,8 @@ class json_class():
                 user = '<@{}>'.format(user)
             else:
                 user = '@' + p.get('sName')
-            responce += '{}. {} with **{}** points\n'.format(p['iRank'], user, p['iPoints'])
-        return responce[:-1]
+            response += '{}. {} with **{}** points\n'.format(p['iRank'], user, p['iPoints'])
+        return response[:-1]
 
     def list_of_challenges(s):
         if not s.j.get('aChallenge'):
@@ -87,13 +87,13 @@ class json_class():
     
     def result_challenge(s, ChallengeName, ignoreScore=True):
         '''depreciated'''
-        responce = ''
+        response = ''
         resp = []
         if not ChallengeName in s.oRankByChallenge:
             return 'Still no submissions in challenge **{}**'.format(ChallengeName)
         for key, value in s.oRankByChallenge[ChallengeName].items():
             modus = s.find(s.j['aChallengeType'], sName=key).get('sNick', key)
-            responce += 'Challenge **{}** in modus **{}**\n'.format(ChallengeName, modus)
+            response += 'Challenge **{}** in modus **{}**\n'.format(ChallengeName, modus)
             value.sort(key=lambda x: x['iRank'])
             for val in value:
                 p = s.find(s.j.get('aPlayer', []), iID=val['iUserID'])
@@ -103,19 +103,19 @@ class json_class():
                 else:
                     user = '@' + p.get('sName')
                 if ignoreScore:
-                    responce += '{:4}. {} at the {}{} try => **{}** points\n'.format(val['iRank'],
+                    response += '{:4}. {} at the {}{} try => **{}** points\n'.format(val['iRank'],
                                                                                     user,
                                                                                     val['iSubmissionId'] + 1,
                                                                                     s.suffix(val['iSubmissionId'] + 1),
                                                                                     beautify(val['iPoints']))
                 else:
-                    responce += '{:4}. {} with {} at the {}{} try => **{}** points\n'.format(val['iRank'],
+                    response += '{:4}. {} with {} at the {}{} try => **{}** points\n'.format(val['iRank'],
                                                                                             user,
                                                                                             beautify(val['fScore']),
                                                                                             val['iSubmissionId'] + 1,
                                                                                             s.suffix(val['iSubmissionId'] + 1),
                                                                                             beautify(val['iPoints']))
-        return responce[:-1]
+        return response[:-1]
     
     def result_challenge_embed(s, ChallengeName, ignoreScore=True):
         r_list = []
@@ -124,25 +124,22 @@ class json_class():
                      'value':'Still no submissions'}]
         for key, value in s.oRankByChallenge[ChallengeName].items():
             challengeType = s.find(s.j['aChallengeType'], sName=key)
-            responce = ''
+            response = ''
+            not_same = len(s.find(s.j.get('aChallenge'), sName=ChallengeName).get('aPoints', [])) != 1
             value.sort(key=lambda x: x['iRank'])
             for val in value:
-                user = '<@{}>'.format(val['iUserID'])
-                if ignoreScore:
-                    responce += '{}. {} at the {}{} try => **{}** points\n'.format(val['iRank'],
-                                                                                    user,
-                                                                                    val['iSubmissionId'] + 1,
-                                                                                    s.suffix(val['iSubmissionId'] + 1),
-                                                                                    beautify(val['iPoints']))
-                else:
-                    responce += '{}. {} with {} at the {}{} try => **{}** points\n'.format(val['iRank'],
-                                                                                            user,
-                                                                                            beautify(val['fScore']),
-                                                                                            val['iSubmissionId'] + 1,
-                                                                                            s.suffix(val['iSubmissionId'] + 1),
-                                                                                            beautify(val['iPoints']))
+                user = f"<@{val['iUserID']}>"
+                if not_same:
+                    response += f"{val['iRank']}. "
+                response += f"{user}"
+                if not ignoreScore:
+                    response += f" with {beautify(val['fScore'])}"
+                if not_same:
+                    response += f" at the {val['iSubmissionId'] + 1}{s.suffix(val['iSubmissionId'] + 1)} try"
+                response += f" => **{beautify(val['iPoints'])}** points\n"
+                
             r_list.append({'name':'Modus **{}**'.format(challengeType.get('sNick', key)),
-                           'value':responce,
+                           'value':response,
                            'index':s.j['aChallengeType'].index(challengeType),
                            'fMultiplier':float(challengeType.get('fMultiplier', 1))})
             
@@ -182,7 +179,7 @@ class json_class():
 
         
     def get_top(s, limit = 10):
-        responce = ''
+        response = ''
         players = sorted(s.j.get('aPlayer', []), key=lambda x: float(x.get('iPoints')), reverse=True)
         if not players:
             return 'no submissions'
@@ -200,11 +197,11 @@ class json_class():
                 if rank > limit:
                     break
             if player and rank and points:
-                responce += '\n**{:4}.** {} with **{}** points'.format(rank, user, points)
-        return responce
+                response += '\n**{:4}.** {} with **{}** points'.format(rank, user, points)
+        return response
 
     def get_active(s, limit=7):
-        responce = []
+        response = []
         full_ch = 3 #how many challenges with full score
         half_ch = 3
         full_points = 10 #how many points for full score challenge
@@ -223,24 +220,24 @@ class json_class():
             if not points:
                 continue
             points += sub.get('iSubmissionId', 0) * 2
-            item = s.find(responce, iID=sub.get('iUserID'))
+            item = s.find(response, iID=sub.get('iUserID'))
             if item:
                 item['iPoints'] = item.get('iPoints', 0) + points
             else:
-                responce.append({'iID':sub.get('iUserID'),
+                response.append({'iID':sub.get('iUserID'),
                                  'iPoints':points,
                                  'iDiscriminator':player.get('iDiscriminator'),
                                  'sName':player.get('sName')})
-        responce.sort(key=lambda x: x.get('iPoints', 0), reverse=True)
+        response.sort(key=lambda x: x.get('iPoints', 0), reverse=True)
         last_rank = 0
         last_points = None
-        for i, item in enumerate(responce, 1):
+        for i, item in enumerate(response, 1):
             if item['iPoints'] != last_points:
                 last_rank = i
             item['iRank'] = last_rank
 
-        responce = [x for x in responce if x.get('iRank') <= limit]
-        return responce
+        response = [x for x in response if x.get('iRank') <= limit]
+        return response
             
         
         
