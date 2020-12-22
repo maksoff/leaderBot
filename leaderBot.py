@@ -146,11 +146,8 @@ class leaderBot_class():
         
         if mode == 'ynd':
             arr = {yes:'yes', stop:'no', x:'delete'}
-        elif mode == 'yn':
-            arr = {yes:'yes', x:'no'}
         else:
-            print('wrong mode for ask_for_reaction')
-            return # wrong mode
+            arr = {yes:'yes', x:'no'}
 
         for i in arr:
             await message.add_reaction(i)
@@ -167,14 +164,14 @@ class leaderBot_class():
         except asyncio.TimeoutError:
             await message.clear_reactions()
             await message.channel.send(f'`timeout {timeout}s`')
-            return 
+            return (None, None)
         except Exception as e:
             await message.clear_reactions()
             if DEBUG:
                 raise (e)
             else:
                 print(e)
-                return
+                return (None, None)
                 
         await message.clear_reactions()
         return arr[reaction.emoji], user
@@ -359,16 +356,22 @@ class leaderBot_class():
             if last | used: # maybe list is empty (fresh json?)
                 accept_list = []
                 response = 'Last active types (`>` = used in this challenge):'
-                for i, chl in enumerate(s.json_data.j.get('aChallengeType', []), 1):
-                    if chl.get('sName') in (last | used):
-                        accept_list.append(str(i))
-                        response += ('\n' + ('\> ' if (chl.get('sName') in used) else '    ') +
-                                     f"{i}. " +
-                                     f"`{chl.get('sNick', chl.get('sName'))}` " +
-                                     ('*higher*' if chl.get('bHigherScore') else 'lower') +
-                                     f" score wins, multiplier **{chl.get('fMultiplier', 1)}**" +
-                                     ('; __place=score__' if chl.get('bSpecial') else ''))
-                response += '\n\nEnter number of existing type (e.g. `1`) or `0` to view all types / create new'
+                def create_list(full = False):
+                    response = '```'
+                    wide = 3, 15, 15, 10
+                    response += f" {'#':>{wide[0]}} {'MODUS':<{wide[1]}}{'SCORE WINS':<{wide[2]}}{'MULTIPLIER':<{wide[3]}}```"
+                    for i, chl in enumerate(s.json_data.j.get('aChallengeType', []), 1):
+                        if full or (chl.get('sName') in (last | used)):
+                            accept_list.append(str(i))
+                            response += (f"```{'>' if (chl.get('sName') in used) else ' '}" +
+                                         f"{i:>{wide[0]}} {chl.get('sNick', chl.get('sName')):<{wide[1]}}" +
+                                         f"{('*higher*' if chl.get('bHigherScore') else 'lower'):<{wide[2]}}" +
+                                         f"{beautify(chl.get('fMultiplier', 1)):<{wide[3]}}" +
+                                         ('   place=score' if chl.get('bSpecial') else '') + '```')
+                    return response
+                    
+                response += create_list()
+                response += 'Enter number of existing type (e.g. `1`) or `0` to view all types / create new'
 
                 await s.send(message.channel, response)
                 message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait response - add author_id in case start from reaction
@@ -383,24 +386,19 @@ class leaderBot_class():
                 
             # short list too short, try full list now
             response = 'All types (`>` = used in this challenge):'
-            for i, chl in enumerate(s.json_data.j.get('aChallengeType', []), 1):
-                response += ('\n' + ('\> ' if (chl.get('sName') in used) else '    ') +
-                             f"{i}. " +
-                             f"`{chl.get('sNick', chl.get('sName'))}` " +
-                             ('*higher*' if chl.get('bHigherScore') else 'lower') +
-                             f" score wins, multiplier **{chl.get('fMultiplier', 1)}**" +
-                             ('; __place=score__' if chl.get('bSpecial') else ''))
-            response += '\n\nEnter number of existing type (e.g. `1`) or `0` to create new'
+            response += create_list(full = True)
+            response += 'Enter number of existing type (e.g. `1`) or `0` to create new'
             
             await s.send(message.channel, response)
             message = await s.wait_response(message, author_id=kwargs.get('author_id'))
             if not message:
                 return
-            
-            try:
-                return s.json_data.j['aChallengeType'][int(message.content.strip())-1]['sName']
-            except:
-                await s.send(message.channel, '`wrong index`')
+
+            if message.content.strip() in accept_list:
+                try:
+                    return s.json_data.j['aChallengeType'][int(message.content.strip())-1]['sName']
+                except:
+                    await s.send(message.channel, '`wrong index`')
                      
         # new challenge type creation
         response = 'Create new type in format `modus_name lower/higher multiplier`'
@@ -664,16 +662,16 @@ class leaderBot_class():
                                 inline=False)
             await message.channel.send(embed=embed)
 
-            all_gets_same_score = len(s.json_data.find(s.json_data.j.get('aChallenge'), sName=sChallengeName).get('aPoints', 0)) == 1
+            all_gets_same_score = len(s.json_data.find(s.json_data.j.get('aChallenge'), sName=sChallengeName).get('aPoints', [])) == 1
                 
             if not all_gets_same_score:
                 await s.send(message.channel, 'Enter score (e.g. `3.14`):')
-                message = await s.wait_response(message, author_id=author_id)
+                msg = await s.wait_response(message, author_id=author_id)
                 if not message:
                     await message.channel.send('`changes reverted`')
                     s.open_json()
                     return
-                fScore = float(message.content)
+                fScore = float(msg.content)
             else:
                 fScore = 1.0
 
@@ -687,7 +685,7 @@ class leaderBot_class():
             sTypeName = s.json_data.find(s.json_data.j['aChallengeType'], sName=sChallengeTypeName).get('sNick')
                 
             embed = discord.Embed(title='Last check')
-            embed.add_field(name=('__NEW__ ' if newPlayer else '') + 'Player', value=f"**@{author_name}**\nid: {user_id}")
+            embed.add_field(name=('__NEW__ ' if newPlayer else '') + 'Player', value=f"**@{author_name}**\nid: {user_id}", inline=False)
             embed.add_field(name='Challenge', value=sChallengeName)
             embed.add_field(name='Modus', value=sTypeName)
             if not all_gets_same_score:
