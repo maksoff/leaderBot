@@ -359,11 +359,11 @@ class leaderBot_class():
                 def create_list(full = False):
                     response = '```'
                     wide = 3, 15, 15, 10
-                    response += f" {'#':>{wide[0]}} {'MODUS':<{wide[1]}}{'SCORE WINS':<{wide[2]}}{'MULTIPLIER':<{wide[3]}}```"
+                    response += f"\n {'#':>{wide[0]}} {'MODUS':<{wide[1]}}{'SCORE WINS':<{wide[2]}}{'MULTIPLIER':<{wide[3]}}```"
                     for i, chl in enumerate(s.json_data.j.get('aChallengeType', []), 1):
                         if full or (chl.get('sName') in (last | used)):
                             accept_list.append(str(i))
-                            response += (f"```{'>' if (chl.get('sName') in used) else ' '}" +
+                            response += (f"```\n{'>' if (chl.get('sName') in used) else ' '}" +
                                          f"{i:>{wide[0]}} {chl.get('sNick', chl.get('sName')):<{wide[1]}}" +
                                          f"{('*higher*' if chl.get('bHigherScore') else 'lower'):<{wide[2]}}" +
                                          f"{beautify(chl.get('fMultiplier', 1)):<{wide[3]}}" +
