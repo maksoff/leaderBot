@@ -678,7 +678,7 @@ class leaderBot_class():
 
             # we are ready! last confirmation
             author_name = kwargs.get('author_name')
-            if not author_name:
+            if (not author_name) or (user_id != kwargs.get('iID')):
                 author_name = (await s.client.fetch_user(user_id)).name
 
             newPlayer = (0 == len([1 for x in s.json_data.j['aSubmission'] if x.get('iUserID') == user_id]))
@@ -1430,9 +1430,10 @@ class leaderBot_class():
 
             
         embed.add_field(name='message text', value=f'{message.content}', inline=False)
+        msg = await channel.send(content=text, embed=embed)
+        await msg.pin(reason='new challenge submission')
         
         while True:   
-            msg = await channel.send(content=text, embed=embed)
             response = None
             reaction, user = await s.ask_for_reaction(msg, mode='ynd')
 
@@ -1441,6 +1442,7 @@ class leaderBot_class():
                 reaction, user = await s.ask_for_reaction(message_r, mode='yn', timeout=30, author_id=user.id)
                 await message_r.delete()
                 if reaction == 'yes':
+                    await msg.unpin(reason='new challenge submission - ready')
                     await msg_confirmation.delete()
                     await msg.delete()
                     response = '`deleted`'
@@ -1455,6 +1457,7 @@ class leaderBot_class():
                                                                                sChallengeName=ch_name,
                                                                                author_id=user.id,
                                                                                ret_points=True)
+                    await msg.unpin(reason='new challenge submission - ready')
                 except:
                     continue
                 
@@ -1490,6 +1493,7 @@ class leaderBot_class():
                 if message_r is None:
                     await channel.send('Timeout.. Try again!')
                     continue
+                await msg.unpin(reason='new challenge submission - ready')
                 if message_r.content == '*':
                     response = 'Okay, no message sent'
                     break
@@ -1500,6 +1504,7 @@ class leaderBot_class():
                 break
             else:
                 print('mentioned - None reaction')
+                await msg.unpin(reason='new challenge submission - ready')
                 return  # sommething went really bad here
 
         if response:
