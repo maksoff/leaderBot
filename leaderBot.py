@@ -1474,22 +1474,6 @@ class leaderBot_class():
             except:
                 ...
         return
-    
-        for a in message.content.splitlines():
-            if a.startswith('<'):
-                a = a.split('>', 1)[0]
-                a = a.split(':')[-1]
-                try:
-                    emoji = s.client.get_emoji(int(a))
-                    print(emoji)
-                    await message.add_reaction(emoji)
-                except:
-                    ...
-            else:
-                try:
-                    await message.add_reaction(a[0])
-                except:
-                    ...
 
     async def mentioned(s, message):
         # will be supported in 1.6 await message.channel.send('Okay', reference=message)
