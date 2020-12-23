@@ -1448,10 +1448,13 @@ class leaderBot_class():
         return response
 
     async def voting(s, message):
-        create_new_vote = False
+        create_new_vote = 'voting-new' in message.content.lower().strip()
         new_message = []
         emojis = []
+        special_emojis={':coolrocket:':'732098507137220718 '}
         for a in message.content.split(maxsplit=1)[1].splitlines():
+            if a.split()[0] in special_emojis:
+                a = a.replace(a.split()[0], special_emojis[a.split()[0]])
             if a:
                 code = a.split()[0].split('>', 1)[0].split(':')[-1]
                 if code.isdecimal():
@@ -1705,7 +1708,7 @@ class leaderBot_class():
                               ('?leaderboard', 'same as `?top`', s.top_img),
                               ('?activity', 'activity rank; add number to limit positions `?activity 3`', s.act_img),
                               ('?ksp', 'random ksp loading hint', s.ksp),
-                              ('?voting', "all emojis at line start added as reactions", s.voting),
+                              ('?voting', "all emojis at line start added as reactions *`voting-new` to replace your message*", s.voting),
                           )
         
         s.commands = (('?help', 'prints this message', s.admin_help),
