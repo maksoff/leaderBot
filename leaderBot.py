@@ -1448,12 +1448,40 @@ class leaderBot_class():
         return response
 
     async def voting(s, message):
+        create_new_vote = False
+        new_message = []
+        emojis = []
+        for a in message.content.split(maxsplit=1)[1].splitlines():
+            code = a.split()[0].split('>', 1)[0].split(':')[-1]
+            if code.isdecimal():
+                try:
+                    emoji = s.client.get_emoji(int(code))
+                    if emoji:
+                        create_new_vote = create_new_vote or emoji.animated
+                        a = a.replace(a.split()[0], f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
+                        new_message.append(a)
+                        emojis.append(emoji)
+                        continue
+                except:
+                    ...
+            new_message.append(a)
+            emojis.append(a[0])
+        if create_new_vote:
+            message = await message.channel.send('\n'.join(new_message))
+        for emoji in emojis:
+            try:
+                await message.add_reaction(emoji)
+            except:
+                ...
+        return
+    
         for a in message.content.splitlines():
             if a.startswith('<'):
                 a = a.split('>', 1)[0]
                 a = a.split(':')[-1]
                 try:
                     emoji = s.client.get_emoji(int(a))
+                    print(emoji)
                     await message.add_reaction(emoji)
                 except:
                     ...
