@@ -1452,22 +1452,30 @@ class leaderBot_class():
         new_message = []
         emojis = []
         for a in message.content.split(maxsplit=1)[1].splitlines():
-            code = a.split()[0].split('>', 1)[0].split(':')[-1]
-            if code.isdecimal():
-                try:
-                    emoji = s.client.get_emoji(int(code))
-                    if emoji:
-                        create_new_vote = create_new_vote or emoji.animated
-                        a = a.replace(a.split()[0], f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
-                        new_message.append(a)
-                        emojis.append(emoji)
-                        continue
-                except:
-                    ...
+            if a:
+                code = a.split()[0].split('>', 1)[0].split(':')[-1]
+                if code.isdecimal():
+                    try:
+                        emoji = s.client.get_emoji(int(code))
+                        if emoji:
+                            create_new_vote = create_new_vote or emoji.animated
+                            a = a.replace(a.split()[0], f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
+                            new_message.append(a)
+                            emojis.append(emoji)
+                            continue
+                    except:
+                        ...
+                emojis.append(a[0])
             new_message.append(a)
-            emojis.append(a[0])
+            
         if create_new_vote:
-            message = await message.channel.send('\n'.join(new_message))
+            msg = await message.channel.send('\n'.join(new_message))
+            try:
+                await message.delete()
+            except:
+                ...
+            message = msg
+            
         for emoji in emojis:
             try:
                 await message.add_reaction(emoji)
