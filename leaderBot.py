@@ -1481,6 +1481,24 @@ class leaderBot_class():
             
         if create_new_vote:
             msg = await message.channel.send('\n'.join(new_message))
+
+            # it is not visible in audit, so...
+            if True:
+                # check if channel exists
+                channel_id = s.json_data.j.get('iMentionsChannel')
+                if channel_id:
+                    try:
+                        channel = client.get_channel(channel_id)
+                        if not channel:
+                            raise
+                        embed = discord.Embed(title='New anonimised voting!')
+                        embed.add_field(name='user', value=f"<@{message.author.id}>")
+                        embed.add_field(name='voting', value=f"[jump]({msg.jump_url})")
+                        embed.add_field(name='original text', value=f"{message.content}")
+                        await channel.send(embed = embed)
+                    except Exception as e:
+                        ...
+
             try:
                 await message.delete()
             except:
