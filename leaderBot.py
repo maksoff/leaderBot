@@ -1934,7 +1934,6 @@ class leaderBot_class():
                           )
         
         s.commands = (
-                                (f'{s.prefix}help', 'prints this message', s.help),
                                 (f'{s.prefix}ping', 'bot latency', s.ping),
                                 (f'{s.prefix}add', 'to add new submission', s.add_submission),
                                 (f'{s.prefix}static points', 'add points (e.g. giveaways)', s.add_points),
