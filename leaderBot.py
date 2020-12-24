@@ -40,6 +40,7 @@ TOKEN   = os.getenv('DISCORD_TOKEN')
 ROLE    = os.getenv('DISCORD_ROLE')
 CHANNEL = os.getenv('DISCORD_CHANNEL')
 DEBUG_CH = os.getenv('DISCORD_DEBUG_CH')
+ADMIN = os.getenv('DISCORD_ADMIN')
 if DEBUG_CH:
     DEBUG_CH = int(DEBUG_CH)
 
@@ -1815,6 +1816,33 @@ class leaderBot_class():
                 return
             
         return
+
+    @staticmethod
+    async def dm(client, message):
+        try:
+            admin_id = int(ADMIN)
+            admin = await client.fetch_user(admin_id)
+            if not admin_id:
+                raise
+        except:
+            return
+        if message.author != admin:
+            await admin.send(f"<@{message.author.id}>\nmessage.content")
+            await message.channel.send('`my creator is notified`')
+        else:
+            try:
+                user_id = leaderBot_class.get_int(message.content.split()[0])
+                user = await client.fetch_user(user_id)
+                print(user_id, user)
+                if not user:
+                    raise Exception('no user')
+            except Exception as e:
+                if DEBUG: raise e
+                await message.channel.send('Message should start with @user or id!')
+                return
+            await user.send(message.content.split(maxsplit=1)[1])
+            await message.channel.send('`message sent`')
+        return
             
     def create_help (s, *args):
         s.user_commands = (
@@ -1888,7 +1916,12 @@ async def on_message(message):
         return
     if message.author == client.user:
         return
-    await leaderBot[message.guild.id](message)
+    
+    if message.guild:
+        await leaderBot[message.guild.id](message)
+    else:
+        #dm message
+        await leaderBot_class.dm(client, message)
 
 print('ready, steady, go')
 client.run(TOKEN)
