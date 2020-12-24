@@ -311,9 +311,8 @@ class leaderBot_class():
             try:
                 await message.attachments[0].save(fp=s.json_path)
                 s.open_json()
-                await s.update_lb()
+                await s.update_all(message, ignore_lock=True)
                 s.json_lock.lock = None
-                await s.update_winners()
             except Exception as e:
                 s.json_lock.lock = None
                 if DEBUG:
@@ -600,7 +599,7 @@ class leaderBot_class():
                     return
             else:
                 aPoints = s.json_data.find(s.json_data.j.get('aChallenge'), sName=sChallengeName).get('aPoints', [])
-            if len(aPoints) == 1:
+            if (len(aPoints) == 1) or (channel_id == 0):
                 bShowScore = False
             else:
                 msg = await message.channel.send('Show score for this challenge in `#winners`?')
@@ -622,10 +621,10 @@ class leaderBot_class():
                                                     'idMessage': message_id,
                                                     'bShowScore': bShowScore,
                                                     'aPoints': aPoints})
+            await s.update_winners(sChallengeName=sChallengeName)
             if change_existing_channel:
                 s.save_json()
                 s.json_lock.lock = None
-            await s.update_winners(sChallengeName=sChallengeName)
             return ('Done: ' if change_existing_channel else '') + sChallengeName 
         except Exception as e:
             s.json_lock.lock = None
@@ -828,6 +827,7 @@ class leaderBot_class():
                 player['iStaticPoints'] = player.get('iStaticPoints', 0) + points
             await message.channel.send('*updating...*')
             response = await s.update_lb()
+            s.save_json()
             s.json_lock.lock = None
             return response
         except Exception as e:
@@ -862,6 +862,7 @@ class leaderBot_class():
             s.leaderboard_message_id = msg.id
             s.json_data.set_lb_message(s.leaderboard_channel_id, s.leaderboard_message_id)
             await s.update_lb()
+            s.save_json()
             s.json_lock.lock = None
             return 'placeholder created'
 
@@ -943,7 +944,7 @@ class leaderBot_class():
                     raise e
                 else:
                     print(e)
-        asyncio.gather(*(asyncio.ensure_future(update_player(player)) for player in s.json_data.j.get('aPlayer', [])))
+        await asyncio.gather(*(asyncio.ensure_future(update_player(player)) for player in s.json_data.j.get('aPlayer', [])))
         s.save_json()
         return
 
@@ -967,7 +968,12 @@ class leaderBot_class():
                     embed.add_field(name=item['name'],
                                     value=item['value'],
                                     inline=False)
-                
+
+                # remove entries with empty idChannel
+                if (not (idChannel is None)) and (not idChannel):
+                    del challenge['idChannel']
+                    del challenge['idMessage']
+                    
                 if idChannel and idMessage:
                     msg = await s.get_message(idChannel, idMessage)
                     if msg:
@@ -981,7 +987,7 @@ class leaderBot_class():
                 else:
                     print('update_winners\n', e)
                     
-        asyncio.gather(*(asyncio.ensure_future(update_win(sub)) for sub in sub))
+        await asyncio.gather(*(asyncio.ensure_future(update_win(sub)) for sub in sub))
         return
                     
     
@@ -989,7 +995,6 @@ class leaderBot_class():
         try:
             await s.update_usernames() # update usernames & avatars
             s.json_data.calculate_rating()
-            s.save_json()
             await s.post()
 
             name, value = s.json_data.result_leaderboard().split('\n', 1)
@@ -1025,10 +1030,12 @@ class leaderBot_class():
                 await s.send(message.channel, '`json locked. try again later`')
                 return
         await s.send(message.channel, '*updating...*')
+        await s.update_roles(message)
         response = await s.update_lb()
+        await s.update_winners()
+        s.save_json()
         if not ignore_lock:
             s.json_lock.lock = None
-        await s.update_winners()
         return response
             
     async def print_lb(s, msg):
@@ -1486,6 +1493,115 @@ class leaderBot_class():
                 ...
         return
 
+    async def update_roles(s, message):
+        try:
+            role_int = s.json_data.j['aRole']['iRole']
+            act_int = s.json_data.j['aRole']['iActive']
+            old_role_int = s.json_data.j['aRole'].get('iOldRole')
+            mem_list = s.json_data.j['aRole']['aMembers']
+            role = message.guild.get_role(role_int)
+            if not old_role_int:
+                old_role = message.guild.get_role(old_role_int)
+            else:
+                old_role = None
+            if not role: raise
+        except Exception as e:
+            if DEBUG:
+                raise e
+            else:
+                print(e)
+            return
+
+        active_challenges = [ch.get('sName') for ch in s.json_data.j.get('aChallenge', [])[:-act_int-1:-1]]
+        active_members = set([sub.get('iUserID') for sub in s.json_data.j.get('aSubmission') if sub.get('sChallengeName') in active_challenges])
+        active_members.discard(None)
+
+        # get list to clean roles
+        if old_role and old_role != role:
+            rem_set = set(mem_list[::])
+        else:
+            old_role = role
+            rem_set = set([mem for mem in mem_list if (not (mem in active_members))])
+        try:
+            del s.json_data.j['aRole']['iOldRole']
+        except:
+            ...
+            
+        # get list to set role
+        add_set = active_members - (set(mem_list) - rem_set)
+        s.json_data.j['aRole']['aMembers'] = list(active_members)
+        
+        # async update roles
+        async def update_role(message, user_id, role, add_rem):
+            member = await message.guild.fetch_member(user_id)
+            try:
+                if add_rem:
+                    await member.add_roles(role)
+                else:
+                    await member.remove_roles(role)
+            except Exception as e:
+                if DEBUG:
+                    raise e
+                else:
+                    print(e)
+            
+        await asyncio.gather(*(*(asyncio.ensure_future(update_role(message, user_id, role, True)) for user_id in add_set),
+                               *(asyncio.ensure_future(update_role(message, user_id, old_role, False)) for user_id in rem_set)))
+        return
+
+        
+        
+
+    async def set_role(s, message):
+        if s.json_lock.lock:
+            await message.channel.send('`json locked. try again later`')
+            return
+        await message.channel.send('How many last challenges counted as active?')
+        while True:
+            msg_c = await s.wait_response(message)
+            if not msg_c:
+                s.json_lock.lock = None
+                return
+            try:
+                act_int = int(msg_c.content)
+                if act_int == 0:
+                    break
+                if not act_int:
+                    raise
+                break
+            except:
+                await message.channel.send('Please enter number, like `3`')
+                continue
+        
+        await message.channel.send('Enter the @role or role_id which will be assigned to active players')
+        while True:
+            msg_c = await s.wait_response(message)
+            if not msg_c:
+                s.json_lock.lock = None
+                return
+            try:
+                role_int = s.get_int(msg_c.content)
+                role = message.guild.get_role(role_int)
+                if not role:
+                    raise
+                break
+            except:
+                await message.channel.send('Wrong id or @role. Try again or `cancel`')
+                continue
+        # we have a role!
+        await message.channel.send('*updating...*')
+        if not s.json_data.j.get('aRole'):
+            s.json_data.j['aRole'] = {}
+            s.json_data.j['aRole']['aMembers'] = []
+        s.json_data.j['aRole']['iOldRole'] = s.json_data.j['aRole'].get('iRole')
+        s.json_data.j['aRole']['iRole'] = role_int
+        s.json_data.j['aRole']['iActive'] = act_int
+        await s.update_roles(message)
+        s.save_json()
+        await message.channel.send('Role saved.')
+        s.json_lock.lock = None
+        return
+
     async def mentioned(s, message):
         # will be supported in 1.6 await message.channel.send('Okay', reference=message)
 
@@ -1728,6 +1844,7 @@ class leaderBot_class():
                       ('?disable user', 'to hide user from leaderboard', s.disable),
                       ('?enable user', 'to reenable user to leaderboard', s.enable),
                       ('?unlock', "don't use! debug feature", s.unlock),
+                      ('?set role', 'set @role for active winners', s.set_role),
                       )
     
     def __init__(s, client, guild_id):
