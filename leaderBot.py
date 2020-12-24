@@ -1513,7 +1513,6 @@ class leaderBot_class():
             return
 
         active_challenges = [ch.get('sName') for ch in s.json_data.j.get('aChallenge', [])[:-act_int-1:-1]]
-        print('acttive_challenges', active_challenges)
         active_members = set([sub.get('iUserID') for sub in s.json_data.j.get('aSubmission') if sub.get('sChallengeName') in active_challenges])
         active_members.discard(None)
 
@@ -1590,6 +1589,7 @@ class leaderBot_class():
                 await message.channel.send('Wrong id or @role. Try again or `cancel`')
                 continue
         # we have a role!
+        await message.channel.send('*updating...*')
         if not s.json_data.j.get('aRole'):
             s.json_data.j['aRole'] = {}
             s.json_data.j['aRole']['aMembers'] = []
