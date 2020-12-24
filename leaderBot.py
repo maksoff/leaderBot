@@ -110,6 +110,8 @@ class leaderBot_class():
 
     ksp_hints = None
     avatar_cache={}
+
+    prefix = 'lb?'
     
     ## assistant functions
 
@@ -301,7 +303,7 @@ class leaderBot_class():
         if s.json_lock.lock:
             await message.channel.send('`json locked. Retry later`')
             return
-        await message.channel.send('Please send me your json!')
+        await message.channel.send('Please send me your json! Or `cancel`')
 
         message = await s.wait_response(message)
         if not message:
@@ -344,19 +346,31 @@ class leaderBot_class():
 
     ## state machine functions
     
-    async def admin_help(s, *args):
-        response = 'Hello! This bot helps to update the leaderboard.\nUse these commands (in `#leaderbot` channel!):\n'
-        for n, t, _ in s.commands:
-            response += '`{}` - {}\n'.format(n, t)
-
-        response += '\nAll users have additional commands:\n' + await s.user_help()
-        return response
-
-    async def user_help(s, *args):
-        response = 'Check ranking:\n'
-        for n, t, _ in s.user_commands:
-            response += '`{}` - {}\n'.format(n, t)
-        return response
+    async def help(s, message):
+        if message.channel.name == CHANNEL:
+            embed = discord.Embed(title = 'Hello! This bot helps to update the leaderboard.')
+            embed.add_field(name = 'Use these commands (in `#leaderbot` channel!)',
+                            value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.commands]),
+                            inline=False)
+            embed.add_field(name = 'User commands',
+                            value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.user_commands]),
+                            inline=False)
+            try:
+                admin_id = int(ADMIN)
+                admin = await s.client.fetch_user(admin_id)
+                embed.set_footer(text = f'{admin.name}#{admin.discriminator}',
+                                 icon_url=admin.avatar_url)
+            except:
+                ...
+            await message.channel.send(embed = embed)
+            return
+        else:
+            embed = discord.Embed()
+            embed.add_field(name = 'Available commands',
+                            value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.user_commands]),
+                            inline=False)
+            await message.channel.send(embed = embed)
+            return
 
     def get_used_challenges(s, sChallengeName):
         active_challenges = 3
@@ -1003,10 +1017,10 @@ class leaderBot_class():
             embed = discord.Embed()
             embed.add_field(name=name, value=value)
             if not (s.leaderboard_channel_id and s.leaderboard_message_id):
-                return '`?set leaderboard` required'
+                return f'`{s.prefix}set leaderboard` required'
             msg = await s.get_message(s.leaderboard_channel_id, s.leaderboard_message_id)
             if not msg:
-                return '`?set leaderboard` required'
+                return f'`{s.prefix}set leaderboard` required'
             try:
                 await msg.edit(content='', embed=embed)
                 await s.update_lb_img()
@@ -1205,7 +1219,7 @@ class leaderBot_class():
             try:
                 channel_id = s.leaderboard_channel_id
                 if not channel_id:
-                    return 'please configure `?set leaderboard`'
+                    return f'please configure `{s.prefix}set leaderboard`'
                 channel = client.get_channel(channel_id)
 
                 # leaderboard image
@@ -1369,7 +1383,7 @@ class leaderBot_class():
             try:
                 url = args[0].content.strip().split(' ')[1]
             except Exception as e:
-                return 'Specify URL `?post URL`'
+                return f'Specify URL `{s.prefix}post URL`'
 
             # send empty data
             if len(args[0].content.split(' ')) > 2:
@@ -1421,7 +1435,7 @@ class leaderBot_class():
         s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)['bDisabled']=True
         response =  await s.update_all(msg, ignore_lock = True)
         s.json_lock.lock = None
-        await msg.channel.send('Disabled. If needed `?update all`')
+        await msg.channel.send(f'Disabled. If needed `{s.prefix}update all`')
 
     async def enable(s, msg):
         if s.json_lock.lock:
@@ -1794,6 +1808,23 @@ class leaderBot_class():
             
         return
 
+    async def change_prefix(s, message):
+        if s.json_lock.lock:
+            await message.channel.send('`json locked. try again later`')
+            return
+        await message.channel.send('Enter new prefix or `cancel`')
+        msg_r = await s.wait_response(message)
+        if not msg_r:
+            s.json_lock.lock = None
+            return
+        s.prefix = msg_r.content
+        s.json_data.j['sPrefix'] = s.prefix
+        await s.client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'your {s.prefix}rank'))
+        s.save_json()
+        s.json_lock.lock = None
+        s.create_help()
+        await message.channel.send(f'New prefix `{s.prefix}` saved')
+        return
                 
     async def __call__(s, message):
         response = ''
@@ -1893,38 +1924,39 @@ class leaderBot_class():
             
     def create_help (s, *args):
         s.user_commands = (
-                                ('?help', 'prints this message', s.user_help),
-                                ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
-                                ('?top', 'leaderboard; add number to limit positions `?top 3`', s.top_img),
-                                ('?leaderboard', 'same as `?top`', s.top_img),
-                                ('?activity', 'activity rank; add number to limit positions `?activity 3`', s.act_img),
-                                ('?ksp', 'random ksp loading hint', s.ksp),
-                                ('?voting', "all emojis at line start added as reactions *`voting-new` to replace your message*", s.voting),
+                                (f'{s.prefix}help', 'prints this message', s.help),
+                                (f'{s.prefix}rank', f'your rank; `{s.prefix}rank @user` to get *@user* rank', s.rank_img),
+                                (f'{s.prefix}top', f'leaderboard; add number to limit positions `{s.prefix}top 3`', s.top_img),
+                                (f'{s.prefix}leaderboard', f'same as `{s.prefix}top`', s.top_img),
+                                (f'{s.prefix}activity', f'activity rank; add number to limit positions `{s.prefix}activity 3`', s.act_img),
+                                (f'{s.prefix}ksp', 'random ksp loading hint', s.ksp),
+                                (f'{s.prefix}voting', "all emojis at line start added as reactions. *at least I'll try*", s.voting),
                           )
         
         s.commands = (
-                                ('?help', 'prints this message', s.admin_help),
-                                ('?ping', 'bot latency', s.ping),
-                                ('?add', 'to add new submission', s.add_submission),
-                                ('?static points', 'add points (e.g. giveaways)', s.add_points),
-                                ('?update', 'force leaderboard update', s.update_all),
-                                ('?print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
-                                ('?set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
-                                ('?set winners', 'set in which channel to post winners for challenge', s.set_challenge_channel),
-                                ('?set mentions', f'set channel where <@{s.client.user.id}> mentions will be posted', s.set_mention_ch),
-                                ('?set role', 'set @role for active winners', s.set_role),
-                                ('?export json', 'exports data in json', s.json_exp),
-                                ('?import json', 'imports data from json', s.json_imp),
-                                ('?delete json', 'clears all you data from server', s.json_del),
-                                ('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
-                                ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
-                                ('?disable user', 'to hide user from leaderboard', s.disable),
-                                ('?enable user', 'to reenable user to leaderboard', s.enable),
+                                (f'{s.prefix}help', 'prints this message', s.help),
+                                (f'{s.prefix}ping', 'bot latency', s.ping),
+                                (f'{s.prefix}add', 'to add new submission', s.add_submission),
+                                (f'{s.prefix}static points', 'add points (e.g. giveaways)', s.add_points),
+                                (f'{s.prefix}update', 'force leaderboard update', s.update_all),
+                                (f'{s.prefix}print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
+                                (f'{s.prefix}set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
+                                (f'{s.prefix}set winners', 'set in which channel to post winners for challenge', s.set_challenge_channel),
+                                (f'{s.prefix}set mentions', f'set channel where <@{s.client.user.id}> mentions will be posted', s.set_mention_ch),
+                                (f'{s.prefix}set role', 'set @role for active winners', s.set_role),
+                                (f'{s.prefix}export json', 'exports data in json', s.json_exp),
+                                (f'{s.prefix}post', f'send json over `post` request. e.g.`{s.prefix}post http://URL`', s.post),
+                                (f'{s.prefix}seturl', f'`{s.prefix}seturl URL` - where will be JSON posted after each ranking update', s.seturl),
+                                (f'{s.prefix}disable user', 'to hide user from leaderboard', s.disable),
+                                (f'{s.prefix}enable user', 'to reenable user to leaderboard', s.enable),
+                                (f'{s.prefix}change prefix', 'to change the prefix', s.change_prefix),
                       )
 
         s.hidden_commands = (
-                                ('?give', 'give cool rocket reaction', s.give_rocket),
-                                ('?unlock', "don't use! debug feature", s.unlock),
+                                (f'{s.prefix}give', 'give cool rocket reaction', s.give_rocket),
+                                (f'{s.prefix}unlock', "don't use! debug feature", s.unlock),
+                                (f'{s.prefix}import json', 'imports data from json', s.json_imp),
+                                (f'{s.prefix}delete json', 'clears all you data from server', s.json_del),
                             )
     
     def __init__(s, client, guild_id):
@@ -1940,6 +1972,10 @@ class leaderBot_class():
         else:
             s.save_json()
             print('no json found - empty created')
+        pref = s.json_data.j.get('sPrefix')
+        if not (pref is None):
+            s.prefix = pref
+        s.create_help()
 
 client = discord.Client()
 print('client created')
@@ -1953,7 +1989,7 @@ async def on_ready():
             if guild.id != DEBUG_CH:
                 continue
         leaderBot[guild.id] = leaderBot_class(client, guild.id)
-        await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='your ?rank'))
+        await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'your {leaderBot[guild.id].prefix}rank'))
         print(
             f'{client.user} is connected to the following guild:\n'
             f'{guild.name}(id: {guild.id})'
