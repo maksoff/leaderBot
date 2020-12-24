@@ -40,6 +40,7 @@ TOKEN   = os.getenv('DISCORD_TOKEN')
 ROLE    = os.getenv('DISCORD_ROLE')
 CHANNEL = os.getenv('DISCORD_CHANNEL')
 DEBUG_CH = os.getenv('DISCORD_DEBUG_CH')
+ADMIN = os.getenv('DISCORD_ADMIN')
 if DEBUG_CH:
     DEBUG_CH = int(DEBUG_CH)
 
@@ -1815,6 +1816,48 @@ class leaderBot_class():
                 return
             
         return
+
+    @staticmethod
+    async def dm(client, message):
+        try:
+            admin_id = int(ADMIN)
+            admin = await client.fetch_user(admin_id)
+            if not admin_id:
+                raise
+        except:
+            return
+        async def get_files(message):
+            if not message.attachments:
+                return
+            files = []
+            for m in message.attachments:
+                buffer = io.BytesIO(await m.read())
+                buffer.seek(0)
+                files.append(discord.File(buffer, m.filename))
+            return files
+                
+        if (message.author != admin) or ('super!mega!test' in message.content):
+            await admin.send(f"<@{message.author.id}>\n" + message.content, files=(await get_files(message)))
+            await message.channel.send('`message sent`')
+        else:
+            try:
+                user_id = leaderBot_class.get_int(message.content.split()[0])
+                user = await client.fetch_user(user_id)
+                if not user:
+                    raise Exception('no user')
+            except Exception as e:
+                await message.channel.send('Message should start with @user or id!')
+                return
+            try:
+                try:
+                    content = message.content.split(maxsplit=1)[1]
+                except:
+                    content = '*'
+                await user.send(content, files=(await get_files(message)))
+                await message.channel.send(f'`message sent` to <@{user.id}>')
+            except Exception as e:
+                await message.channel.send('> ' + str(e))
+        return
             
     def create_help (s, *args):
         s.user_commands = (
@@ -1888,7 +1931,12 @@ async def on_message(message):
         return
     if message.author == client.user:
         return
-    await leaderBot[message.guild.id](message)
+    
+    if message.guild:
+        await leaderBot[message.guild.id](message)
+    else:
+        #dm message
+        await leaderBot_class.dm(client, message)
 
 print('ready, steady, go')
 client.run(TOKEN)
