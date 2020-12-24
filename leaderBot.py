@@ -599,7 +599,7 @@ class leaderBot_class():
                     return
             else:
                 aPoints = s.json_data.find(s.json_data.j.get('aChallenge'), sName=sChallengeName).get('aPoints', [])
-            if len(aPoints) == 1:
+            if (len(aPoints) == 1) or (channel_id == 0):
                 bShowScore = False
             else:
                 msg = await message.channel.send('Show score for this challenge in `#winners`?')
@@ -621,10 +621,10 @@ class leaderBot_class():
                                                     'idMessage': message_id,
                                                     'bShowScore': bShowScore,
                                                     'aPoints': aPoints})
+            await s.update_winners(sChallengeName=sChallengeName)
             if change_existing_channel:
                 s.save_json()
                 s.json_lock.lock = None
-            await s.update_winners(sChallengeName=sChallengeName)
             return ('Done: ' if change_existing_channel else '') + sChallengeName 
         except Exception as e:
             s.json_lock.lock = None
@@ -827,6 +827,7 @@ class leaderBot_class():
                 player['iStaticPoints'] = player.get('iStaticPoints', 0) + points
             await message.channel.send('*updating...*')
             response = await s.update_lb()
+            s.save_json()
             s.json_lock.lock = None
             return response
         except Exception as e:
@@ -861,6 +862,7 @@ class leaderBot_class():
             s.leaderboard_message_id = msg.id
             s.json_data.set_lb_message(s.leaderboard_channel_id, s.leaderboard_message_id)
             await s.update_lb()
+            s.save_json()
             s.json_lock.lock = None
             return 'placeholder created'
 
@@ -942,7 +944,7 @@ class leaderBot_class():
                     raise e
                 else:
                     print(e)
-        asyncio.gather(*(asyncio.ensure_future(update_player(player)) for player in s.json_data.j.get('aPlayer', [])))
+        await asyncio.gather(*(asyncio.ensure_future(update_player(player)) for player in s.json_data.j.get('aPlayer', [])))
         s.save_json()
         return
 
@@ -966,7 +968,12 @@ class leaderBot_class():
                     embed.add_field(name=item['name'],
                                     value=item['value'],
                                     inline=False)
-                
+
+                # remove entries with empty idChannel
+                if (not (idChannel is None)) and (not idChannel):
+                    del challenge['idChannel']
+                    del challenge['idMessage']
+                    
                 if idChannel and idMessage:
                     msg = await s.get_message(idChannel, idMessage)
                     if msg:
@@ -980,7 +987,7 @@ class leaderBot_class():
                 else:
                     print('update_winners\n', e)
                     
-        asyncio.gather(*(asyncio.ensure_future(update_win(sub)) for sub in sub))
+        await asyncio.gather(*(asyncio.ensure_future(update_win(sub)) for sub in sub))
         return
                     
     
@@ -988,7 +995,6 @@ class leaderBot_class():
         try:
             await s.update_usernames() # update usernames & avatars
             s.json_data.calculate_rating()
-            s.save_json()
             await s.post()
 
             name, value = s.json_data.result_leaderboard().split('\n', 1)
@@ -1024,11 +1030,12 @@ class leaderBot_class():
                 await s.send(message.channel, '`json locked. try again later`')
                 return
         await s.send(message.channel, '*updating...*')
-        response = await s.update_lb()
         await s.update_roles(message)
+        response = await s.update_lb()
+        await s.update_winners()
+        s.save_json()
         if not ignore_lock:
             s.json_lock.lock = None
-        await s.update_winners()
         return response
             
     async def print_lb(s, msg):
@@ -1516,18 +1523,14 @@ class leaderBot_class():
         else:
             old_role = role
             rem_set = set([mem for mem in mem_list if (not (mem in active_members))])
-        del s.json_data.j['aRole']['iOldRole']
+        try:
+            del s.json_data.j['aRole']['iOldRole']
+        except:
+            ...
             
         # get list to set role
         add_set = active_members - (set(mem_list) - rem_set)
         s.json_data.j['aRole']['aMembers'] = list(active_members)
-
-        if DEBUG:
-            print('act_memb', active_members)
-            print('add', add_set)
-            print('rem', rem_set)
-            print('role', role)
-            print('old_role', old_role)
         
         # async update roles
         async def update_role(message, user_id, role, add_rem):
@@ -1543,8 +1546,8 @@ class leaderBot_class():
                 else:
                     print(e)
             
-        asyncio.gather(*(*(asyncio.ensure_future(update_role(message, user_id, role, True)) for user_id in add_set),
-                         *(asyncio.ensure_future(update_role(message, user_id, old_role, False)) for user_id in rem_set)))
+        await asyncio.gather(*(*(asyncio.ensure_future(update_role(message, user_id, role, True)) for user_id in add_set),
+                               *(asyncio.ensure_future(update_role(message, user_id, old_role, False)) for user_id in rem_set)))
         return
 
         
