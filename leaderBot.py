@@ -1621,6 +1621,15 @@ class leaderBot_class():
         s.json_lock.lock = None
         return
 
+    async def give_rocket(s, message):
+        try:
+            msg_id = s.get_int(message.content)
+            msg = await message.channel.fetch_message(msg_id)
+            await msg.add_reaction(s.client.get_emoji(732098507137220718))
+            await message.delete()
+        except Exception as e:
+            ...
+
     async def mentioned(s, message):
         # will be supported in 1.6 await message.channel.send('Okay', reference=message)
 
@@ -1812,6 +1821,9 @@ class leaderBot_class():
             if message.content.lower().startswith(n):
                 response = await f(message)
                 break
+
+        if message.content.lower().startswith('?give'):
+            await s.give_rocket(message)
             
         if response:
             await s.send(message.channel, response)
