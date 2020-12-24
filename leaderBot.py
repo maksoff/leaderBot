@@ -1838,6 +1838,7 @@ class leaderBot_class():
                 
         if (message.author != admin) or ('super!mega!test' in message.content):
             await admin.send(f"<@{message.author.id}>\n" + message.content, files=(await get_files(message)))
+            await message.channel.send('`message sent`')
         else:
             try:
                 user_id = leaderBot_class.get_int(message.content.split()[0])
@@ -1845,12 +1846,15 @@ class leaderBot_class():
                 if not user:
                     raise Exception('no user')
             except Exception as e:
-                if DEBUG: raise e
                 await message.channel.send('Message should start with @user or id!')
                 return
             try:
-                await user.send(message.content.split(maxsplit=1)[1], files=(await get_files(message)))
-                await message.channel.send('`message sent`')
+                try:
+                    content = message.content.split(maxsplit=1)[1]
+                except:
+                    content = '*'
+                await user.send(content, files=(await get_files(message)))
+                await message.channel.send(f'`message sent` to <@{user.id}>')
             except Exception as e:
                 await message.channel.send('> ' + str(e))
         return
