@@ -1826,22 +1826,33 @@ class leaderBot_class():
                 raise
         except:
             return
-        if message.author != admin:
-            await admin.send(f"<@{message.author.id}>\nmessage.content")
-            await message.channel.send('`my creator is notified`')
+        async def get_files(message):
+            if not message.attachments:
+                return
+            files = []
+            for m in message.attachments:
+                buffer = io.BytesIO(await m.read())
+                buffer.seek(0)
+                files.append(discord.File(buffer, m.filename))
+            return files
+                
+        if (message.author != admin) or ('super!mega!test' in message.content):
+            await admin.send(f"<@{message.author.id}>\n" + message.content, files=(await get_files(message)))
         else:
             try:
                 user_id = leaderBot_class.get_int(message.content.split()[0])
                 user = await client.fetch_user(user_id)
-                print(user_id, user)
                 if not user:
                     raise Exception('no user')
             except Exception as e:
                 if DEBUG: raise e
                 await message.channel.send('Message should start with @user or id!')
                 return
-            await user.send(message.content.split(maxsplit=1)[1])
-            await message.channel.send('`message sent`')
+            try:
+                await user.send(message.content.split(maxsplit=1)[1], files=(await get_files(message)))
+                await message.channel.send('`message sent`')
+            except Exception as e:
+                await message.channel.send('> ' + str(e))
         return
             
     def create_help (s, *args):
