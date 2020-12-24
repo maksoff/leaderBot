@@ -1621,6 +1621,15 @@ class leaderBot_class():
         s.json_lock.lock = None
         return
 
+    async def give_rocket(s, message):
+        try:
+            msg_id = s.get_int(message.content)
+            msg = await message.channel.fetch_message(msg_id)
+            await msg.add_reaction(s.client.get_emoji(732098507137220718))
+            await message.delete()
+        except Exception as e:
+            ...
+
     async def mentioned(s, message):
         # will be supported in 1.6 await message.channel.send('Okay', reference=message)
 
@@ -1813,6 +1822,11 @@ class leaderBot_class():
                 response = await f(message)
                 break
             
+        for n, _, f in s.hidden_commands:
+            if message.content.lower().startswith(n):
+                response = await f(message)
+                break
+            
         if response:
             await s.send(message.channel, response)
             return
@@ -1879,34 +1893,39 @@ class leaderBot_class():
             
     def create_help (s, *args):
         s.user_commands = (
-                              ('?help', 'prints this message', s.user_help),
-                              ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
-                              ('?top', 'leaderboard; add number to limit positions `?top 3`', s.top_img),
-                              ('?leaderboard', 'same as `?top`', s.top_img),
-                              ('?activity', 'activity rank; add number to limit positions `?activity 3`', s.act_img),
-                              ('?ksp', 'random ksp loading hint', s.ksp),
-                              ('?voting', "all emojis at line start added as reactions *`voting-new` to replace your message*", s.voting),
+                                ('?help', 'prints this message', s.user_help),
+                                ('?rank', 'your rank; `?rank @user` to get @user rank', s.rank_img),
+                                ('?top', 'leaderboard; add number to limit positions `?top 3`', s.top_img),
+                                ('?leaderboard', 'same as `?top`', s.top_img),
+                                ('?activity', 'activity rank; add number to limit positions `?activity 3`', s.act_img),
+                                ('?ksp', 'random ksp loading hint', s.ksp),
+                                ('?voting', "all emojis at line start added as reactions *`voting-new` to replace your message*", s.voting),
                           )
         
-        s.commands = (('?help', 'prints this message', s.admin_help),
-                      ('?ping', 'bot latency', s.ping),
-                      ('?add', 'to add new submission', s.add_submission),
-                      ('?static points', 'add points (e.g. giveaways)', s.add_points),
-                      ('?update', 'force leaderboard update', s.update_all),
-                      ('?print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
-                      ('?set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
-                      ('?set winners', 'set in which channel to post winners for challenge', s.set_challenge_channel),
-                      ('?set mentions', f'set channel where <@{s.client.user.id}> mentions will be posted', s.set_mention_ch),
-                      ('?export json', 'exports data in json', s.json_exp),
-                      ('?import json', 'imports data from json', s.json_imp),
-                      ('?delete json', 'clears all you data from server', s.json_del),
-                      ('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
-                      ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
-                      ('?disable user', 'to hide user from leaderboard', s.disable),
-                      ('?enable user', 'to reenable user to leaderboard', s.enable),
-                      ('?unlock', "don't use! debug feature", s.unlock),
-                      ('?set role', 'set @role for active winners', s.set_role),
+        s.commands = (
+                                ('?help', 'prints this message', s.admin_help),
+                                ('?ping', 'bot latency', s.ping),
+                                ('?add', 'to add new submission', s.add_submission),
+                                ('?static points', 'add points (e.g. giveaways)', s.add_points),
+                                ('?update', 'force leaderboard update', s.update_all),
+                                ('?print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
+                                ('?set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
+                                ('?set winners', 'set in which channel to post winners for challenge', s.set_challenge_channel),
+                                ('?set mentions', f'set channel where <@{s.client.user.id}> mentions will be posted', s.set_mention_ch),
+                                ('?set role', 'set @role for active winners', s.set_role),
+                                ('?export json', 'exports data in json', s.json_exp),
+                                ('?import json', 'imports data from json', s.json_imp),
+                                ('?delete json', 'clears all you data from server', s.json_del),
+                                ('?post', 'send json over `post` request. e.g.`?post http://URL`', s.post),
+                                ('?seturl', '`?seturl URL` - where will be JSON posted after each ranking update', s.seturl),
+                                ('?disable user', 'to hide user from leaderboard', s.disable),
+                                ('?enable user', 'to reenable user to leaderboard', s.enable),
                       )
+
+        s.hidden_commands = (
+                                ('?give', 'give cool rocket reaction', s.give_rocket),
+                                ('?unlock', "don't use! debug feature", s.unlock),
+                            )
     
     def __init__(s, client, guild_id):
         s.guild_id = guild_id
