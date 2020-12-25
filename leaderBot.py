@@ -41,6 +41,13 @@ ROLE    = os.getenv('DISCORD_ROLE')
 CHANNEL = os.getenv('DISCORD_CHANNEL')
 DEBUG_CH = os.getenv('DISCORD_DEBUG_CH')
 ADMIN = os.getenv('DISCORD_ADMIN')
+KSP_GUILDS = os.getenv('DISCORD_KSP_GUILDS')
+try:
+    ksp_guilds = KSP_GUILDS.split()
+    ksp_guilds = [int(k) for k in ksp_guilds]
+except:
+    ksp_guilds = []
+    
 if DEBUG_CH:
     DEBUG_CH = int(DEBUG_CH)
 
@@ -1470,16 +1477,63 @@ class leaderBot_class():
         return response
 
     async def voting(s, message):
-        create_new_vote = 'voting-new' in message.content.lower().strip()
-        new_message = []  
+        create_new_list = 'voting-list' in message.content.lower().strip()
+        create_new_vote = 'voting-new' in message.content.lower().strip() or create_new_list
+        new_message = []
+
+        # emoji list
+        if message.guild.id in ksp_guilds:
+            emoji_list = iter((
+                                '<:1_:737600854957359125>',
+                                '<:2_:737600868865540178>',
+                                '<:3_:737600883516506114>',
+                                '<:4_:737600898934636574>',
+                                '<:5_:737600913249927209>',
+                                '<:6_:737600928009682984>',
+                                '<:7_:737600942488420415>',
+                                '<:8_:737600960855277608>',
+                                '<:9_:737600974360936471>',
+                                ))
+
+        else:
+            emoji_list = iter((
+                                '\u0030\uFE0F\u20E3',
+                                '\u0031\uFE0F\u20E3',
+                                '\u0032\uFE0F\u20E3',
+                                '\u0033\uFE0F\u20E3',
+                                '\u0034\uFE0F\u20E3',
+                                '\u0035\uFE0F\u20E3',
+                                '\u0036\uFE0F\u20E3',
+                                '\u0037\uFE0F\u20E3',
+                                '\u0038\uFE0F\u20E3',
+                                '\u0039\uFE0F\u20E3',
+                              ))
+
+        message_text = message.content
+
+        if message.guild.id in ksp_guilds:
+            special_emojis={':coolrocket:':'732098507137220718'}
+            for se, code in special_emojis.items():
+                try:
+                    emoji = s.client.get_emoji(int(code))
+                    if emoji and (message_text.find(se) != -1):
+                        create_new_vote = create_new_vote or emoji.animated
+                        message_text = message_text.replace(se, f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
+                        continue
+                except:
+                    ...
+                
 
         # replace integers with animated emojis
-        emojis = []
-        special_emojis={':coolrocket:':'732098507137220718 '}
+        emojis = []           
         try:
-            for a in message.content.split(maxsplit=1)[1].splitlines():
-                if a.split()[0] in special_emojis:
-                    a = a.replace(a.split()[0], special_emojis[a.split()[0]])
+            for a in message_text.split(maxsplit=1)[1].splitlines():
+                if create_new_list:
+                    if a:
+                        emo = next(emoji_list, '')
+                        new_message.append(emo + (' ' if emo else '') + a)
+                        emojis.append(emo)
+                        continue
                 if a:
                     code = a.split()[0].split('>', 1)[0].split(':')[-1]
                     if code.isdecimal():
@@ -1529,8 +1583,8 @@ class leaderBot_class():
         for emoji in emojis:
             try:
                 await message.add_reaction(emoji)
-            except:
-                ...
+            except Exception as e:
+                raise e
         return
 
     async def update_roles(s, message):
@@ -1690,16 +1744,20 @@ class leaderBot_class():
                   'copy what',
                   'roger',
                   )
-        part_2 = ('Kadmins will be notified ASAP! Or tomorrow...',
-                  'Kadmins are on the Jool orbit with only Ion engines. They will be notified as soon they are back',
-                  'Kadmins chilling on Eeloo. Your submission will be send with the next post-ship (ETA: 4 years 189 days)',
-                  'Kadmins now tanning on Moho. Because of Kerbol activity message can be corrupte#12!$30<42< `C`R`C` eRr0r',
-                  'Kadmins gone to Val. Or to Vall? As soon they are back, all be updated',
-                  'Relax, read a book. Kadmins will update all soon',
-                  '   .--. .-.. . .- ... . / .-- .- .. -',
-                  "Kadmins are at meeting! Or sleeping. Don't know, but all be updated soon",
-                  "Kadmins are stuck on Eve. Please send help. And snacks.",
-                  "Kadmins installed RSS & RO. They are lost now.")
+
+        if message.guild.id in ksp_guiilds:
+            part_2 = ('Kadmins will be notified ASAP! Or tomorrow...',
+                      'Kadmins are on the Jool orbit with only Ion engines. They will be notified as soon they are back',
+                      'Kadmins chilling on Eeloo. Your submission will be send with the next post-ship (ETA: 4 years 189 days)',
+                      'Kadmins now tanning on Moho. Because of Kerbol activity message can be corrupte#12!$30<42< `C`R`C` eRr0r',
+                      'Kadmins gone to Val. Or to Vall? As soon they are back, all be updated',
+                      'Relax, read a book. Kadmins will update all soon',
+                      '   .--. .-.. . .- ... . / .-- .- .. -',
+                      "Kadmins are at meeting! Or sleeping. Don't know, but all be updated soon",
+                      "Kadmins are stuck on Eve. Please send help. And snacks.",
+                      "Kadmins installed RSS & RO. They are lost now.")
+        else:
+            prat_2 = ('',)
         user_id = message.author.id
         msg_confirmation = await message.channel.send(f'<@{user_id}> {random.choice(part_1)}. {random.choice(part_2)}')
 
