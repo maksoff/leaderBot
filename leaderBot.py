@@ -1471,27 +1471,34 @@ class leaderBot_class():
 
     async def voting(s, message):
         create_new_vote = 'voting-new' in message.content.lower().strip()
-        new_message = []
+        new_message = []  
+
+        # replace integers with animated emojis
         emojis = []
         special_emojis={':coolrocket:':'732098507137220718 '}
-        for a in message.content.split(maxsplit=1)[1].splitlines():
-            if a.split()[0] in special_emojis:
-                a = a.replace(a.split()[0], special_emojis[a.split()[0]])
-            if a:
-                code = a.split()[0].split('>', 1)[0].split(':')[-1]
-                if code.isdecimal():
-                    try:
-                        emoji = s.client.get_emoji(int(code))
-                        if emoji:
-                            create_new_vote = create_new_vote or emoji.animated
-                            a = a.replace(a.split()[0], f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
-                            new_message.append(a)
-                            emojis.append(emoji)
-                            continue
-                    except:
-                        ...
-                emojis.append(a[0])
-            new_message.append(a)
+        try:
+            for a in message.content.split(maxsplit=1)[1].splitlines():
+                if a.split()[0] in special_emojis:
+                    a = a.replace(a.split()[0], special_emojis[a.split()[0]])
+                if a:
+                    code = a.split()[0].split('>', 1)[0].split(':')[-1]
+                    if code.isdecimal():
+                        try:
+                            emoji = s.client.get_emoji(int(code))
+                            if emoji:
+                                create_new_vote = create_new_vote or emoji.animated
+                                a = a.replace(a.split()[0], f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
+                                new_message.append(a)
+                                emojis.append(emoji)
+                                continue
+                        except:
+                            ...
+                    else:
+                        emojis.append(a.split()[0])
+                new_message.append(a)
+        except Exception as e:
+            print(e)
+            return # no text in message
             
         if create_new_vote:
             msg = await message.channel.send('\n'.join(new_message))
