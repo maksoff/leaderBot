@@ -126,6 +126,9 @@ class json_class():
             challengeType = s.find(s.j['aChallengeType'], sName=key)
             response = ''
             not_same = len(s.find(s.j.get('aChallenge'), sName=ChallengeName).get('aPoints', [])) != 1
+            # if it special type (rank = score)
+            if challengeType.get('bSpecial'):
+                not_same = False
             value.sort(key=lambda x: x['iRank'])
             for val in value:
                 user = f"<@{val['iUserID']}>"
