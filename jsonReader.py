@@ -211,7 +211,8 @@ class json_class():
         half_points = 5
         full_list = list(s.list_of_challenges())[-full_ch:]
         half_list = list(s.list_of_challenges())[-full_ch-half_ch:-full_ch]
-        points_for_multiple_submissions = {1:4, 2:2, 3:1, 4:1, 5:1}
+        points_for_multiple_submissions = {0:0, 1:4, 2:6, 3:7, 4:8, 5:9}
+        max_points_for_multiple_submissions = max(points_for_multiple_submissions.values())
         for sub in s.j.get('aSubmission', []):
             player = s.find(s.j.get('aPlayer'), iID=sub.get('iUserID'))
             if player.get('bDisabled', False):
@@ -226,7 +227,7 @@ class json_class():
                 points = half_points
             if not points:
                 continue
-            points += points_for_multiple_submissions.get(sub.get('iSubmissionId', 0), 0)
+            points += points_for_multiple_submissions.get(sub.get('iSubmissionId', 0), max_points_for_multiple_submissions)
             item = s.find(response, iID=sub.get('iUserID'))
             if item:
                 item['iPoints'] = item.get('iPoints', 0) + points
