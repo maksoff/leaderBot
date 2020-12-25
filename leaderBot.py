@@ -1551,7 +1551,6 @@ class leaderBot_class():
                         emojis.append(a.split()[0])
                 new_message.append(a)
         except Exception as e:
-            print(e)
             return # no text in message
             
         if create_new_vote:
@@ -1584,7 +1583,7 @@ class leaderBot_class():
             try:
                 await message.add_reaction(emoji)
             except Exception as e:
-                raise e
+                ...
         return
 
     async def update_roles(s, message):
@@ -1884,7 +1883,7 @@ class leaderBot_class():
             return
         s.prefix = msg_r.content
         s.json_data.j['sPrefix'] = s.prefix
-        await s.client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'your {s.prefix}rank'))
+        #await s.client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'your rank'))
         s.save_json()
         s.json_lock.lock = None
         s.create_help()
@@ -1995,7 +1994,7 @@ class leaderBot_class():
                                 (f'{s.prefix}leaderboard', f'same as `{s.prefix}top`', s.top_img),
                                 (f'{s.prefix}activity', f'activity rank; add number to limit positions `{s.prefix}activity 3`', s.act_img),
                                 (f'{s.prefix}ksp', 'random ksp loading hint', s.ksp),
-                                (f'{s.prefix}voting', "all emojis at line start added as reactions. *at least I'll try*", s.voting),
+                                (f'{s.prefix}voting', "all emojis at line start added as reactions. *at least I'll try*. `-new`, `-list`", s.voting),
                           )
         
         s.commands = (
@@ -2003,7 +2002,7 @@ class leaderBot_class():
                                 (f'{s.prefix}add', 'to add new submission', s.add_submission),
                                 (f'{s.prefix}static points', 'add points (e.g. giveaways)', s.add_points),
                                 (f'{s.prefix}update', 'force leaderboard update', s.update_all),
-                                (f'{s.prefix}print all', 'prints leaderboard for all challenges **can be slow because of discord**', s.print_lb),
+                                (f'{s.prefix}print all', 'prints leaderboard for all challenges *can be slow because of discord*', s.print_lb),
                                 (f'{s.prefix}set leaderboard', 'set in which channel to post leaderboard', s.set_lb),
                                 (f'{s.prefix}set winners', 'set in which channel to post winners for challenge', s.set_challenge_channel),
                                 (f'{s.prefix}set mentions', f'set channel where <@{s.client.user.id}> mentions will be posted', s.set_mention_ch),
@@ -2027,7 +2026,6 @@ class leaderBot_class():
         s.guild_id = guild_id
         s.client = client
         s.json_data = json_class()
-        s.create_help()
         
         s.json_path = str(guild_id)+'.txt'
         if(os.path.isfile(s.json_path)):
@@ -2053,7 +2051,7 @@ async def on_ready():
             if guild.id != DEBUG_CH:
                 continue
         leaderBot[guild.id] = leaderBot_class(client, guild.id)
-        await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'your {leaderBot[guild.id].prefix}rank'))
+        await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'your rank'))
         print(
             f'{client.user} is connected to the following guild:\n'
             f'{guild.name}(id: {guild.id})'
