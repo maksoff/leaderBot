@@ -373,7 +373,7 @@ class leaderBot_class():
             return
 
     def get_used_challenges(s, sChallengeName):
-        active_challenges = 3
+        active_challenges = 4
         last_challenges = set()
         last_challenge_types = set()
         used_challenge_types = set()
@@ -404,7 +404,7 @@ class leaderBot_class():
                     for i, chl in enumerate(s.json_data.j.get('aChallengeType', []), 1):
                         if full or (chl.get('sName') in (last | used)):
                             accept_list.append(str(i))
-                            response += (f"```\n{'>' if (chl.get('sName') in used) else ' '}" +
+                            response += (f"```\n{'>' if (chl.get('sName') in used) else (('|' if (chl.get('sName') in last) else ' ') if full else ' ')}" +
                                          f"{i:>{wide[0]}} {chl.get('sNick', chl.get('sName')):<{wide[1]}}" +
                                          f"{('*higher*' if chl.get('bHigherScore') else 'lower'):<{wide[2]}}" +
                                          f"{beautify(chl.get('fMultiplier', 1)):<{wide[3]}}" +
@@ -426,7 +426,7 @@ class leaderBot_class():
                         await s.send(message.channel, '`wrong index`')
                 
             # short list too short, try full list now
-            response = 'All types (`>` = used in this challenge):'
+            response = 'All types (`>` = used in this challenge, `|` = used in last challenges):'
             response += create_list(full = True)
             response += 'Enter number of existing type (e.g. `1`) or `0` to create new'
             
