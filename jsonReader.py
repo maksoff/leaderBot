@@ -126,6 +126,9 @@ class json_class():
             challengeType = s.find(s.j['aChallengeType'], sName=key)
             response = ''
             not_same = len(s.find(s.j.get('aChallenge'), sName=ChallengeName).get('aPoints', [])) != 1
+            # if it special type (rank = score)
+            if challengeType.get('bSpecial'):
+                not_same = False
             value.sort(key=lambda x: x['iRank'])
             for val in value:
                 user = f"<@{val['iUserID']}>"
@@ -208,18 +211,22 @@ class json_class():
         half_points = 5
         full_list = list(s.list_of_challenges())[-full_ch:]
         half_list = list(s.list_of_challenges())[-full_ch-half_ch:-full_ch]
+        points_for_multiple_submissions = {1:4, 2:2, 3:1, 4:1, 5:1}
         for sub in s.j.get('aSubmission', []):
             player = s.find(s.j.get('aPlayer'), iID=sub.get('iUserID'))
             if player.get('bDisabled', False):
                 continue
             points = 0
+            # if not in rank - skip
+            if not sub.get('iRank'):
+                continue
             if sub.get('sChallengeName') in full_list:
                 points = full_points
             if sub.get('sChallengeName') in half_list:
                 points = half_points
             if not points:
                 continue
-            points += sub.get('iSubmissionId', 0) * 2
+            points += points_for_multiple_submissions.get(sub.get('iSubmissionId', 0), 0)
             item = s.find(response, iID=sub.get('iUserID'))
             if item:
                 item['iPoints'] = item.get('iPoints', 0) + points
