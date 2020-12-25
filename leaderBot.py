@@ -28,6 +28,7 @@ import discord
 from dotenv import load_dotenv
 
 from jsonReader import json_class, beautify
+from blueLetters import replace_letters
 import rankDisplay
 
 import json
@@ -1582,7 +1583,10 @@ class leaderBot_class():
         for emoji in emojis:
             try:
                 await message.add_reaction(emoji)
+##                print('\\u' + '\\u'.join(hex(ord(e))[2:] for e in emoji))
+##                print(emoji)
             except Exception as e:
+                print(e)
                 ...
         return
 
@@ -1703,6 +1707,39 @@ class leaderBot_class():
             await message.delete()
         except Exception as e:
             ...
+
+    async def give_text(s, message):
+        add_reaction = True
+        msg_id = s.get_int(message.content.split()[1])
+        if msg_id is None:
+            add_reaction = False
+        try:
+            msg = await message.channel.fetch_message(msg_id)
+            if not msg: raise
+        except Exception as e:
+            add_reaction = False
+        text = message.content.split(maxsplit = 1 + int(add_reaction))[-1]
+        #print(text)
+        emojis, unique = replace_letters(text)
+        if not unique:
+            add_reaction = False
+
+        if add_reaction:
+            try:
+                await message.delete()
+            except Exception as e:
+                ...
+            for e in emojis:
+                try:
+                    await msg.add_reaction(e)
+                except Exception as e:
+                    ...
+        else:
+            try:
+                await message.channel.send(' '.join(emojis).replace('\n ', '\n'))
+                await message.delete()
+            except Exception as e:
+                ...    
 
     async def mentioned(s, message):
         # will be supported in 1.6 await message.channel.send('Okay', reference=message)
@@ -2017,6 +2054,7 @@ class leaderBot_class():
 
         s.hidden_commands = (
                                 (f'{s.prefix}give', 'give cool rocket reaction', s.give_rocket),
+                                (f'{s.prefix}text', 'give text reaction', s.give_text),
                                 (f'{s.prefix}unlock', "don't use! debug feature", s.unlock),
                                 (f'{s.prefix}import json', 'imports data from json', s.json_imp),
                                 (f'{s.prefix}delete json', 'clears all you data from server', s.json_del),
