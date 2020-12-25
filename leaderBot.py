@@ -374,12 +374,12 @@ class leaderBot_class():
 
     def get_used_challenges(s, sChallengeName):
         active_challenges = 3
-        last_challenges = []
+        last_challenges = set()
         last_challenge_types = set()
         used_challenge_types = set()
         
         for submission in s.json_data.j.get('aSubmission', [])[::-1]:
-            last_challenges.append(submission['sChallengeName'])
+            last_challenges.add(submission['sChallengeName'])
             if len(last_challenges) > active_challenges:
                 break
             last_challenge_types.add(submission['sChallengeTypeName'])
