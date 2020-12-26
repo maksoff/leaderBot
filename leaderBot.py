@@ -2001,7 +2001,8 @@ class leaderBot_class():
             return files
                 
         if (message.author != admin) or ('super!mega!test' in message.content):
-            await admin.send(f"<@{message.author.id}>\n" + message.content, files=(await get_files(message)))
+            await admin.send(f"> from <@{message.author.id}> @{message.author.name}#{message.author.discriminator} {message.author.id}\n" +
+                             message.content, files=(await get_files(message)))
             await message.channel.send('`message sent`')
         else:
             try:
@@ -2018,7 +2019,7 @@ class leaderBot_class():
                 except:
                     content = '*'
                 await user.send(content, files=(await get_files(message)))
-                await message.channel.send(f'`message sent` to <@{user.id}>')
+                await message.channel.send(f'`message sent` to <@{user.id}> @{user.name}#{user.discriminator} {user.id}')
             except Exception as e:
                 await message.channel.send('> ' + str(e))
         return
