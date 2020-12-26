@@ -53,13 +53,19 @@ def replace_letters(word):
         if c == ' ':
             emoji.append(blue_square)
         elif '0' <= c <= '9':
-            emoji.append(blue_digits[c - ord('0')])
+            emoji.append(blue_digits[ord(c) - ord('0')])
         elif c == '\n':
             emoji.append('\n')
-        else:
+        elif 'a' <= c <= 'z':
             try:
                 emoji.append(blue_letters[ord(c) - ord('a')])
             except Exception as e:
                 ...
+        else:
+            try:
+                emoji.append(c)
+            except:
+                ...
+            
 
     return emoji, len(w) == len(set(emoji))
