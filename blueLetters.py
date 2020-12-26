@@ -43,18 +43,17 @@ blue_digits = (
                 '\u0039\uFE0F\u20E3',
                 )
 
-cr_name = ':coolrocket:'
-
-def replace_letters(word):
+def replace_letters(word, special_emojis={}):
     ''' returns emoji list as first argument '''
     ''' and second argumnet True if all letters are unique '''
     if word is None: return
-    cool_rocket = (word.find(cr_name) != -1)*(len(cr_name) - 1)
-    word = word.replace(cr_name, '<a:CoolChallengeAccepted:732098507137220718>')
+    for e, v in special_emojis.items():
+        word = word.replace(e.lower(), v)
     w = list(word.lower())
     emoji = []
     bEm = 0
     lEm = []
+    special_emojis_len = 0
     for i, c in enumerate(w):
         # try to recognize special emoji
         if (c == '<') and ('>' in w[i:]):
@@ -68,6 +67,7 @@ def replace_letters(word):
                 lEm.append(c)
             elif (bEm == 2) and (c == '>') and (len(lEm) > 20):
                 # looks good, I suppose
+                special_emojis_len += len(lEm)
                 lEm.append(c)
                 emoji.append(''.join(lEm))
                 lEm = []
@@ -102,7 +102,5 @@ def replace_letters(word):
                 emoji.append(c)
             except:
                 ...
-            
-    print(emoji)
-    print(len(w), cool_rocket, len(set(emoji)), w)
-    return emoji, (len(w) - cool_rocket) == len(set(emoji))
+
+    return emoji, (len(w) - special_emojis_len) == len(set(emoji))

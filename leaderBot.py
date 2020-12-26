@@ -120,6 +120,10 @@ class leaderBot_class():
     avatar_cache={}
 
     prefix = 'lb?'
+
+    
+    special_emojis = {':coolrocket:':'732098507137220718'}
+    special_emojis_full = {':coolrocket:':'<a:CoolChallengeAccepted:732098507137220718>'}
     
     ## assistant functions
 
@@ -1513,8 +1517,7 @@ class leaderBot_class():
         message_text = message.content
 
         if message.guild.id in ksp_guilds:
-            special_emojis={':coolrocket:':'732098507137220718'}
-            for se, code in special_emojis.items():
+            for se, code in s.special_emojis.items():
                 try:
                     emoji = s.client.get_emoji(int(code))
                     if emoji and (message_text.find(se) != -1):
@@ -1720,7 +1723,7 @@ class leaderBot_class():
             add_reaction = False
         text = message.content.split(maxsplit = 1 + int(add_reaction))[-1]
         #print(text)
-        emojis, unique = replace_letters(text)
+        emojis, unique = replace_letters(text, special_emojis=s.special_emojis_full)
         if not unique:
             add_reaction = False
 
