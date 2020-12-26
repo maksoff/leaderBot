@@ -814,45 +814,51 @@ class leaderBot_class():
         s.json_lock.lock = None
         return
     
-    async def add_points(s, message):
+    async def add_points(s, message, **kwargs):
         if s.json_lock.lock:
             await s.send(message.channel, '`json locked. try again later`')
             return
-        await message.channel.send('Enter users (@best_player) or id, separate multiple users with *space*')
-        msg = await s.wait_response(message)
-        if not msg:
-            s.json_lock.lock = None
-            return
-        user_ids = msg.content.strip().split()
-        user_ids = set([s.get_int(x) for x in user_ids])
-        user_ids.discard(None)
-        
-        user_id_s = set([(await s.ask_for_user_id(message, user_id = u, ignore_bots=True)) for u in user_ids])
-        user_id_s.discard(None)
-        
-        if not user_id_s:
-            await s.send(message.channel, 'No valid @users found')
-            s.json_lock.lock = None
-            return
-        await s.send(message.channel, 'How many points? (e.g. `2.5`)')
-        while True:
-            msg_r = await s.wait_response(message)
-            if not msg_r:
-                await message.channel.send('`reverted changes`')
-                s.open_json()
+        if (kwargs.get('winners') is None) or (kwargs.get('points') is None):
+            await message.channel.send('Enter users (@best_player) or id, separate multiple users with *space*')
+            msg = await s.wait_response(message)
+            if not msg:
                 s.json_lock.lock = None
                 return
-            try:
-                points = float(msg_r.content)
-                break
-            except:
-                await message.channel.send('Please enter valid number or `cancel`')
-                continue
+            user_ids = msg.content.strip().split()
+            user_ids = set([s.get_int(x) for x in user_ids])
+            user_ids.discard(None)
+            
+            user_id_s = set([(await s.ask_for_user_id(message, user_id = u, ignore_bots=True)) for u in user_ids])
+            user_id_s.discard(None)
+            
+            if not user_id_s:
+                await s.send(message.channel, 'No valid @users found')
+                s.json_lock.lock = None
+                return
+            await s.send(message.channel, 'How many points? (e.g. `2.5`)')
+            while True:
+                msg_r = await s.wait_response(message)
+                if not msg_r:
+                    await message.channel.send('`reverted changes`')
+                    s.open_json()
+                    s.json_lock.lock = None
+                    return
+                try:
+                    points = float(msg_r.content)
+                    break
+                except:
+                    await message.channel.send('Please enter valid number or `cancel`')
+                    continue
+        else:
+            user_id_s = kwargs.get('winners')
+            points = kwargs.get('points')
+            
         try:
             for user_id in user_id_s:
                 player = s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)
                 player['iStaticPoints'] = player.get('iStaticPoints', 0) + points
-            await message.channel.send('*updating...*')
+            if kwargs.get('winners') is None:
+                await message.channel.send('*updating...*')
             response = await s.update_lb()
             s.save_json()
             s.json_lock.lock = None
@@ -865,7 +871,7 @@ class leaderBot_class():
                 raise e
             else:
                 print(e)
-            return 'something wrong'
+            return
 
     async def set_lb(s, message):
         if s.json_lock.lock:
@@ -1929,6 +1935,77 @@ class leaderBot_class():
         s.create_help()
         await message.channel.send(f'New prefix `{s.prefix}` saved')
         return
+
+    async def ext_bot(s, message):
+        if message.author.id == 294882584201003009:
+            ## giveaway bot ##
+            # check if mentions channel exists
+            channel_id = s.json_data.j.get('iMentionsChannel')
+            text = s.json_data.j.get('iMentionsText', '')
+            
+            if channel_id:
+                try:
+                    channel = client.get_channel(channel_id)
+                except:
+                    return
+                if not channel:
+                    return
+            else:
+                return
+            # check if mentions #
+            members = message.mentions
+            if not members:
+                return
+
+            # prepare data & list
+            winners_list = [m.id for m in members]
+            # I should learn regular expressions!
+            points_text = message.content[message.content.find('You won'):]
+            points_text = points_text[:points_text.find('!')].replace('*', '')
+            # lets try to find the number!
+            for pt in points_text.split():
+                try:
+                    points = float(pt)
+                    # success!
+                    break
+                except Exception as e:
+                    ...
+            # nothing found
+            if not points:
+                return
+            winners = '\n'.join([f"<@{m.id}> **@{m.display_name}#{m.discriminator}** {m.id}" for m in members])
+            embed = discord.Embed(title='Giveaway winners!')
+            embed.add_field(name='Winners', value=winners, inline=False)
+            embed.add_field(name='Points', value=str(points))
+            embed.add_field(name='Message', value=f"[jump]({message.jump_url})")
+            msg = await channel.send(content=text + '\n**All correct?**', embed=embed)
+            await msg.pin(reason='new giveaway')
+
+            while True:
+                reaction, _ = await s.ask_for_reaction(msg, mode='yn')
+
+                if reaction != 'yes':
+                    await channel.send(f'`canceled` try `{s.prefix}static points`')
+                    await msg.unpin()
+                    return
+                try:
+                    await channel.send('*updating...*')
+                    msg_a = await s.add_points(message, winners=winners_list, points=points)
+                    if msg_a is None:
+                        await channel.send('`reverted`')
+                        continue
+                    leaderboard_ch = f"<#{s.leaderboard_channel_id}>" if s.leaderboard_channel_id else 'leaderboard'
+                    msg_c = await message.channel.send(f'\U0001F389 Congratulations! {leaderboard_ch} updated! \U0001F389')
+                    await msg.unpin()
+                    embed = discord.Embed()
+                    embed.add_field(name='confirmed', value=f'[jump]({msg_c.jump_url})')
+                    await channel.send(embed=embed)
+                    break
+                except:
+                    channel.send(f'`something went wrong` try `{s.prefix}static points`')
+                await msg.unpin()
+                break
+        return
                 
     async def __call__(s, message):
         response = ''
@@ -2104,9 +2181,10 @@ async def on_message(message):
     if DEBUG_CH:
         if message.guild.id != DEBUG_CH:
             return
-    if message.author.bot:
-        return
     if message.author == client.user:
+        return
+    if message.author.bot:
+        await leaderBot[message.guild.id].ext_bot(message)
         return
     
     if message.guild:
