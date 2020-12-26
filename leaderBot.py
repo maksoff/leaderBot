@@ -1781,7 +1781,7 @@ class leaderBot_class():
                   'roger',
                   )
 
-        if message.guild.id in ksp_guiilds:
+        if message.guild.id in ksp_guilds:
             part_2 = ('Kadmins will be notified ASAP! Or tomorrow...',
                       'Kadmins are on the Jool orbit with only Ion engines. They will be notified as soon they are back',
                       'Kadmins chilling on Eeloo. Your submission will be send with the next post-ship (ETA: 4 years 189 days)',
