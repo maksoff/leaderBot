@@ -120,6 +120,10 @@ class leaderBot_class():
     avatar_cache={}
 
     prefix = 'lb?'
+
+    
+    special_emojis = {':coolrocket:':'732098507137220718'}
+    special_emojis_full = {':coolrocket:':'<a:CoolChallengeAccepted:732098507137220718>'}
     
     ## assistant functions
 
@@ -1513,8 +1517,7 @@ class leaderBot_class():
         message_text = message.content
 
         if message.guild.id in ksp_guilds:
-            special_emojis={':coolrocket:':'732098507137220718'}
-            for se, code in special_emojis.items():
+            for se, code in s.special_emojis.items():
                 try:
                     emoji = s.client.get_emoji(int(code))
                     if emoji and (message_text.find(se) != -1):
@@ -1720,7 +1723,7 @@ class leaderBot_class():
             add_reaction = False
         text = message.content.split(maxsplit = 1 + int(add_reaction))[-1]
         #print(text)
-        emojis, unique = replace_letters(text)
+        emojis, unique = replace_letters(text, special_emojis=s.special_emojis_full)
         if not unique:
             add_reaction = False
 
@@ -1781,7 +1784,7 @@ class leaderBot_class():
                   'roger',
                   )
 
-        if message.guild.id in ksp_guiilds:
+        if message.guild.id in ksp_guilds:
             part_2 = ('Kadmins will be notified ASAP! Or tomorrow...',
                       'Kadmins are on the Jool orbit with only Ion engines. They will be notified as soon they are back',
                       'Kadmins chilling on Eeloo. Your submission will be send with the next post-ship (ETA: 4 years 189 days)',
@@ -2001,7 +2004,8 @@ class leaderBot_class():
             return files
                 
         if (message.author != admin) or ('super!mega!test' in message.content):
-            await admin.send(f"<@{message.author.id}>\n" + message.content, files=(await get_files(message)))
+            await admin.send(f"> from <@{message.author.id}> @{message.author.name}#{message.author.discriminator} {message.author.id}\n" +
+                             message.content, files=(await get_files(message)))
             await message.channel.send('`message sent`')
         else:
             try:
@@ -2018,7 +2022,7 @@ class leaderBot_class():
                 except:
                     content = '*'
                 await user.send(content, files=(await get_files(message)))
-                await message.channel.send(f'`message sent` to <@{user.id}>')
+                await message.channel.send(f'`message sent` to <@{user.id}> @{user.name}#{user.discriminator} {user.id}')
             except Exception as e:
                 await message.channel.send('> ' + str(e))
         return

@@ -43,23 +43,64 @@ blue_digits = (
                 '\u0039\uFE0F\u20E3',
                 )
 
-def replace_letters(word):
+def replace_letters(word, special_emojis={}):
     ''' returns emoji list as first argument '''
     ''' and second argumnet True if all letters are unique '''
     if word is None: return
+    for e, v in special_emojis.items():
+        word = word.replace(e.lower(), v)
     w = list(word.lower())
     emoji = []
-    for c in w:
-        if c == ' ':
+    bEm = 0
+    lEm = []
+    special_emojis_len = 0
+    for i, c in enumerate(w):
+        # try to recognize special emoji
+        if (c == '<') and ('>' in w[i:]):
+            bEm = 1
+            lEm.append(c)
+        elif bEm:
+            if (bEm == 1) and (c == ':'):
+                bEm = 2
+                lEm.append(c)
+            elif (bEm == 1) and (c == 'a'):
+                lEm.append(c)
+            elif (bEm == 2) and (c == '>') and (len(lEm) > 20):
+                # looks good, I suppose
+                special_emojis_len += len(lEm)
+                lEm.append(c)
+                emoji.append(''.join(lEm))
+                lEm = []
+                bEm = 0
+            elif (bEm == 2) and (c != ' '):
+                lEm.append(c)
+            else:
+                #something wrong, cancel!
+                lEm.append(c)
+                bEm = 0
+                emoji += lEm
+                lEm = []
+            
+        # nothing special, just do the usual work
+        elif c == ' ':
             emoji.append(blue_square)
         elif '0' <= c <= '9':
-            emoji.append(blue_digits[c - ord('0')])
+            emoji.append(blue_digits[ord(c) - ord('0')])
         elif c == '\n':
             emoji.append('\n')
-        else:
+        elif 'a' <= c <= 'z':
             try:
                 emoji.append(blue_letters[ord(c) - ord('a')])
             except Exception as e:
                 ...
+        elif c == '!':
+            emoji.append('\u2757')
+        elif c == '?':
+            emoji.append('\u2753')
+        else:
+            try:
+                emoji.append(c)
+            except:
+                ...
 
-    return emoji, len(w) == len(set(emoji))
+    return emoji, (len(w) - special_emojis_len) == len(set(emoji))
