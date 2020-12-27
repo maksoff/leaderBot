@@ -2068,6 +2068,8 @@ class leaderBot_class():
 
     @staticmethod
     async def dm(client, message):
+        if not hasattr(leaderBot_class.dm, "last_user"):
+            leaderBot_class.dm.last_user = None  # it doesn't exist yet, so initialize it
         try:
             admin_id = int(ADMIN)
             admin = await client.fetch_user(admin_id)
@@ -2084,27 +2086,59 @@ class leaderBot_class():
                 buffer.seek(0)
                 files.append(discord.File(buffer, m.filename))
             return files
-                
+
+        # normal user
         if (message.author != admin) or ('super!mega!test' in message.content):
             await admin.send(f"> from <@{message.author.id}> @{message.author.name}#{message.author.discriminator} {message.author.id}\n" +
                              message.content, files=(await get_files(message)))
             await message.channel.send('`message sent`')
+            leaderBot_class.dm.last_user = message.author
+        # admin user
         else:
             try:
+                # check if starts with user_id
+                user = None
                 user_id = leaderBot_class.get_int(message.content.split()[0])
-                user = await client.fetch_user(user_id)
-                if not user:
-                    raise Exception('no user')
+                try:
+                    user = await client.fetch_user(user_id)
+                except:
+                    ...
+                if user:
+                    try:
+                        content = message.content.split(maxsplit=1)[1]
+                    except:
+                        content = '*'
+                else:
+                    # check if message referenced
+                    if message.reference:
+                        try:
+                            channel = client.get_channel(message.reference.channel_id)
+                            msg_ref = await channel.fetch_message(message.reference.message_id)
+                        except Exception as e:
+                            if DEBUG: raise e
+                            msg_ref = None
+                        user_id = leaderBot_class.get_int(msg_ref.content.split()[2])
+                        try:
+                            user = await client.fetch_user(user_id)
+                        except:
+                            ...
+                    if user:
+                        content = message.content or '*'
+                    elif leaderBot_class.dm.last_user:
+                        # use last known user
+                        user = leaderBot_class.dm.last_user
+                        content = message.content or '*'
+                    if not user:
+                        raise Exception('no user')
+                
             except Exception as e:
-                await message.channel.send('Message should start with @user or id!')
+                # if DEBUG: raise e
+                await message.channel.send('Message should start with @user or id; referenced to `| from` or `| to` or it will be sent to last user')
                 return
             try:
-                try:
-                    content = message.content.split(maxsplit=1)[1]
-                except:
-                    content = '*'
                 await user.send(content, files=(await get_files(message)))
-                await message.channel.send(f'`message sent` to <@{user.id}> @{user.name}#{user.discriminator} {user.id}')
+                await message.channel.send(f'> to <@{user.id}> @{user.name}#{user.discriminator} {user.id}')
+                leaderBot_class.dm.last_user = user
             except Exception as e:
                 await message.channel.send('> ' + str(e))
         return
