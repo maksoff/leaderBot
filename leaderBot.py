@@ -2084,17 +2084,21 @@ class leaderBot_class():
                 buffer.seek(0)
                 files.append(discord.File(buffer, m.filename))
             return files
-                
+
+        # normal user
         if (message.author != admin) or ('super!mega!test' in message.content):
             await admin.send(f"> from <@{message.author.id}> @{message.author.name}#{message.author.discriminator} {message.author.id}\n" +
                              message.content, files=(await get_files(message)))
             await message.channel.send('`message sent`')
+        # admin user
         else:
             try:
+                # check if user is at start
                 user_id = leaderBot_class.get_int(message.content.split()[0])
                 user = await client.fetch_user(user_id)
                 if not user:
                     raise Exception('no user')
+                
             except Exception as e:
                 await message.channel.send('Message should start with @user or id!')
                 return
