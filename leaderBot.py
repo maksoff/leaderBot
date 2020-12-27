@@ -1491,7 +1491,24 @@ class leaderBot_class():
         return random.choice(s.ksp_hints)[:-1]
 
     async def ping(s, *args):
-        return 'Pong! {}ms'.format(int(s.client.latency*1000))
+        time_d = int(time.time() - s.start_time)
+        weeks = time_d // (7 * 24 * 3600)
+        time_d = (time_d % (7 * 24 * 3600))
+        days = time_d // (24 * 3600)
+        time_d = (time_d % (24 * 3600))
+        h = time_d //3600
+        m = (time_d % 3600)//60
+        ss = time_d % 60
+        hms = f"{h:02}:{m:02}:{ss:02}"
+
+        uptime = ''
+        if weeks:
+            uptime += f"{weeks} weeks, '"
+        if days:
+            uptime += f"{days} days, '"
+        uptime += hms
+        
+        return f'Pong! **{int(s.client.latency*1000)}** ms\nUptime: {uptime}'
 
     async def unlock(s, *args):
         response = 'Locked -> Unlocked' if s.json_lock.lock else 'Unlocked -> Unlocked'
@@ -2028,6 +2045,38 @@ class leaderBot_class():
                     await channel.send(f'`something went wrong` try `{s.prefix}static points`')
                 await msg.unpin()
                 break
+        elif message.author.id == 740118933809528872:
+            ## KSP Weekly Challenges
+            if message.content.startswith(f"{s.prefix}giveaway"):
+                try:
+                    points = float(message.content.split()[1])
+                    winners_list = [int(m) for m in message.content.split()[2:]]
+                except:
+                    points = 0
+                    winners_list = []
+                # check if mentions channel exists
+                channel_id = s.json_data.j.get('iMentionsChannel')
+                try:
+                    channel = client.get_channel(channel_id)
+                    if not channel:
+                        raise
+                except:
+                    channel = message.channel
+                embed = discord.Embed(title='Automagically adding static points')
+                embed.add_field(name='Players', value='\n'.join(f'<@{id}> for id in winners_list') or 'no one found')
+                embed.add_field(name='Points', value=f'**{points}**')
+                msg = await channel.send(embed=embed)
+                if not winners:
+                    channel.send('No winners, aborted')
+                    return
+                if not points:
+                    channel.send('0 points, aborted')
+                    return
+                msg_a = await s.add_points(msg, winners=winners_list, points=points)
+                if msg_a is None:
+                    await channel.send('`something gone wrong`')
+                    return
+                await channel.send('`done`')
         return
                 
     async def __call__(s, message):
@@ -2199,6 +2248,7 @@ class leaderBot_class():
                             )
     
     def __init__(s, client, guild_id):
+        s.start_time = time.time()
         s.guild_id = guild_id
         s.client = client
         s.json_data = json_class()
