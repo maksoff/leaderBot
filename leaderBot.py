@@ -2191,7 +2191,7 @@ class leaderBot_class():
 
         s.hidden_commands = (
                                 (f'{s.prefix}give', 'give cool rocket reaction. `message_id` + optional `#channel`', s.give_rocket),
-                                (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message.', s.give_text),
+                                (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message. Add `#channel` after `message_id` to send to another #channel', s.give_text),
                                 (f'{s.prefix}unlock', "removes `json lock`. don't use! debug feature", s.unlock),
                                 (f'{s.prefix}import json', 'imports data from json', s.json_imp),
                                 (f'{s.prefix}delete json', 'clears all you data from server', s.json_del),
