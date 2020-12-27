@@ -1737,11 +1737,17 @@ class leaderBot_class():
         msg_id = s.get_int(message.content.split()[1])
         if msg_id is None:
             add_reaction = False
-        try:
-            msg = await message.channel.fetch_message(msg_id)
-            if not msg: raise
-        except Exception as e:
-            add_reaction = False
+        else:
+            try:
+                channel_id = s.get_int(message.content.split()[2])
+                msg = await s.get_message(channel_id, msg_id)
+                add_reaction = 2
+                if not msg:
+                    msg = await message.channel.fetch_message(msg_id)
+                    add_reaction = 1
+                if not msg: raise
+            except Exception as e:
+                add_reaction = False
         text = message.content.split(maxsplit = 1 + int(add_reaction))[-1]
         #print(text)
         emojis, unique = replace_letters(text, special_emojis=s.special_emojis_full)
