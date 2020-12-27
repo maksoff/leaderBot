@@ -867,7 +867,7 @@ class leaderBot_class():
             for user_id in user_id_s:
                 player = s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)
                 player['iStaticPoints'] = player.get('iStaticPoints', 0) + points
-                player_text += f"<@{player.get('iID')}> **@{player.get('sName')}#{player.get('iDiscriminator')}** {player.get('iID')}"
+                player_text += f"\n<@{player.get('iID')}> **@{player.get('sName')}#{player.get('iDiscriminator')}** {player.get('iID')}"
             embed.add_field(name='Updating players', value=player_text)
             await message.channel.send(embed=embed)
             response = await s.update_lb()
@@ -2089,24 +2089,24 @@ class leaderBot_class():
                         try:
                             msg_a = await s.add_points(msg, winners=winners_list, points=points)
                             if msg_a is None:
-                                rand_time = random.randint(4, 18)*10*i
-                                await channel.send(f'`something gone wrong` I will try again in **{rand_time}** seconds. (Try {xxx}/{max_try})')
+                                rand_time = random.randint(4, 18)*10*xxx
+                                await channel.send(f'`something went wrong` I will try again in **{rand_time}** seconds. (Try {xxx}/{max_try})')
                                 await asyncio.sleep(rand_time)
                                 continue
                             else:
                                 await channel.send('`done`')
                                 break
-                        except:
-                            ...
+                        except Exception as e:
+                            print(e)
                     else:
-                        embed = discord.Embed(title='!!! something went wrong, use {s.prefix}static points !!!')
+                        embed = discord.Embed(title=f'!!! something went wrong, use {s.prefix}static points !!!')
                         embed.add_field(name='Players', value='\n'.join(f'<@{i}>' for i in winners_list) or 'no one found')
                         embed.add_field(name='Points', value=f'**{points}**')
                         msg_x = await channel.send(content=text, embed=embed)
-                        await msg_x.pin()
+                        await msg_x.pin(reason='something wrong')
                         
-            except:
-                ...
+            except Exception as e:
+                print(e)
         return
                 
     async def __call__(s, message):
