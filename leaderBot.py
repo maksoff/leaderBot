@@ -867,7 +867,7 @@ class leaderBot_class():
             for user_id in user_id_s:
                 player = s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)
                 player['iStaticPoints'] = player.get('iStaticPoints', 0) + points
-                player_text += f"<@{player.get('iID')}> **@{player.get('sName')}#{player.get('iDiscriminator')}** {player.get('iID')}"
+                player_text += f"\n<@{player.get('iID')}> **@{player.get('sName')}#{player.get('iDiscriminator')}** {player.get('iID')}"
             embed.add_field(name='Updating players', value=player_text)
             await message.channel.send(embed=embed)
             response = await s.update_lb()
@@ -1033,7 +1033,21 @@ class leaderBot_class():
                     
         await asyncio.gather(*(asyncio.ensure_future(update_win(sub)) for sub in sub))
         return
-                    
+
+    def generate_lb_embed(s):
+        first = True
+        limit = 5900
+        fields = s.json_data.result_leaderboard_for_embed() or []
+        embed = discord.Embed()
+        for field in fields:
+            if len(embed) + len(field) > limit:
+                embed.add_field(name='and some more', value='...', inline=False)
+                break
+            name = 'Actual ranking' if first else '\u200b'
+            first = False
+            embed.add_field(name=name, value=field, inline=False)
+
+        return embed          
     
     async def update_lb(s, *args):
         try:
@@ -1041,17 +1055,15 @@ class leaderBot_class():
             s.json_data.calculate_rating()
             await s.post()
 
-            name, value = s.json_data.result_leaderboard().split('\n', 1)
+            embed = s.generate_lb_embed()
             
-            embed = discord.Embed()
-            embed.add_field(name=name, value=value)
             if not (s.leaderboard_channel_id and s.leaderboard_message_id):
                 return f'`{s.prefix}set leaderboard` required'
             msg = await s.get_message(s.leaderboard_channel_id, s.leaderboard_message_id)
             if not msg:
                 return f'`{s.prefix}set leaderboard` required'
             try:
-                await msg.edit(content='', embed=embed)
+                await msg.edit(embed=embed)
                 await s.update_lb_img()
                 return 'updated'
             except Exception as e:
@@ -1093,9 +1105,7 @@ class leaderBot_class():
                                     inline=False)
                 await msg.channel.send(embed=embed)
                 
-            name, value = s.json_data.result_leaderboard().split('\n', 1)
-            embed = discord.Embed()
-            embed.add_field(name=name, value=value)
+            embed = s.generate_lb_embed()
             await msg.channel.send(embed=embed)                       
             return '*** Done ***'
         except Exception as e:
@@ -1345,26 +1355,6 @@ class leaderBot_class():
         else:
             return "no submissions found"
         return
-        
-        
-    async def get_top(s, msg, full_list=False):
-        limit = 7
-        if len(msg.content.strip().split(' ')) > 1:
-            try:
-                limit = int(msg.content.split(' ')[1])
-            except:
-                ...
-        if full_list:
-            limit = 0
-        response = s.json_data.get_top(limit)
-        if s.leaderboard_channel_id:
-            response += '\n\nFull list: <#' + str(s.leaderboard_channel_id) + '>'
-        embed = discord.Embed()
-        if not limit:
-            limit = 'ALL'
-        embed.add_field(name='TOP '+str(limit), value=response)
-        await msg.channel.send(embed=embed)
-
 
     async def act_img(s, *msg):
         limit = 7
@@ -1456,7 +1446,7 @@ class leaderBot_class():
         if s.json_lock.lock:
             await msg.channel.send('`json locked. try again later`')
             return
-        await s.get_top(msg, full_list=True)
+        await msg.channel.send(embed=s.generate_lb_embed())
         user_id = await s.ask_for_user_id(msg, no_creation=True)
         if not user_id:
             s.json_lock.lock = None
@@ -2057,6 +2047,7 @@ class leaderBot_class():
                         winners_list = []
                     # check if mentions channel exists
                     channel_id = s.json_data.j.get('iMentionsChannel')
+                    text = s.json_data.j.get('iMentionsText', '')
                     try:
                         channel = client.get_channel(channel_id)
                         if not channel:
@@ -2064,7 +2055,7 @@ class leaderBot_class():
                     except:
                         channel = message.channel
                     embed = discord.Embed(title='Automagically adding static points')
-                    embed.add_field(name='Players', value='\n'.join(f'<@{id}>' for id in winners_list) or 'no one found')
+                    embed.add_field(name='Players', value='\n'.join(f'<@{i}>' for i in winners_list) or 'no one found')
                     embed.add_field(name='Points', value=f'**{points}**')
                     msg = await channel.send(embed=embed)
                     if not winners_list:
@@ -2073,13 +2064,29 @@ class leaderBot_class():
                     if not points:
                         await channel.send('`0 points, aborted`')
                         return
-                    msg_a = await s.add_points(msg, winners=winners_list, points=points)
-                    if msg_a is None:
-                        await channel.send('`something gone wrong`')
-                        return
-                    await channel.send('`done`')
-            except:
-                ...
+                    max_try = 3
+                    for xxx in range(1, max_try + 1):
+                        try:
+                            msg_a = await s.add_points(msg, winners=winners_list, points=points)
+                            if msg_a is None:
+                                rand_time = random.randint(4, 18)*10*xxx
+                                await channel.send(f'`something went wrong` I will try again in **{rand_time}** seconds. (Try {xxx}/{max_try})')
+                                await asyncio.sleep(rand_time)
+                                continue
+                            else:
+                                await channel.send('`done`')
+                                break
+                        except Exception as e:
+                            print(e)
+                    else:
+                        embed = discord.Embed(title=f'!!! something went wrong, use {s.prefix}static points !!!')
+                        embed.add_field(name='Players', value='\n'.join(f'<@{i}>' for i in winners_list) or 'no one found')
+                        embed.add_field(name='Points', value=f'**{points}**')
+                        msg_x = await channel.send(content=text, embed=embed)
+                        await msg_x.pin(reason='something wrong')
+                        
+            except Exception as e:
+                print(e)
         return
                 
     async def __call__(s, message):

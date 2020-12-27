@@ -61,11 +61,14 @@ class json_class():
         if j['iVersion'] < s.iVersion: return
         s.j = j
         s.calculate_rating()
-        
-    def result_leaderboard(s):
-        response = '**Actual ranking**\n'
+
+    def result_leaderboard_for_embed(s):
+        limit = 1000
+        fields = []
+        split_rank = 10
         if not s.j.get('aPlayer'):
-            return response + 'no submissions'
+            return []
+        text = ''
         for p in sorted(s.j.get('aPlayer', []), key = lambda i: i['iPoints'], reverse = True):
             if p.get('bDisabled'):
                 continue
@@ -74,8 +77,18 @@ class json_class():
                 user = '<@{}>'.format(user)
             else:
                 user = '@' + p.get('sName')
-            response += '{}. {} with **{}** points\n'.format(p['iRank'], user, p['iPoints'])
-        return response[:-1]
+            line = '{}. {} with **{}** points'.format(p['iRank'], user, p['iPoints'])
+            if len(text) + len(line) > limit:
+                fields.append(text)
+                text = line
+            elif p['iRank'] > split_rank:
+                split_rank += 10
+                fields.append(text)
+                text = line
+            else:
+                text += '\n' + line
+        fields.append(text)
+        return fields
 
     def list_of_challenges(s):
         if not s.j.get('aChallenge'):
@@ -179,29 +192,6 @@ class json_class():
             return 'Ranked **{}**{} (out of {} members) with **{}** points'.format(rank, s.suffix(rank), len(s.j.get('aPlayer', [])), points)
         else:
             return 'Still no points. Submit some challenges!'
-
-        
-    def get_top(s, limit = 10):
-        response = ''
-        players = sorted(s.j.get('aPlayer', []), key=lambda x: float(x.get('iPoints')), reverse=True)
-        if not players:
-            return 'no submissions'
-        for player in players:
-            if player.get('bDisabled'):
-                continue
-            user = player.get('iID', None)
-            if user:
-                user = '<@{}>'.format(user)
-            else:
-                user = '@' + player.get('sName')
-            rank = player.get('iRank')
-            points = player.get('iPoints')
-            if limit:
-                if rank > limit:
-                    break
-            if player and rank and points:
-                response += '\n**{:4}.** {} with **{}** points'.format(rank, user, points)
-        return response
 
     def get_active(s, limit=7):
         response = []
