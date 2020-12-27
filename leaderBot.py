@@ -2067,6 +2067,7 @@ class leaderBot_class():
                         winners_list = []
                     # check if mentions channel exists
                     channel_id = s.json_data.j.get('iMentionsChannel')
+                    text = s.json_data.j.get('iMentionsText', '')
                     try:
                         channel = client.get_channel(channel_id)
                         if not channel:
@@ -2074,7 +2075,7 @@ class leaderBot_class():
                     except:
                         channel = message.channel
                     embed = discord.Embed(title='Automagically adding static points')
-                    embed.add_field(name='Players', value='\n'.join(f'<@{id}>' for id in winners_list) or 'no one found')
+                    embed.add_field(name='Players', value='\n'.join(f'<@{i}>' for i in winners_list) or 'no one found')
                     embed.add_field(name='Points', value=f'**{points}**')
                     msg = await channel.send(embed=embed)
                     if not winners_list:
@@ -2083,11 +2084,27 @@ class leaderBot_class():
                     if not points:
                         await channel.send('`0 points, aborted`')
                         return
-                    msg_a = await s.add_points(msg, winners=winners_list, points=points)
-                    if msg_a is None:
-                        await channel.send('`something gone wrong`')
-                        return
-                    await channel.send('`done`')
+                    max_try = 3
+                    for xxx in range(1, max_try + 1):
+                        try:
+                            msg_a = await s.add_points(msg, winners=winners_list, points=points)
+                            if msg_a is None:
+                                rand_time = random.randint(4, 18)*10*i
+                                await channel.send(f'`something gone wrong` I will try again in **{rand_time}** seconds. (Try {xxx}/{max_try})')
+                                await asyncio.sleep(rand_time)
+                                continue
+                            else:
+                                await channel.send('`done`')
+                                break
+                        except:
+                            ...
+                    else:
+                        embed = discord.Embed(title='!!! something went wrong, use {s.prefix}static points !!!')
+                        embed.add_field(name='Players', value='\n'.join(f'<@{i}>' for i in winners_list) or 'no one found')
+                        embed.add_field(name='Points', value=f'**{points}**')
+                        msg_x = await channel.send(content=text, embed=embed)
+                        await msg_x.pin()
+                        
             except:
                 ...
         return
