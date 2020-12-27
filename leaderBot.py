@@ -1037,7 +1037,7 @@ class leaderBot_class():
     def generate_lb_embed(s):
         first = True
         limit = 5900
-        fields = s.json_data.result_leaderboard_for_embed()
+        fields = s.json_data.result_leaderboard_for_embed() or []
         embed = discord.Embed()
         for field in fields:
             if len(embed) + len(field) > limit:
@@ -1355,26 +1355,6 @@ class leaderBot_class():
         else:
             return "no submissions found"
         return
-        
-        
-    async def get_top(s, msg, full_list=False):
-        limit = 7
-        if len(msg.content.strip().split(' ')) > 1:
-            try:
-                limit = int(msg.content.split(' ')[1])
-            except:
-                ...
-        if full_list:
-            limit = 0
-        response = s.json_data.get_top(limit)
-        if s.leaderboard_channel_id:
-            response += '\n\nFull list: <#' + str(s.leaderboard_channel_id) + '>'
-        embed = discord.Embed()
-        if not limit:
-            limit = 'ALL'
-        embed.add_field(name='TOP '+str(limit), value=response)
-        await msg.channel.send(embed=embed)
-
 
     async def act_img(s, *msg):
         limit = 7
@@ -1466,7 +1446,7 @@ class leaderBot_class():
         if s.json_lock.lock:
             await msg.channel.send('`json locked. try again later`')
             return
-        await s.get_top(msg, full_list=True)
+        await msg.channel.send(embed=s.generate_lb_embed())
         user_id = await s.ask_for_user_id(msg, no_creation=True)
         if not user_id:
             s.json_lock.lock = None

@@ -193,29 +193,6 @@ class json_class():
         else:
             return 'Still no points. Submit some challenges!'
 
-        
-    def get_top(s, limit = 10):
-        response = ''
-        players = sorted(s.j.get('aPlayer', []), key=lambda x: float(x.get('iPoints')), reverse=True)
-        if not players:
-            return 'no submissions'
-        for player in players:
-            if player.get('bDisabled'):
-                continue
-            user = player.get('iID', None)
-            if user:
-                user = '<@{}>'.format(user)
-            else:
-                user = '@' + player.get('sName')
-            rank = player.get('iRank')
-            points = player.get('iPoints')
-            if limit:
-                if rank > limit:
-                    break
-            if player and rank and points:
-                response += '\n**{:4}.** {} with **{}** points'.format(rank, user, points)
-        return response
-
     def get_active(s, limit=7):
         response = []
         full_ch = 3 #how many challenges with full score
