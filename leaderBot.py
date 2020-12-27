@@ -851,6 +851,10 @@ class leaderBot_class():
                     continue
         else:
             user_id_s = kwargs.get('winners')
+            for u in user_id_s:
+                u = await s.ask_for_user_id(message, user_id=u)
+            user_id_s = set(user_id_s)
+            user_id_s.discard(None)
             points = kwargs.get('points')
             
         try:
@@ -1963,6 +1967,7 @@ class leaderBot_class():
             points_text = message.content[message.content.find('You won'):]
             points_text = points_text[:points_text.find('!')].replace('*', '')
             # lets try to find the number!
+            points = 0
             for pt in points_text.split():
                 try:
                     points = float(pt)
@@ -1989,8 +1994,8 @@ class leaderBot_class():
                     await msg.unpin()
                     return
                 try:
-                    await channel.send('*updating...*')
-                    msg_a = await s.add_points(message, winners=winners_list, points=points)
+                    msg_u = await channel.send('*updating...*')
+                    msg_a = await s.add_points(msg_u, winners=winners_list, points=points)
                     if msg_a is None:
                         await channel.send('`reverted`')
                         continue
@@ -2002,7 +2007,7 @@ class leaderBot_class():
                     await channel.send(embed=embed)
                     break
                 except:
-                    channel.send(f'`something went wrong` try `{s.prefix}static points`')
+                    await channel.send(f'`something went wrong` try `{s.prefix}static points`')
                 await msg.unpin()
                 break
         return
