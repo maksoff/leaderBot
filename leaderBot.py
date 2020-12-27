@@ -856,19 +856,20 @@ class leaderBot_class():
                     await message.channel.send('Please enter valid number or `cancel`')
                     continue
         else:
-            user_id_s = kwargs.get('winners')
-            for u in user_id_s:
-                u = await s.ask_for_user_id(message, user_id=u)
-            user_id_s = set(user_id_s)
+            user_ids = kwargs.get('winners')
+            user_id_s = set([(await s.ask_for_user_id(message, user_id = u, ignore_bots=True)) for u in user_ids])
             user_id_s.discard(None)
             points = kwargs.get('points')
             
         try:
+            embed = discord.Embed()
+            player_text = ''
             for user_id in user_id_s:
                 player = s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)
                 player['iStaticPoints'] = player.get('iStaticPoints', 0) + points
-            if kwargs.get('winners') is None:
-                await message.channel.send('*updating...*')
+                player_text += f"<@{player.get('iID')}> **@{player.get('sName')}#{player.get('iDiscriminator')}** {player.get('iID')}"
+            embed.add_field(name='Updating players', value=player_text)
+            await message.channel.send(embed=embed)
             response = await s.update_lb()
             s.save_json()
             s.json_lock.lock = None
@@ -2011,8 +2012,7 @@ class leaderBot_class():
                     await msg.unpin()
                     return
                 try:
-                    msg_u = await channel.send('*updating...*')
-                    msg_a = await s.add_points(msg_u, winners=winners_list, points=points)
+                    msg_a = await s.add_points(msg, winners=winners_list, points=points)
                     if msg_a is None:
                         await channel.send('`reverted`')
                         continue
@@ -2023,7 +2023,8 @@ class leaderBot_class():
                     embed.add_field(name='confirmed', value=f'[jump]({msg_c.jump_url})')
                     await channel.send(embed=embed)
                     break
-                except:
+                except Exception as e:
+                    if DEBUG: raise e
                     await channel.send(f'`something went wrong` try `{s.prefix}static points`')
                 await msg.unpin()
                 break
