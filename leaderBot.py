@@ -856,19 +856,20 @@ class leaderBot_class():
                     await message.channel.send('Please enter valid number or `cancel`')
                     continue
         else:
-            user_id_s = kwargs.get('winners')
-            for u in user_id_s:
-                u = await s.ask_for_user_id(message, user_id=u)
-            user_id_s = set(user_id_s)
+            user_ids = kwargs.get('winners')
+            user_id_s = set([(await s.ask_for_user_id(message, user_id = u, ignore_bots=True)) for u in user_ids])
             user_id_s.discard(None)
             points = kwargs.get('points')
             
         try:
+            embed = discord.Embed()
+            player_text = ''
             for user_id in user_id_s:
                 player = s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)
                 player['iStaticPoints'] = player.get('iStaticPoints', 0) + points
-            if kwargs.get('winners') is None:
-                await message.channel.send('*updating...*')
+                player_text += f"<@{player.get('iID')}> **@{player.get('sName')}#{player.get('iDiscriminator')}** {player.get('iID')}"
+            embed.add_field(name='Updating players', value=player_text)
+            await message.channel.send(embed=embed)
             response = await s.update_lb()
             s.save_json()
             s.json_lock.lock = None
@@ -1490,7 +1491,24 @@ class leaderBot_class():
         return random.choice(s.ksp_hints)[:-1]
 
     async def ping(s, *args):
-        return 'Pong! {}ms'.format(int(s.client.latency*1000))
+        time_d = int(time.time() - s.start_time)
+        weeks = time_d // (7 * 24 * 3600)
+        time_d = (time_d % (7 * 24 * 3600))
+        days = time_d // (24 * 3600)
+        time_d = (time_d % (24 * 3600))
+        h = time_d //3600
+        m = (time_d % 3600)//60
+        ss = time_d % 60
+        hms = f"{h:02}:{m:02}:{ss:02}"
+
+        uptime = ''
+        if weeks:
+            uptime += f"{weeks} weeks, '"
+        if days:
+            uptime += f"{days} days, '"
+        uptime += hms
+        
+        return f'Pong! **{int(s.client.latency*1000)}** ms\nUptime: {uptime}'
 
     async def unlock(s, *args):
         response = 'Locked -> Unlocked' if s.json_lock.lock else 'Unlocked -> Unlocked'
@@ -2011,8 +2029,7 @@ class leaderBot_class():
                     await msg.unpin()
                     return
                 try:
-                    msg_u = await channel.send('*updating...*')
-                    msg_a = await s.add_points(msg_u, winners=winners_list, points=points)
+                    msg_a = await s.add_points(msg, winners=winners_list, points=points)
                     if msg_a is None:
                         await channel.send('`reverted`')
                         continue
@@ -2023,7 +2040,8 @@ class leaderBot_class():
                     embed.add_field(name='confirmed', value=f'[jump]({msg_c.jump_url})')
                     await channel.send(embed=embed)
                     break
-                except:
+                except Exception as e:
+                    if DEBUG: raise e
                     await channel.send(f'`something went wrong` try `{s.prefix}static points`')
                 await msg.unpin()
                 break
@@ -2191,13 +2209,14 @@ class leaderBot_class():
 
         s.hidden_commands = (
                                 (f'{s.prefix}give', 'give cool rocket reaction. `message_id` + optional `#channel`', s.give_rocket),
-                                (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message.', s.give_text),
+                                (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message. Add `#channel` after `message_id` to send to another #channel', s.give_text),
                                 (f'{s.prefix}unlock', "removes `json lock`. don't use! debug feature", s.unlock),
                                 (f'{s.prefix}import json', 'imports data from json', s.json_imp),
                                 (f'{s.prefix}delete json', 'clears all you data from server', s.json_del),
                             )
     
     def __init__(s, client, guild_id):
+        s.start_time = time.time()
         s.guild_id = guild_id
         s.client = client
         s.json_data = json_class()
