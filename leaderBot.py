@@ -1033,7 +1033,21 @@ class leaderBot_class():
                     
         await asyncio.gather(*(asyncio.ensure_future(update_win(sub)) for sub in sub))
         return
-                    
+
+    def generate_lb_embed(s):
+        first = True
+        limit = 5900
+        fields = s.json_data.result_leaderboard_for_embed()
+        embed = discord.Embed()
+        for field in fields:
+            if len(embed) + len(field) > limit:
+                embed.add_field(name='and some more', value='...', inline=False)
+                break
+            name = 'Actual ranking' if first else '\u200b'
+            first = False
+            embed.add_field(name=name, value=field, inline=False)
+
+        return embed          
     
     async def update_lb(s, *args):
         try:
@@ -1041,17 +1055,15 @@ class leaderBot_class():
             s.json_data.calculate_rating()
             await s.post()
 
-            name, value = s.json_data.result_leaderboard().split('\n', 1)
+            embed = s.generate_lb_embed()
             
-            embed = discord.Embed()
-            embed.add_field(name=name, value=value)
             if not (s.leaderboard_channel_id and s.leaderboard_message_id):
                 return f'`{s.prefix}set leaderboard` required'
             msg = await s.get_message(s.leaderboard_channel_id, s.leaderboard_message_id)
             if not msg:
                 return f'`{s.prefix}set leaderboard` required'
             try:
-                await msg.edit(content='', embed=embed)
+                await msg.edit(embed=embed)
                 await s.update_lb_img()
                 return 'updated'
             except Exception as e:
@@ -1093,9 +1105,7 @@ class leaderBot_class():
                                     inline=False)
                 await msg.channel.send(embed=embed)
                 
-            name, value = s.json_data.result_leaderboard().split('\n', 1)
-            embed = discord.Embed()
-            embed.add_field(name=name, value=value)
+            embed = s.generate_lb_embed()
             await msg.channel.send(embed=embed)                       
             return '*** Done ***'
         except Exception as e:
