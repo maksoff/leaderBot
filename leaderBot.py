@@ -367,6 +367,12 @@ class leaderBot_class():
             embed.add_field(name = 'User commands',
                             value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.user_commands]),
                             inline=False)
+            if 'help-hidden' in message.content:
+                embed.add_field(name = 'Hidden commands, use with care!',
+                                value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.hidden_commands]),
+                                inline=False)
+                if message.guild.id in ksp_guilds:
+                    embed.add_field(name = 'Special emoji', value='For `voting`, `text` you can use `:coolrocket:`')
             try:
                 admin_id = int(ADMIN)
                 admin = await s.client.fetch_user(admin_id)
@@ -1714,8 +1720,13 @@ class leaderBot_class():
 
     async def give_rocket(s, message):
         try:
-            msg_id = s.get_int(message.content)
-            msg = await message.channel.fetch_message(msg_id)
+            msg = None
+            msg_id = s.get_int(message.content.split()[1])
+            if len(message.content.split()) == 3:
+                channel_id = s.get_int(message.content.split()[2])
+                msg = await s.get_message(channel_id, msg_id)
+            if msg is None:
+                msg = await message.channel.fetch_message(msg_id)
             await msg.add_reaction(s.client.get_emoji(732098507137220718))
             await message.delete()
         except Exception as e:
@@ -2173,9 +2184,9 @@ class leaderBot_class():
                       )
 
         s.hidden_commands = (
-                                (f'{s.prefix}give', 'give cool rocket reaction', s.give_rocket),
-                                (f'{s.prefix}text', 'give text reaction', s.give_text),
-                                (f'{s.prefix}unlock', "don't use! debug feature", s.unlock),
+                                (f'{s.prefix}give', 'give cool rocket reaction. `message_id` + optional `#channel`', s.give_rocket),
+                                (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message.', s.give_text),
+                                (f'{s.prefix}unlock', "removes `json lock`. don't use! debug feature", s.unlock),
                                 (f'{s.prefix}import json', 'imports data from json', s.json_imp),
                                 (f'{s.prefix}delete json', 'clears all you data from server', s.json_del),
                             )
