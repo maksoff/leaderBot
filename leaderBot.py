@@ -2068,6 +2068,8 @@ class leaderBot_class():
 
     @staticmethod
     async def dm(client, message):
+        if not hasattr(leaderBot_class.dm, "last_user"):
+            leaderBot_class.dm.last_user = None  # it doesn't exist yet, so initialize it
         try:
             admin_id = int(ADMIN)
             admin = await client.fetch_user(admin_id)
@@ -2090,6 +2092,7 @@ class leaderBot_class():
             await admin.send(f"> from <@{message.author.id}> @{message.author.name}#{message.author.discriminator} {message.author.id}\n" +
                              message.content, files=(await get_files(message)))
             await message.channel.send('`message sent`')
+            leaderBot_class.dm.last_user = message.author
         # admin user
         else:
             try:
@@ -2121,20 +2124,21 @@ class leaderBot_class():
                             ...
                     if user:
                         content = message.content or '*'
-                    else:
-                        # use last known id
-                        ...
-                    user = await client.fetch_user(user_id)
+                    elif leaderBot_class.dm.last_user:
+                        # use last known user
+                        user = leaderBot_class.dm.last_user
+                        content = message.content or '*'
                     if not user:
                         raise Exception('no user')
                 
             except Exception as e:
-                if DEBUG: raise e
-                await message.channel.send('Message should start with @user or id!')
+                # if DEBUG: raise e
+                await message.channel.send('Message should start with @user or id; referenced to `| from` or `| to` or it will be sent to last user')
                 return
             try:
                 await user.send(content, files=(await get_files(message)))
                 await message.channel.send(f'> to <@{user.id}> @{user.name}#{user.discriminator} {user.id}')
+                leaderBot_class.dm.last_user = user
             except Exception as e:
                 await message.channel.send('> ' + str(e))
         return
