@@ -2045,6 +2045,38 @@ class leaderBot_class():
                     await channel.send(f'`something went wrong` try `{s.prefix}static points`')
                 await msg.unpin()
                 break
+        elif message.author.id == 740118933809528872:
+            ## KSP Weekly Challenges
+            if message.content.startswith(f"{s.prefix}giveaway"):
+                try:
+                    points = float(message.content.split()[1])
+                    winners_list = [int(m) for m in message.content.split()[2:]]
+                except:
+                    points = 0
+                    winners_list = []
+                # check if mentions channel exists
+                channel_id = s.json_data.j.get('iMentionsChannel')
+                try:
+                    channel = client.get_channel(channel_id)
+                    if not channel:
+                        raise
+                except:
+                    channel = message.channel
+                embed = discord.Embed(title='Automagically adding static points')
+                embed.add_field(name='Players', value='\n'.join(f'<@{id}> for id in winners_list') or 'no one found')
+                embed.add_field(name='Points', value=f'**{points}**')
+                msg = await channel.send(embed=embed)
+                if not winners:
+                    channel.send('No winners, aborted')
+                    return
+                if not points:
+                    channel.send('0 points, aborted')
+                    return
+                msg_a = await s.add_points(msg, winners=winners_list, points=points)
+                if msg_a is None:
+                    await channel.send('`something gone wrong`')
+                    return
+                await channel.send('`done`')
         return
                 
     async def __call__(s, message):
