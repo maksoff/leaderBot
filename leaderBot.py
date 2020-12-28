@@ -167,6 +167,44 @@ class leaderBot_class():
             else:
                 print('wait response:', e)
             return
+
+    @staticmethod
+    async def add_ynd_reactions(message, **kwargs):
+        '''kwargs: mode ('yn' or 'ynd')'''
+        yes = '✅'
+        stop = '⛔'
+        x = '❌'
+
+        mode = kwargs.get('mode', 'yn')
+        
+        if mode == 'ynd':
+            arr = {yes:'yes', stop:'no', x:'delete'}
+        else:
+            arr = {yes:'yes', x:'no'}
+
+        for i in arr:
+            await message.add_reaction(i)
+        return
+
+    @staticmethod
+    def check_reaction(emoji, **kwargs):
+        '''kwargs: mode ('yn' or 'ynd')'''
+        yes = '✅'
+        stop = '⛔'
+        x = '❌'
+
+        mode = kwargs.get('mode', 'yn')
+        
+        if mode == 'ynd':
+            arr = {yes:'yes', stop:'no', x:'delete'}
+        else:
+            arr = {yes:'yes', x:'no'}
+
+        #print(hex(emoji.name), *[hex(v) for v in arr])
+
+        print(emoji.name, arr, emoji.name in arr)
+
+        return arr.get(emoji.name)
         
     async def ask_for_reaction(s, message, **kwargs):
         '''kwargs: mode ('yn' or 'ynd'), timeout, return_user (True/False)'''
@@ -209,7 +247,7 @@ class leaderBot_class():
                 return (None, None)
                 
         await message.clear_reactions()
-        return arr[reaction.emoji], user
+        return arr.get(reaction.emoji), user
 
                     
     async def get_message(s, ch_id, m_id):
@@ -1939,7 +1977,7 @@ class leaderBot_class():
                 message_r = await channel.send('Please enter the reason, why this submission is declined, or `*` for no message')
                 message_r = await s.wait_response(message_r, timeout=120, author_id=user.id)
                 if message_r is None:
-                    await channel.send('Timeout.. Try again!')
+                    await channel.send('`reverted`')
                     continue
                 await msg.unpin(reason='new challenge submission - ready')
                 if message_r.content == '*':
@@ -1970,13 +2008,19 @@ member
 message_id
 user_id
 '''
-        if payload.user_id == s.client.user.id:
-            return # ignore own reactions
+        if payload.user_id == s.client.user.id or payload.member.bot:
+            return # ignore own & bot reactions
         message = await s.get_message(payload.channel_id, payload.message_id)
         if message.author.id == s.client.user.id:
             if message.embeds:
                 embed_dict = message.embeds[0].to_dict()
+                # seems to be new mention from player
                 if 'New mention!' in embed_dict.get('title'):
+                    reaction = s.check_reaction(payload.emoji, mode='ynd')
+                    print(reaction, payload.emoji)
+                    if reaction is None:
+                        return # unexpected reaction
+                    await message.channel.send(f"> {reaction}")
                     embed_dict['title']+='!'
                     embed = discord.Embed.from_dict(embed_dict)
                     await message.edit(embed=embed)
