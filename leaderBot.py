@@ -1941,7 +1941,7 @@ class leaderBot_class():
             if msg.embeds:
                 embed_dict = msg.embeds[0].to_dict()
                 # seems to be new mention from player
-                if ':new: mention' in embed_dict.get('title'):
+                if ':new: mention' == embed_dict.get('title'):
                     try:
                         ch_id, msg_id = [s.get_int(x) for x in
                                                       dfind(embed_dict.get('fields'),
