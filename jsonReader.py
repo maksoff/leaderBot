@@ -98,38 +98,6 @@ class json_class():
         except:
             return []
     
-    def result_challenge(s, ChallengeName, ignoreScore=True):
-        '''depreciated'''
-        response = ''
-        resp = []
-        if not ChallengeName in s.oRankByChallenge:
-            return 'Still no submissions in challenge **{}**'.format(ChallengeName)
-        for key, value in s.oRankByChallenge[ChallengeName].items():
-            modus = s.find(s.j['aChallengeType'], sName=key).get('sNick', key)
-            response += 'Challenge **{}** in modus **{}**\n'.format(ChallengeName, modus)
-            value.sort(key=lambda x: x['iRank'])
-            for val in value:
-                p = s.find(s.j.get('aPlayer', []), iID=val['iUserID'])
-                user = p.get('iID', None)
-                if user:
-                    user = '<@{}>'.format(user)
-                else:
-                    user = '@' + p.get('sName')
-                if ignoreScore:
-                    response += '{:4}. {} at the {}{} try => **{}** points\n'.format(val['iRank'],
-                                                                                    user,
-                                                                                    val['iSubmissionId'] + 1,
-                                                                                    s.suffix(val['iSubmissionId'] + 1),
-                                                                                    beautify(val['iPoints']))
-                else:
-                    response += '{:4}. {} with {} at the {}{} try => **{}** points\n'.format(val['iRank'],
-                                                                                            user,
-                                                                                            beautify(val['fScore']),
-                                                                                            val['iSubmissionId'] + 1,
-                                                                                            s.suffix(val['iSubmissionId'] + 1),
-                                                                                            beautify(val['iPoints']))
-        return response[:-1]
-    
     def result_challenge_embed(s, ChallengeName, ignoreScore=True):
         r_list = []
         if not ChallengeName in s.oRankByChallenge:
@@ -140,8 +108,7 @@ class json_class():
             response = ''
             not_same = len(s.find(s.j.get('aChallenge'), sName=ChallengeName).get('aPoints', [])) != 1
             # if it special type (rank = score)
-            if challengeType.get('bSpecial'):
-                not_same = False
+            bSpecial = challengeType.get('bSpecial', False)
             value.sort(key=lambda x: x['iRank'])
             for val in value:
                 user = f"<@{val['iUserID']}>"
@@ -150,7 +117,7 @@ class json_class():
                 response += f"{user}"
                 if not ignoreScore:
                     response += f" with {beautify(val['fScore'])}"
-                if not_same:
+                if not_same and (not bSpecial):
                     response += f" at the {val['iSubmissionId'] + 1}{s.suffix(val['iSubmissionId'] + 1)} try"
                 response += f" => **{beautify(val['iPoints'])}** points\n"
                 
@@ -161,14 +128,6 @@ class json_class():
             
         r_list.sort(key = lambda x: (x['fMultiplier'], x['index']))
         return r_list
-
-    def print_all(s):
-        result = ''
-        for i in s.list_of_challenges():
-            if s.result_challenge(i):
-                result += s.result_challenge(i, ignoreScore=False) + '\n'
-        result += s.result_leaderboard()
-        return result
 
     @staticmethod
     def suffix(n):
@@ -236,9 +195,6 @@ class json_class():
 
         response = [x for x in response if x.get('iRank') <= limit]
         return response
-            
-        
-        
     
     def calculate_rating(s):
         s.oRankByChallenge = {}
@@ -315,13 +271,4 @@ class json_class():
             p['iRank'] = curRank
             
         return
-       
-if __name__ == '__main__':
-
-    j = json_class()
-
-    with open("715549991212548216.txt", 'r') as f:
-        j.load(f)
-
-    #print(j.dump())
-    print(j.print_all())
+    
