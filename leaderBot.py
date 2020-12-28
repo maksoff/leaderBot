@@ -87,6 +87,21 @@ def deepcopy_nostring(temp):
         return temp
     return ret
 
+def dfind(dicts, *key_val, **kwargs):
+    if len(key_val) == 1 or kwargs:
+        if key_val: key_val = key_val[0]
+        else: key_val = kwargs
+        for item in dicts:
+            for k, v in key_val.items():
+                if item.get(k, None) != v:
+                    break
+            else:
+                return item
+        return None        
+    else:
+        key, val = key_val
+        return next((item for item in dicts if item[key] == val), None)
+
 class Mutex:
     ''' returns False if lock is free '''
     def __init__(s, *args):
@@ -199,11 +214,6 @@ class leaderBot_class():
             arr = {yes:'yes', stop:'no', x:'delete'}
         else:
             arr = {yes:'yes', x:'no'}
-
-        #print(hex(emoji.name), *[hex(v) for v in arr])
-
-        print(emoji.name, arr, emoji.name in arr)
-
         return arr.get(emoji.name)
         
     async def ask_for_reaction(s, message, **kwargs):
@@ -1903,11 +1913,12 @@ class leaderBot_class():
         ch_winners = challenge.get('idChannel')
 
         # add embed to channel
-        embed = discord.Embed(title='New mention!')
+        embed = discord.Embed(title=':new: mention')
         embed.add_field(name='user', value=f'<@{message.author.id}>')
         embed.add_field(name='user ID', value=f'{message.author.id}')
         embed.add_field(name='channel', value=f'<#{message.channel.id}>')
         embed.add_field(name='message', value=f'[jump]({message.jump_url})')
+        embed.add_field(name='confirmation', value=f'[jump]({msg_confirmation.jump_url})')
 
         if ch_name:
             embed.add_field(name='challenge', value=f'{ch_name}')
@@ -1918,112 +1929,143 @@ class leaderBot_class():
         embed.add_field(name='message text', value=f'{message.content}', inline=False)
         msg = await channel.send(content=text, embed=embed)
         await msg.pin(reason='new challenge submission')
-        
-        while True:   
-            response = None
-            reaction, user = await s.ask_for_reaction(msg, mode='ynd')
 
-            if reaction == 'delete':
-                message_r = await channel.send('Really delete this and confirmation message?')
-                reaction, user = await s.ask_for_reaction(message_r, mode='yn', timeout=30, author_id=user.id)
-                await message_r.delete()
-                if reaction == 'yes':
-                    await msg.unpin(reason='new challenge submission - ready')
-                    await msg_confirmation.delete()
-                    await msg.delete()
-                    response = '`deleted`'
-                    break
-                else:
-                    continue
-            elif reaction == 'yes':
-                try:
-                    rSubmission, newPlayer, sTypeName = await s.add_submission(msg,
-                                                                               iID=message.author.id,
-                                                                               author_name=message.author.display_name,
-                                                                               sChallengeName=ch_name,
-                                                                               author_id=user.id,
-                                                                               ret_points=True)
-                    await msg.unpin(reason='new challenge submission - ready')
-                except:
-                    continue
-                
-                modus = s.json_data.find(s.json_data.j['aChallengeType'], sName=rSubmission.get('sChallengeTypeName')).get('sNick')
-                win_ch_id = s.json_data.find(s.json_data.j['aChallenge'], sName=rSubmission.get('sChallengeName')).get('idChannel')
-
-                user_id = rSubmission.get('iUserID')
-
-                leaderboard_ch = f"<#{s.leaderboard_channel_id}>" if s.leaderboard_channel_id else 'leaderboard'
-                winners_ch = f"<#{win_ch_id}>" if win_ch_id else 'challenge winners'
-                newPlayerWelcome = '\n:tada: **Welcome to the challenges by the way! :tada:**' if newPlayer else ''
-                iPoints = rSubmission.get('iPoints')
-                if iPoints and iPoints > 0:
-                    buffer = await s.rank_img(msg, user_id=user_id)
-                    message_r = await message.channel.send(f"<@{user_id}>, **yay!** You got " +
-                                                           f"**{beautify(iPoints)}** points " +
-                                                           f"and the **{rSubmission.get('iRank')}**{s.json_data.suffix(rSubmission.get('iRank'))} place "+
-                                                           f"in modus **{modus}**." +
-                                                           f"\n{winners_ch} and {leaderboard_ch} are updated" +
-                                                           newPlayerWelcome +
-                                                           f"\nYour actual rank:", file=discord.File(buffer, 'rank.png'))
-                else:
-                    message_r = await message.channel.send(f"<@{user_id}> your submission counted, but you got no points :pensive: " +
-                                                           f"\nCheck {winners_ch} and {leaderboard_ch}" +
-                                                           newPlayerWelcome)
-                embed = discord.Embed()
-                embed.add_field(name='Accept message sent', value=f'[jump]({message_r.jump_url})')
-                await channel.send(embed=embed)
-                break
-            elif reaction == 'no':
-                message_r = await channel.send('Please enter the reason, why this submission is declined, or `*` for no message')
-                message_r = await s.wait_response(message_r, timeout=120, author_id=user.id)
-                if message_r is None:
-                    await channel.send('`reverted`')
-                    continue
-                await msg.unpin(reason='new challenge submission - ready')
-                if message_r.content == '*':
-                    response = 'Okay, no message sent'
-                    break
-                message_r = await message.channel.send(f'<@{message.author.id}>, *sorry, your submission is declined*\n{message_r.content}')
-                embed = discord.Embed()
-                embed.add_field(name='Decline message sent', value=f'[jump]({message_r.jump_url})')
-                await channel.send(embed=embed)
-                break
-            else:
-                print('mentioned - None reaction')
-                await msg.unpin(reason='new challenge submission - ready')
-                return  # sommething went really bad here
-
-        if response:
-            await s.send(msg.channel, response)
-            
+        await s.add_ynd_reactions(msg, mode='ynd')
         return
 
     async def raw_react(s, payload):
-        '''
-channel_id
-emoji
-event_type
-guild_id
-member
-message_id
-user_id
-'''
         if payload.user_id == s.client.user.id or payload.member.bot:
             return # ignore own & bot reactions
-        message = await s.get_message(payload.channel_id, payload.message_id)
-        if message.author.id == s.client.user.id:
-            if message.embeds:
-                embed_dict = message.embeds[0].to_dict()
+        msg = await s.get_message(payload.channel_id, payload.message_id)
+        if msg.author.id == s.client.user.id:
+            if msg.embeds:
+                embed_dict = msg.embeds[0].to_dict()
                 # seems to be new mention from player
-                if 'New mention!' in embed_dict.get('title'):
+                if ':new: mention' in embed_dict.get('title'):
+                    try:
+                        ch_id, msg_id = [s.get_int(x) for x in
+                                                      dfind(embed_dict.get('fields'),
+                                                             name='message')['value'].split('/')[-2:]]
+                        message = await s.get_message(ch_id, msg_id)
+                    except:
+                        ...
+                    try:
+                        conf_ch_id, conf_msg_id = [s.get_int(x) for x in
+                                                                dfind(embed_dict.get('fields'),
+                                                                      name='confirmation')['value'].split('/')[-2:]]
+                        msg_confirmation = await s.get_message(conf_ch_id, conf_msg_id)
+                    except:
+                        ...
+                    try:
+                        ch_name = dfind(embed_dict.get('fields'), name='challenge').get('value')
+                    except:
+                        ch_name = None
+                        
+                        
+                    # check reactions
                     reaction = s.check_reaction(payload.emoji, mode='ynd')
-                    print(reaction, payload.emoji)
                     if reaction is None:
                         return # unexpected reaction
-                    await message.channel.send(f"> {reaction}")
-                    embed_dict['title']+='!'
-                    embed = discord.Embed.from_dict(embed_dict)
-                    await message.edit(embed=embed)
+                    await msg.clear_reactions()
+                    if reaction == 'delete':
+                        message_r = await msg.channel.send('Really delete this and confirmation message?')
+                        reaction, user = await s.ask_for_reaction(message_r, mode='yn', timeout=30, author_id=payload.user_id)
+                        await message_r.delete()
+                        if reaction == 'yes':
+                            await msg.unpin(reason='new challenge submission - ready')
+                            try:
+                                await msg_confirmation.delete()
+                            except:
+                                ...
+                            await msg.channel.send('`deleted`')
+                            try:
+                                await msg.delete()
+                            except:
+                                ...
+                            return
+                        else:
+                            await s.add_ynd_reactions(msg, mode='ynd')
+                            return
+                    elif reaction == 'yes':
+                        try:
+                            rSubmission, newPlayer, sTypeName = await s.add_submission(msg,
+                                                                                       iID=message.author.id,
+                                                                                       author_name=message.author.display_name,
+                                                                                       sChallengeName=ch_name,
+                                                                                       author_id=payload.user_id,
+                                                                                       ret_points=True)
+                            await msg.unpin(reason='new challenge submission - ready')
+                        except Exception as e:
+                            await s.add_ynd_reactions(msg, mode='ynd')
+                            return
+                        
+                        modus = s.json_data.find(s.json_data.j['aChallengeType'], sName=rSubmission.get('sChallengeTypeName')).get('sNick')
+                        win_ch_id = s.json_data.find(s.json_data.j['aChallenge'], sName=rSubmission.get('sChallengeName')).get('idChannel')
+
+                        user_id = rSubmission.get('iUserID')
+
+                        leaderboard_ch = f"<#{s.leaderboard_channel_id}>" if s.leaderboard_channel_id else 'leaderboard'
+                        winners_ch = f"<#{win_ch_id}>" if win_ch_id else 'challenge winners'
+                        newPlayerWelcome = '\n:tada: **Welcome to the challenges by the way! :tada:**' if newPlayer else ''
+                        iPoints = rSubmission.get('iPoints')
+                        if iPoints and iPoints > 0:
+                            buffer = await s.rank_img(msg, user_id=user_id)
+                            message_r = await message.channel.send(f"<@{user_id}>, **yay!** You got " +
+                                                                   f"**{beautify(iPoints)}** points " +
+                                                                   f"and the **{rSubmission.get('iRank')}**{s.json_data.suffix(rSubmission.get('iRank'))} place "+
+                                                                   f"in modus **{modus}**." +
+                                                                   f"\n{winners_ch} and {leaderboard_ch} are updated" +
+                                                                   newPlayerWelcome +
+                                                                   f"\nYour actual rank:", file=discord.File(buffer, 'rank.png'))
+                        else:
+                            message_r = await message.channel.send(f"<@{user_id}> your submission counted, but you got no points :pensive: " +
+                                                                   f"\nCheck {winners_ch} and {leaderboard_ch}" +
+                                                                   newPlayerWelcome)
+                        embed = discord.Embed()
+                        embed.add_field(name='Accept message sent', value=f'[jump]({message_r.jump_url})')
+                        await msg.channel.send(embed=embed)
+                        try:
+                            embed_dict['title'] = ':white_check_mark: submission accepted'
+                            embed_dict['fields'].append({'name':'accept', 'value':f'[jump]({message_r.jump_url})'})
+                            await msg.edit(embed = discord.Embed.from_dict(embed_dict))
+                        except:
+                            ...
+                        await msg.unpin(reason='new challenge submission - ready')
+                        return
+                    elif reaction == 'no':
+                        message_r = await msg.channel.send('Please enter the reason, why this submission is declined, or `*` for no message')
+                        message_r = await s.wait_response(message_r, timeout=120, author_id=payload.user_id)
+                        if message_r is None:
+                            await msg.channel.send('`reverted`')
+                            await s.add_ynd_reactions(msg, mode='ynd')
+                            return
+                        await msg.unpin(reason='new challenge submission - ready')
+                        if message_r.content == '*':
+                            await msg.channel.send('Okay, no message sent')
+                            try:
+                                embed_dict['title'] = ':no_entry: submission declined'
+                                embed_dict['fields'].append({'name':'decline', 'value':'without message'})
+                                await msg.edit(embed = discord.Embed.from_dict(embed_dict))
+                            except Exception as e:
+                                if DEBUG: print(e)
+                            await msg.unpin(reason='new challenge submission - declined')
+                            return
+                        message_r = await message.channel.send(f'<@{message.author.id}>, *sorry, your submission is declined*\n{message_r.content}')
+                        embed = discord.Embed()
+                        embed.add_field(name='Decline message sent', value=f'[jump]({message_r.jump_url})')
+                        try:
+                            embed_dict['title'] = ':no_entry: submission declined'
+                            embed_dict['fields'].append({'name':'decline', 'value':f'[jump]({message_r.jump_url})'})
+                            await msg.edit(embed = discord.Embed.from_dict(embed_dict))
+                        except:
+                            ...
+                        await msg.channel.send(embed=embed)
+                        await msg.unpin(reason='new challenge submission - declined')
+                        return
+                    else:
+                        print('mentioned - None reaction')
+                        await msg.unpin(reason='new challenge submission - ready')
+                        return  # sommething went really bad here
         return
 
     async def change_prefix(s, message):
