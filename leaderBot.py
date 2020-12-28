@@ -965,9 +965,16 @@ class leaderBot_class():
     async def update_usernames(s, *args):
         async def update_player(player):
             try:
-                user = await s.client.fetch_user(player.get('iID'))
+                
+                # try to get member from guild
+                try:
+                    guild = s.client.get_guild(s.guild_id)
+                    user = await guild.fetch_member(player.get('iID'))
+                    if not user: raise
+                except:
+                    user = await s.client.fetch_user(player.get('iID'))
                 await s.get_avatar(user.id, update=True, user=user) # update avatar too
-                player['sName'] = user.name
+                player['sName'] = user.display_name
                 player['iDiscriminator'] = user.discriminator
             except Exception as e:
                 if DEBUG:
@@ -1142,10 +1149,14 @@ class leaderBot_class():
                 print('rank_img:', e)
             return 'User not found. Maybe invite him?'
 
-##        guild = s.client.get_guild(s.guild_id)
-##        print(guild)
-##        member = guild.get_member(user_id)
-##        print(member)
+        # try to get member from guild
+        try:
+            guild = s.client.get_guild(s.guild_id)
+            member = await guild.fetch_member(user_id)
+            if member:
+                user = member
+        except:
+            ...
 
         # get player info from json
         player = s.json_data.find(s.json_data.j.get('aPlayer', []), iID=user_id)
