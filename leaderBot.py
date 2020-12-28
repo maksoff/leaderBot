@@ -269,20 +269,6 @@ class leaderBot_class():
             msg = await channel.send(content[:2000])
             content = content[2000:]
         return msg
-        
-    async def update(s, ch, msg, content):
-        if (not msg) or (not ch):
-            return 'no message set to update - check settings'
-        msg = await s.get_message(ch, msg)
-        try:
-            await msg.edit(content = content)
-            return 'updated'
-        except Exception as e:
-            if DEBUG:
-                raise e
-            else:
-                print('update:', e)
-            return
 
     ## json file functions
           
