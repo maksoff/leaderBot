@@ -1773,7 +1773,24 @@ class leaderBot_class():
                 await message.channel.send(' '.join(emojis).replace('\n ', '\n'))
                 await message.delete()
             except Exception as e:
-                ...    
+                ...
+
+    async def init_message(s):
+        # check if mentions channel exists
+        channel_id = s.json_data.j.get('iMentionsChannel')
+        #text = s.json_data.j.get('iMentionsText', '')
+        
+        if channel_id:
+            try:
+                channel = client.get_channel(channel_id)
+                if not channel:
+                    return
+                await channel.send(f"<@{s.client.user.id}> just restarted")
+            except:
+                return
+        else:
+            return
+
 
     async def mentioned(s, message):
         # will be supported in 1.6 await message.channel.send('Okay', reference=message)
@@ -2283,6 +2300,7 @@ async def on_ready():
             if guild.id != DEBUG_CH:
                 continue
         leaderBot[guild.id] = leaderBot_class(client, guild.id)
+        await leaderBot[guild.id].init_message()
         await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'your rank'))
         print(
             f'{client.user} is connected to the following guild:\n'
