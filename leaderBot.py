@@ -262,7 +262,7 @@ class leaderBot_class():
                     
     async def get_message(s, ch_id, m_id):
         try:
-            channel = s.client.get_channel(ch_id)
+            channel = await s.client.fetch_channel(ch_id)
             return await channel.fetch_message(m_id)
         except Exception as e:
             if DEBUG:
@@ -1771,39 +1771,37 @@ class leaderBot_class():
         s.json_lock.lock = None
         return
 
+    async def get_message_from_id(s, message, ch_m_id):
+        ''' ch_m_id in format channel_id-message_id '''
+        ''' or if only message_id, channel_id taken from message '''
+        try:
+            ch_m_id = ch_m_id.split('-')
+            msg_id = s.get_int(ch_m_id[-1])
+            if len(ch_m_id) == 1:
+                return (await message.channel.fetch_message(msg_id))
+            else:
+                channel_id = s.get_int(ch_m_id[0])
+                return (await s.get_message(channel_id, msg_id))
+        except:
+            return
+        return
+
     async def give_rocket(s, message):
         try:
-            msg = None
-            msg_id = s.get_int(message.content.split()[1])
-            if len(message.content.split()) == 3:
-                channel_id = s.get_int(message.content.split()[2])
-                msg = await s.get_message(channel_id, msg_id)
-            if msg is None:
-                msg = await message.channel.fetch_message(msg_id)
+            msg = await s.get_message_from_id(message, message.content.split()[1])
             if message.guild.id in ksp_guilds:
                 await msg.add_reaction(s.client.get_emoji(732098507137220718))
             else:
                 await msg.add_reaction('\U0001F680')
             await message.delete()
         except Exception as e:
-            ...
+            print('give_rocket', e)
 
     async def give_text(s, message):
         add_reaction = True
-        msg_id = s.get_int(message.content.split()[1])
-        if msg_id is None:
+        msg = await s.get_message_from_id(message, message.content.split()[1])
+        if msg is None:
             add_reaction = False
-        else:
-            try:
-                channel_id = s.get_int(message.content.split()[2])
-                msg = await s.get_message(channel_id, msg_id)
-                add_reaction = 2
-                if not msg:
-                    msg = await message.channel.fetch_message(msg_id)
-                    add_reaction = 1
-                if not msg: raise
-            except Exception as e:
-                add_reaction = False
         text = message.content.split(maxsplit = 1 + int(add_reaction))[-1]
         emojis, unique = replace_letters(text, special_emojis=s.special_emojis_full)
         if not unique:
@@ -2419,8 +2417,8 @@ class leaderBot_class():
                       )
 
         s.hidden_commands = (
-                                (f'{s.prefix}give', 'give cool rocket reaction. `message_id` + optional `#channel`', s.give_rocket),
-                                (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message. Add `#channel` after `message_id` to send to another #channel', s.give_text),
+                                (f'{s.prefix}give', 'give cool rocket reaction. `channel_id-message_id`  or `message_id` or `#channel-message_id`', s.give_rocket),
+                                (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message. Add `channel_id-message_id` to send to another #channel', s.give_text),
                                 (f'{s.prefix}unlock', "removes `json lock`. don't use! debug feature", s.unlock),
                                 (f'{s.prefix}import json', 'imports data from json', s.json_imp),
                                 (f'{s.prefix}delete json', 'clears all you data from server', s.json_del),
