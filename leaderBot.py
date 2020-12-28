@@ -1960,6 +1960,28 @@ class leaderBot_class():
             
         return
 
+    async def raw_react(s, payload):
+        '''
+channel_id
+emoji
+event_type
+guild_id
+member
+message_id
+user_id
+'''
+        if payload.user_id == s.client.user.id:
+            return # ignore own reactions
+        message = await s.get_message(payload.channel_id, payload.message_id)
+        if message.author.id == s.client.user.id:
+            if message.embeds:
+                embed_dict = message.embeds[0].to_dict()
+                if 'New mention!' in embed_dict.get('title'):
+                    embed_dict['title']+='!'
+                    embed = discord.Embed.from_dict(embed_dict)
+                    await message.edit(embed=embed)
+        return
+
     async def change_prefix(s, message):
         if s.json_lock.lock:
             await message.channel.send('`json locked. try again later`')
@@ -2323,6 +2345,14 @@ async def on_message(message):
     else:
         #dm message
         await leaderBot_class.dm(client, message)
+
+@client.event
+async def on_raw_reaction_add(payload):
+    try:
+        await leaderBot[payload.guild_id].raw_react(payload)
+    except Exception as e:
+        if DEBUG: print('on_raw_reaction_add:', e)
+    return
 
 print('ready, steady, go')
 client.run(TOKEN)
