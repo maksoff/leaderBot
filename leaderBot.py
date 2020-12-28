@@ -165,7 +165,7 @@ class leaderBot_class():
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('wait response:', e)
             return
         
     async def ask_for_reaction(s, message, **kwargs):
@@ -205,7 +205,7 @@ class leaderBot_class():
             if DEBUG:
                 raise (e)
             else:
-                print(e)
+                print('ask for reaction:', e)
                 return (None, None)
                 
         await message.clear_reactions()
@@ -218,7 +218,7 @@ class leaderBot_class():
             return await channel.fetch_message(m_id)
         except Exception as e:
             if DEBUG:
-                print(e)
+                print('get_messsage:', e)
             return
 
     async def get_avatar(s, user_id, update=False, user = None):
@@ -254,7 +254,7 @@ class leaderBot_class():
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('get_avatar:', e)
             user_avatar = None
 
         s.avatar_cache[user_id]['hash'] = user.avatar
@@ -281,8 +281,8 @@ class leaderBot_class():
             if DEBUG:
                 raise e
             else:
-                print(e)
-            return 'something wrong'
+                print('update:', e)
+            return
 
     ## json file functions
           
@@ -300,7 +300,7 @@ class leaderBot_class():
                 if DEBUG:
                     raise e
                 else:
-                    print(e)
+                    print('open json:', e)
                 print('wrong json')
         
     async def json_exp(s, message):
@@ -333,7 +333,7 @@ class leaderBot_class():
                 if DEBUG:
                     raise e
                 else:
-                    print(e)
+                    print('json imp:', e)
                 return 'failed to save'
             s.json_lock.lock = None
             return test + ' received and saved'
@@ -664,7 +664,7 @@ class leaderBot_class():
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('set challenge channel:', e)
             return None
         return
 
@@ -810,7 +810,7 @@ class leaderBot_class():
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('add submission:', e)
             await s.send(message.channel, 'Something really wrong')
             await message.channel.send('`changes reverted`')
             s.open_json()
@@ -881,7 +881,7 @@ class leaderBot_class():
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('add points:', e)
             return
 
     async def set_lb(s, message):
@@ -987,7 +987,7 @@ class leaderBot_class():
                 if DEBUG:
                     raise e
                 else:
-                    print(e)
+                    print('update usernames:', e)
         await asyncio.gather(*(asyncio.ensure_future(update_player(player)) for player in s.json_data.j.get('aPlayer', [])))
         s.save_json()
         return
@@ -1029,7 +1029,7 @@ class leaderBot_class():
                 if DEBUG:
                     raise e
                 else:
-                    print('update_winners\n', e)
+                    print('update_winners:', e)
                     
         await asyncio.gather(*(asyncio.ensure_future(update_win(sub)) for sub in sub))
         return
@@ -1070,14 +1070,14 @@ class leaderBot_class():
                 if DEBUG:
                     raise e
                 else:
-                    print(e)
+                    print('update_lb:', e)
                 return 'something wrong'
             
         except Exception as e:
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('update_lb2:', e)
             return 'something wrong'
 
     async def update_all(s, message, ignore_lock=False):
@@ -1112,7 +1112,7 @@ class leaderBot_class():
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('print lb:', e)
             return 'no/corrupt json'
 
     async def get_rank(s, msg):
@@ -1129,7 +1129,7 @@ class leaderBot_class():
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('get rank:', e)
             name = 'user not found'
             response = 'maybe invite him?'
         embed = discord.Embed()
@@ -1153,7 +1153,7 @@ class leaderBot_class():
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('rank_img:', e)
             return 'User not found. Maybe invite him?'
 
 ##        guild = s.client.get_guild(s.guild_id)
@@ -1185,7 +1185,7 @@ class leaderBot_class():
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('rank img:', e)
             guild_avatar = None
 
         buffer = rankDisplay.create_rank_card(user_avatar,
@@ -1213,14 +1213,14 @@ class leaderBot_class():
                 if DEBUG:
                     raise e
                 else:
-                    print(e)
+                    print('activity img:', e)
                 return 'something wrong'
 
         except Exception as e:
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('activity_img 2:', e)
             return 'something wrong'
 
     async def get_activity_img(s, *args):
@@ -1295,14 +1295,14 @@ class leaderBot_class():
                 if DEBUG:
                     raise e
                 else:
-                    print(e)
+                    print('update lb img:', e)
                 return 'something wrong'
 
         except Exception as e:
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('update lb img 2:', e)
             return 'something wrong'
 
     async def get_top_img(s, limit):
@@ -1396,7 +1396,7 @@ class leaderBot_class():
                 if not url:
                     return
             except Exception as e:
-                print(str(e))
+                print('post', str(e))
                 return
         else:
             try:
@@ -1613,7 +1613,7 @@ class leaderBot_class():
 ##                print('\\u' + '\\u'.join(hex(ord(e))[2:] for e in emoji))
 ##                print(emoji)
             except Exception as e:
-                print(e)
+                print('voting:', e)
                 ...
         return
 
@@ -1633,7 +1633,7 @@ class leaderBot_class():
             if DEBUG:
                 raise e
             else:
-                print(e)
+                print('update roles', e)
             return
 
         active_challenges = [ch.get('sName') for ch in s.json_data.j.get('aChallenge', [])[:-act_int-1:-1]]
@@ -1667,7 +1667,7 @@ class leaderBot_class():
                 if DEBUG:
                     raise e
                 else:
-                    print(e)
+                    print('update role:', e)
             
         await asyncio.gather(*(*(asyncio.ensure_future(update_role(message, user_id, role, True)) for user_id in add_set),
                                *(asyncio.ensure_future(update_role(message, user_id, old_role, False)) for user_id in rem_set)))
@@ -1757,7 +1757,6 @@ class leaderBot_class():
             except Exception as e:
                 add_reaction = False
         text = message.content.split(maxsplit = 1 + int(add_reaction))[-1]
-        #print(text)
         emojis, unique = replace_letters(text, special_emojis=s.special_emojis_full)
         if not unique:
             add_reaction = False
@@ -1831,7 +1830,7 @@ class leaderBot_class():
                       "Kadmins are stuck on Eve. Please send help. And snacks.",
                       "Kadmins installed RSS & RO. They are lost now.")
         else:
-            prat_2 = ('',)
+            part_2 = ('',)
         user_id = message.author.id
         msg_confirmation = await message.channel.send(f'<@{user_id}> {random.choice(part_1)}. {random.choice(part_2)}')
 
@@ -2038,7 +2037,7 @@ class leaderBot_class():
         elif message.author.id == 771433825754021888:
             ## KSP Weekly Challenges
             try:
-                if message.content.split()[0] == f"{s.prefix}giveaway":
+                if message.content and (message.content.split()[0] == f"{s.prefix}giveaway"):
                     try:
                         points = float(message.content.split()[1])
                         winners_list = [int(m) for m in message.content.split()[2:]]
@@ -2077,7 +2076,7 @@ class leaderBot_class():
                                 await channel.send('`done`')
                                 break
                         except Exception as e:
-                            print(e)
+                            print('ext_bot:', e)
                     else:
                         embed = discord.Embed(title=f'!!! something went wrong, use {s.prefix}static points !!!')
                         embed.add_field(name='Players', value='\n'.join(f'<@{i}>' for i in winners_list) or 'no one found')
@@ -2086,7 +2085,7 @@ class leaderBot_class():
                         await msg_x.pin(reason='something wrong')
                         
             except Exception as e:
-                print(e)
+                print('ext_bot2:', e)
         return
                 
     async def __call__(s, message):
