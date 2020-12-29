@@ -740,7 +740,7 @@ class leaderBot_class():
         if user_id:
             author_name = kwargs.get('author_name')
             embed = discord.Embed()
-            embed.add_field(name='Auto user', value=f'**@{author_name}** id: **{user_id}**')
+            embed.add_field(name='Auto user', value=f'**{author_name}** id: **{user_id}**')
             msg = await message.channel.send(content='Correct?', embed=embed)
             react, _ = await s.ask_for_reaction(msg, mode='yn', timeout=120, author_id=author_id)
             if react is None:
@@ -808,7 +808,7 @@ class leaderBot_class():
             sTypeName = s.json_data.find(s.json_data.j['aChallengeType'], sName=sChallengeTypeName).get('sNick')
                 
             embed = discord.Embed(title='Last check')
-            embed.add_field(name=('__NEW__ ' if newPlayer else '') + 'Player', value=f"**@{author_name}**\nid: {user_id}", inline=False)
+            embed.add_field(name=('__NEW__ ' if newPlayer else '') + 'Player', value=f"**{author_name}**\nid: {user_id}", inline=False)
             embed.add_field(name='Challenge', value=sChallengeName)
             embed.add_field(name='Modus', value=sTypeName)
             if not all_gets_same_score:
@@ -1916,6 +1916,7 @@ class leaderBot_class():
         # add embed to channel
         embed = discord.Embed(title=':new: mention')
         embed.add_field(name='user', value=f'<@{message.author.id}>')
+        embed.add_field(name='user name', value=f'@{message.author.display_name}#{message.author.discriminator}')
         embed.add_field(name='user ID', value=f'{message.author.id}')
         embed.add_field(name='channel', value=f'<#{message.channel.id}>')
         embed.add_field(name='message', value=f'[jump]({message.jump_url})')
@@ -1990,9 +1991,11 @@ class leaderBot_class():
                             return
                     elif reaction == 'yes':
                         try:
+                            author_name = dfind(embed_dict.get('fields'), name='user name')['value']
+                            iID = s.get_int(dfind(embed_dict.get('fields'), name='user ID')['value'])
                             rSubmission, newPlayer, sTypeName = await s.add_submission(msg,
-                                                                                       iID=message.author.id,
-                                                                                       author_name=message.author.display_name,
+                                                                                       iID=iID,
+                                                                                       author_name=author_name,
                                                                                        sChallengeName=ch_name,
                                                                                        author_id=payload.user_id,
                                                                                        ret_points=True)
@@ -2032,7 +2035,6 @@ class leaderBot_class():
                             await msg.edit(embed = discord.Embed.from_dict(embed_dict))
                         except:
                             ...
-                        await msg.unpin(reason='new challenge submission - ready')
                         return
                     elif reaction == 'no':
                         message_r = await msg.channel.send('Please enter the reason, why this submission is declined, or `*` for no message')
