@@ -33,6 +33,8 @@ import rankDisplay
 
 import json
 
+import traceback
+
 check_role = False
 check_channel = True
 
@@ -177,6 +179,7 @@ class leaderBot_class():
             await message.channel.send(f'`timeout {timeout}s`')
             return 
         except Exception as e:
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -250,6 +253,7 @@ class leaderBot_class():
             return (None, None)
         except Exception as e:
             await message.clear_reactions()
+            traceback.print_exc()
             if DEBUG:
                 raise (e)
             else:
@@ -266,6 +270,7 @@ class leaderBot_class():
             return await channel.fetch_message(m_id)
         except Exception as e:
             if DEBUG:
+                traceback.print_exc()
                 print('get_messsage:', e)
             return
 
@@ -299,6 +304,7 @@ class leaderBot_class():
             avatar_asset = user.avatar_url_as(format='png', size=AVATAR_SIZE)
             user_avatar = io.BytesIO(await avatar_asset.read())
         except Exception as e:
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -331,6 +337,7 @@ class leaderBot_class():
                 s.json_data.load(f)
                 s.leaderboard_channel_id, s.leaderboard_message_id = s.json_data.get_lb_message()
             except Exception as e:
+                traceback.print_exc()
                 if DEBUG:
                     raise e
                 else:
@@ -364,6 +371,7 @@ class leaderBot_class():
                 s.json_lock.lock = None
             except Exception as e:
                 s.json_lock.lock = None
+                traceback.print_exc()
                 if DEBUG:
                     raise e
                 else:
@@ -475,7 +483,7 @@ class leaderBot_class():
                     try:
                         return s.json_data.j['aChallengeType'][int(message.content.strip())-1]['sName']
                     except:
-                        await s.send(message.channel, '`wrong index`')
+                        ...
                 
             # short list too short, try full list now
             response = 'All types (`>` = used in this challenge, `|` = used in last challenges):'
@@ -491,7 +499,7 @@ class leaderBot_class():
                 try:
                     return s.json_data.j['aChallengeType'][int(message.content.strip())-1]['sName']
                 except:
-                    await s.send(message.channel, '`wrong index`')
+                    ...
                      
         # new challenge type creation
         response = 'Create new type in format `modus_name lower/higher multiplier`'
@@ -695,6 +703,7 @@ class leaderBot_class():
             return ('Done: ' if change_existing_channel else '') + sChallengeName 
         except Exception as e:
             s.json_lock.lock = None
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -841,6 +850,7 @@ class leaderBot_class():
                 return rSubmission, newPlayer, sTypeName
             return
         except Exception as e:
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -912,6 +922,7 @@ class leaderBot_class():
             await message.channel.send('`reverted changes`')
             s.open_json()
             s.json_lock.lock = None
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -1025,6 +1036,7 @@ class leaderBot_class():
                 player['sName'] = user.display_name
                 player['iDiscriminator'] = user.discriminator
             except Exception as e:
+                traceback.print_exc()
                 if DEBUG:
                     raise e
                 else:
@@ -1067,6 +1079,7 @@ class leaderBot_class():
                         del challenge['idChannel']
                         del challenge['idMessage']
             except Exception as e:
+                traceback.print_exc()
                 if DEBUG:
                     raise e
                 else:
@@ -1108,6 +1121,7 @@ class leaderBot_class():
                 await s.update_lb_img()
                 return 'updated'
             except Exception as e:
+                traceback.print_exc()
                 if DEBUG:
                     raise e
                 else:
@@ -1115,6 +1129,7 @@ class leaderBot_class():
                 return 'something wrong'
             
         except Exception as e:
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -1150,6 +1165,7 @@ class leaderBot_class():
             await msg.channel.send(embed=embed)                       
             return '*** Done ***'
         except Exception as e:
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -1167,6 +1183,7 @@ class leaderBot_class():
             name = '@' + user.name
             response = s.json_data.get_rank(user_id)
         except Exception as e:
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -1191,6 +1208,7 @@ class leaderBot_class():
         try:
             user = await s.client.fetch_user(user_id)
         except Exception as e:
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -1227,6 +1245,7 @@ class leaderBot_class():
             avatar_asset = msg.guild.icon_url_as(format='png', size=AVATAR_SIZE)
             guild_avatar = io.BytesIO(await avatar_asset.read())
         except Exception as e:
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -1255,6 +1274,7 @@ class leaderBot_class():
                 message = await message.channel.send(content = 'Activity graph. One **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'activity.png'))
                 return
             except Exception as e:
+                traceback.print_exc()
                 if DEBUG:
                     raise e
                 else:
@@ -1262,6 +1282,7 @@ class leaderBot_class():
                 return 'something wrong'
 
         except Exception as e:
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -1337,6 +1358,7 @@ class leaderBot_class():
                 s.save_json()
                 return 'updated'
             except Exception as e:
+                traceback.print_exc()
                 if DEBUG:
                     raise e
                 else:
@@ -1344,6 +1366,7 @@ class leaderBot_class():
                 return 'something wrong'
 
         except Exception as e:
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -1433,7 +1456,6 @@ class leaderBot_class():
         return buffer
 
     async def post(s, *args):
-        return '***'
         data = None
         if len(args) == 0:
             try:
@@ -1441,6 +1463,7 @@ class leaderBot_class():
                 if not url:
                     return
             except Exception as e:
+                traceback.print_exc()
                 print('post', str(e))
                 return
         else:
@@ -1464,6 +1487,7 @@ class leaderBot_class():
             response = '\nstatus: `{}` \ntext: `{}`'.format(
                         r.status_code, r.text)
         except Exception as e:
+            traceback.print_exc()
             response = 'Exception: {}'.format(e)
         return 'Done: ' + str(response)
     
@@ -1538,9 +1562,9 @@ class leaderBot_class():
 
         uptime = ''
         if weeks:
-            uptime += f"{weeks} weeks, '"
+            uptime += f"{weeks} week{'s' if weeks > 1 else ''}, "
         if days:
-            uptime += f"{days} days, '"
+            uptime += f"{days} day{'s' if days > 1 else ''}, "
         uptime += hms
         
         return f'Pong! **{int(s.client.latency*1000)}** ms\nUptime: {uptime}'
@@ -1658,7 +1682,6 @@ class leaderBot_class():
 ##                print('\\u' + '\\u'.join(hex(ord(e))[2:] for e in emoji))
 ##                print(emoji)
             except Exception as e:
-                print('voting:', e)
                 ...
         return
 
@@ -1675,6 +1698,7 @@ class leaderBot_class():
                 old_role = None
             if not role: raise
         except Exception as e:
+            traceback.print_exc()
             if DEBUG:
                 raise e
             else:
@@ -1709,6 +1733,7 @@ class leaderBot_class():
                 else:
                     await member.remove_roles(role)
             except Exception as e:
+                traceback.print_exc()
                 if DEBUG:
                     raise e
                 else:
@@ -1783,6 +1808,7 @@ class leaderBot_class():
                 channel_id = s.get_int(ch_m_id[0])
                 return (await s.get_message(channel_id, msg_id))
         except:
+            #traceback.print_exc()
             return
         return
 
@@ -1795,6 +1821,7 @@ class leaderBot_class():
                 await msg.add_reaction('\U0001F680')
             await message.delete()
         except Exception as e:
+            traceback.print_exc()
             print('give_rocket', e)
 
     async def give_text(s, message):
@@ -1850,7 +1877,7 @@ class leaderBot_class():
         
         if channel_id:
             try:
-                channel = client.get_channel(channel_id)
+                channel = await s.client.fetch_channel(channel_id)
             except:
                 return
             if not channel:
@@ -2033,8 +2060,9 @@ class leaderBot_class():
                             embed_dict['title'] = ':white_check_mark: submission accepted'
                             embed_dict['fields'].append({'name':'accept', 'value':f'[jump]({message_r.jump_url})'})
                             await msg.edit(embed = discord.Embed.from_dict(embed_dict))
-                        except:
-                            ...
+                        except Exception as e:
+                            traceback.print_exc()
+                            if DEBUG: raise e
                         return
                     elif reaction == 'no':
                         message_r = await msg.channel.send('Please enter the reason, why this submission is declined, or `*` for no message')
@@ -2051,7 +2079,8 @@ class leaderBot_class():
                                 embed_dict['fields'].append({'name':'decline', 'value':'without message'})
                                 await msg.edit(embed = discord.Embed.from_dict(embed_dict))
                             except Exception as e:
-                                ...
+                                traceback.print_exc()
+                                if DEBUG: raise e
                             await msg.unpin(reason='new challenge submission - declined')
                             return
                         message_r = await message.channel.send(f'<@{message.author.id}>, *sorry, your submission is declined*\n{message_r.content}')
@@ -2061,8 +2090,9 @@ class leaderBot_class():
                             embed_dict['title'] = ':no_entry: submission declined'
                             embed_dict['fields'].append({'name':'decline', 'value':f'[jump]({message_r.jump_url})'})
                             await msg.edit(embed = discord.Embed.from_dict(embed_dict))
-                        except:
-                            ...
+                        except Exception as e:
+                            traceback.print_exc()
+                            if DEBUG: raise e
                         await msg.channel.send(embed=embed)
                         await msg.unpin(reason='new challenge submission - declined')
                         return
@@ -2083,8 +2113,9 @@ class leaderBot_class():
                                                       dfind(embed_dict.get('fields'),
                                                              name='Message')['value'].split('/')[-2:]]
                         message = await s.get_message(ch_id, msg_id)
-                    except:
-                        ...
+                    except Exception as e:
+                        traceback.print_exc()
+                        if DEBUG: raise e
 
                     if reaction != 'yes':
                         await msg.channel.send(f'`canceled` try `{s.prefix}static points`')
@@ -2128,6 +2159,7 @@ class leaderBot_class():
                             ...
                         return
                     except Exception as e:
+                        traceback.print_exc()
                         if DEBUG: raise e
                         await msg.channel.send('`reverted`')
                         await s.add_ynd_reactions(msg, mode='yn')
@@ -2164,7 +2196,7 @@ class leaderBot_class():
             
             if channel_id:
                 try:
-                    channel = client.get_channel(channel_id)
+                    channel = await s.client.fetch_channel(channel_id)
                 except:
                     return
                 if not channel:
@@ -2218,7 +2250,7 @@ class leaderBot_class():
                     channel_id = s.json_data.j.get('iMentionsChannel')
                     text = s.json_data.j.get('iMentionsText', '')
                     try:
-                        channel = client.get_channel(channel_id)
+                        channel = await s.client.fetch_channel(channel_id)
                         if not channel:
                             raise
                     except:
@@ -2246,6 +2278,7 @@ class leaderBot_class():
                                 await channel.send('`done`')
                                 break
                         except Exception as e:
+                            traceback.print_exc()
                             print('ext_bot:', e)
                     else:
                         embed = discord.Embed(title=f'!!! something went wrong, use {s.prefix}static points !!!')
@@ -2255,6 +2288,7 @@ class leaderBot_class():
                         await msg_x.pin(reason='something wrong')
                         
             except Exception as e:
+                traceback.print_exc()
                 print('ext_bot2:', e)
         return
                 
@@ -2486,6 +2520,7 @@ async def on_raw_reaction_add(payload):
         await leaderBot[payload.guild_id].raw_react(payload)
     except Exception as e:
         print('on_raw_reaction_add:', e)
+        traceback.print_exc()
     return
 
 print('ready, steady, go')
