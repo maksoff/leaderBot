@@ -1456,7 +1456,6 @@ class leaderBot_class():
         return buffer
 
     async def post(s, *args):
-        return '***'
         data = None
         if len(args) == 0:
             try:
@@ -1563,9 +1562,9 @@ class leaderBot_class():
 
         uptime = ''
         if weeks:
-            uptime += f"{weeks} weeks, '"
+            uptime += f"{weeks} week{'s' if weeks > 1 else ''}, "
         if days:
-            uptime += f"{days} days, '"
+            uptime += f"{days} day{'s' if days > 1 else ''}, "
         uptime += hms
         
         return f'Pong! **{int(s.client.latency*1000)}** ms\nUptime: {uptime}'
@@ -1683,8 +1682,7 @@ class leaderBot_class():
 ##                print('\\u' + '\\u'.join(hex(ord(e))[2:] for e in emoji))
 ##                print(emoji)
             except Exception as e:
-                traceback.print_exc()
-                print('voting:', e)
+                ...
         return
 
     async def update_roles(s, message):
@@ -1810,7 +1808,7 @@ class leaderBot_class():
                 channel_id = s.get_int(ch_m_id[0])
                 return (await s.get_message(channel_id, msg_id))
         except:
-            traceback.print_exc()
+            #traceback.print_exc()
             return
         return
 
