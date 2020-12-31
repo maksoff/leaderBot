@@ -68,6 +68,8 @@ def deepcopy(temp):
         ret = []
         for val in temp:
             ret.append(deepcopy(val))
+    elif type(temp) is bool:
+        return temp
     else:
         return str(temp)
     return ret
@@ -1468,7 +1470,10 @@ class leaderBot_class():
                 return
         else:
             try:
-                url = args[0].content.strip().split(' ')[1]
+                if len(args[0].content.strip().split(' ')) == 1:
+                    url = s.json_data.j.get('sPOSTURL')
+                else:
+                    url = args[0].content.strip().split(' ')[1]
             except Exception as e:
                 return f'Specify URL `{s.prefix}post URL`'
 
