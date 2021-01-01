@@ -2091,14 +2091,18 @@ class leaderBot_class():
                         user_id = rSubmission.get('iUserID')
 
                         leaderboard_ch = f"<#{s.leaderboard_channel_id}>" if s.leaderboard_channel_id else 'leaderboard'
-                        winners_ch = f"<#{win_ch_id}>" if win_ch_id else 'challenge winners'
+                        winners_ch = f"<#{win_ch_id}>" if win_ch_id else 'Challenge winners'
                         newPlayerWelcome = '\n:tada: **Welcome to the challenges by the way! :tada:**' if newPlayer else ''
                         iPoints = rSubmission.get('iPoints')
                         if iPoints and iPoints > 0:
+                            if len(s.json_data.find(s.json_data.j.get('aChallenge'), sName=rSubmission.get('sChallengeName')).get('aPoints', [])) == 1:
+                                place = ''
+                            else:
+                                place = f"and the **{rSubmission.get('iRank')}**{s.json_data.suffix(rSubmission.get('iRank'))} place "
                             buffer = await s.rank_img(msg, user_id=user_id)
                             message_r = await message.channel.send(f"<@{user_id}>, **yay!** You got " +
                                                                    f"**{beautify(iPoints)}** points " +
-                                                                   f"and the **{rSubmission.get('iRank')}**{s.json_data.suffix(rSubmission.get('iRank'))} place "+
+                                                                   place +
                                                                    f"in modus **{modus}**." +
                                                                    f"\n{winners_ch} and {leaderboard_ch} are updated" +
                                                                    newPlayerWelcome +
