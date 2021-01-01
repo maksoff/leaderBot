@@ -1037,6 +1037,7 @@ class leaderBot_class():
                 await s.get_avatar(user.id, update=True, user=user) # update avatar too
                 player['sName'] = user.display_name
                 player['iDiscriminator'] = user.discriminator
+                player['sAvatarURL'] = str(user.avatar_url)
             except Exception as e:
                 traceback.print_exc()
                 if DEBUG:
@@ -1110,6 +1111,7 @@ class leaderBot_class():
             await s.update_usernames() # update usernames & avatars
             s.json_data.calculate_rating()
             await s.post()
+            await s.post_img()
 
             embed = s.generate_lb_embed()
             
@@ -1385,7 +1387,7 @@ class leaderBot_class():
         for player in players:
             if player.get('bDisabled') or (limit == 0 and (float(player.get('iStaticPoints', 0)) - float(player.get('iPoints', 0))) == 0):
                 continue
-            if limit:
+            if limit > 0:
                 if player.get('iRank') > limit:
                     break
 
@@ -1472,28 +1474,55 @@ class leaderBot_class():
             try:
                 if len(args[0].content.strip().split(' ')) == 1:
                     url = s.json_data.j.get('sPOSTURL')
+                    if not url:
+                        raise
                 else:
                     url = args[0].content.strip().split(' ')[1]
             except Exception as e:
                 return f'Specify URL `{s.prefix}post URL`'
-
-            # send empty data
-            if len(args[0].content.split(' ')) > 2:
-                data = ''
-
-        if data == None:    
-            payload = deepcopy(s.json_data.j)            
-            payload['iGuildID'] = s.guild_id
-            data = json.dumps(payload)
+ 
+        payload = deepcopy(s.json_data.j)            
+        payload['iGuildID'] = s.guild_id
+        data = json.dumps(payload)
             
         headers = {'content-type': 'application/json'}
         try:
-            r = requests.post(url, data=data, headers=headers)       
+
+            r = requests.post(url, data=data, headers=headers) 
             response = '\nstatus: `{}` \ntext: `{}`'.format(
                         r.status_code, r.text)
         except Exception as e:
             traceback.print_exc()
-            response = 'Exception: {}'.format(e)
+            return f'Exception: ```{e}```'
+        return 'Done: ' + str(response)
+
+    async def post_img(s, *args):
+        if len(args) == 0:
+            try:
+                url = s.json_data.j.get('sPOSTURL_IMG')
+                if not url:
+                    return
+            except Exception as e:
+                traceback.print_exc()
+                print('post', str(e))
+                return
+        else:
+            try:
+                if len(args[0].content.strip().split(' ')) == 1:
+                    url = s.json_data.j.get('sPOSTURL_IMG')
+                    if not url:
+                        raise
+                else:
+                    url = args[0].content.strip().split(' ')[1]
+            except Exception as e:
+                return f'Specify URL `{s.prefix}post_img URL`'
+        try:
+            r = requests.post(url, files={'top.png':(await s.get_top_img(-1)), 'activity.png':(await s.get_activity_img())})   
+            response = '\nstatus: `{}` \ntext: `{}`'.format(
+                        r.status_code, r.text)
+        except Exception as e:
+            traceback.print_exc()
+            return f'Exception: ```{e}```'
         return 'Done: ' + str(response)
     
 
@@ -1515,6 +1544,26 @@ class leaderBot_class():
             s.save_json()
             s.json_lock.lock = None
             return 'Auto-POST URL updated'
+
+        
+    async def seturl_img(s, msg):
+        if s.json_lock.lock:
+            await msg.channel.send('`json locked. try again later`')
+            return
+        data = msg.content.strip().split(' ')
+        if len(data) == 1:
+            try:
+                del s.json_data.j['sPOSTURL_IMG']
+            except:
+                s.json_lock.lock = None
+                return 'No Auto-POST-IMG URL found'
+            s.json_lock.lock = None
+            return 'Auto-POST-IMG URL deleted'
+        else:
+            s.json_data.j['sPOSTURL_IMG'] = data[1]
+            s.save_json()
+            s.json_lock.lock = None
+            return 'Auto-POST-IMG URL updated'
 
     async def disable(s, msg):
         if s.json_lock.lock:
@@ -2450,8 +2499,10 @@ class leaderBot_class():
                                 (f'{s.prefix}set mentions', f'set channel where <@{s.client.user.id}> mentions will be posted', s.set_mention_ch),
                                 (f'{s.prefix}set role', 'set @role for active winners', s.set_role),
                                 (f'{s.prefix}export json', 'exports data in json', s.json_exp),
-                                (f'{s.prefix}post', f'send json over `post` request. e.g.`{s.prefix}post http://URL`', s.post),
-                                (f'{s.prefix}seturl', f'`{s.prefix}seturl URL` - where will be JSON posted after each ranking update', s.seturl),
+                                (f'{s.prefix}post_img', f'send leaderboard images over `post` request. e.g.`{s.prefix}post_img http://URL`', s.post_img),
+                                (f'{s.prefix}seturl_img', f'`{s.prefix}seturl_img URL` - where will be IMG `post`ed after each ranking update', s.seturl_img),
+                                (f'{s.prefix}post', f'send leaderboard json over `post` request. e.g.`{s.prefix}post http://URL`', s.post),
+                                (f'{s.prefix}seturl', f'`{s.prefix}seturl URL` - where will be JSON `post`ed after each ranking update', s.seturl),
                                 (f'{s.prefix}disable user', 'to hide user from leaderboard', s.disable),
                                 (f'{s.prefix}enable user', 'to reenable user to leaderboard', s.enable),
                                 (f'{s.prefix}change prefix', 'to change the prefix', s.change_prefix),
