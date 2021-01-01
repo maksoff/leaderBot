@@ -2113,10 +2113,12 @@ class leaderBot_class():
                                                                    newPlayerWelcome)
                         embed = discord.Embed()
                         embed.add_field(name='Accept message sent', value=f'[jump]({message_r.jump_url})')
+                        embed.add_field(name='Accepted by', value=f'<@{payload.user_id}>')
                         await msg.channel.send(embed=embed)
                         try:
                             embed_dict['title'] = ':white_check_mark: submission accepted'
                             embed_dict['fields'].append({'name':'accept', 'value':f'[jump]({message_r.jump_url})'})
+                            embed_dict['fields'].append({'name':'by', 'value':f'<@{payload.user_id}>'})
                             await msg.edit(embed = discord.Embed.from_dict(embed_dict))
                         except Exception as e:
                             traceback.print_exc()
@@ -2135,6 +2137,7 @@ class leaderBot_class():
                             try:
                                 embed_dict['title'] = ':no_entry: submission declined'
                                 embed_dict['fields'].append({'name':'decline', 'value':'without message'})
+                                embed_dict['fields'].append({'name':'by', 'value':f'<@{payload.user_id}>'})
                                 await msg.edit(embed = discord.Embed.from_dict(embed_dict))
                             except Exception as e:
                                 traceback.print_exc()
@@ -2144,9 +2147,11 @@ class leaderBot_class():
                         message_r = await message.channel.send(f'<@{message.author.id}>, *sorry, your submission is declined*\n{message_r.content}')
                         embed = discord.Embed()
                         embed.add_field(name='Decline message sent', value=f'[jump]({message_r.jump_url})')
+                        embed.add_field(name='Declined by', value=f'<@{payload.user_id}>')
                         try:
                             embed_dict['title'] = ':no_entry: submission declined'
                             embed_dict['fields'].append({'name':'decline', 'value':f'[jump]({message_r.jump_url})'})
+                            embed_dict['fields'].append({'name':'by', 'value':f'<@{payload.user_id}>'})
                             await msg.edit(embed = discord.Embed.from_dict(embed_dict))
                         except Exception as e:
                             traceback.print_exc()
