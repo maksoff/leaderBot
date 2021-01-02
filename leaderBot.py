@@ -1474,7 +1474,7 @@ class leaderBot_class():
             
         if content is None:
             content = f"Full leaderboard: <#{s.leaderboard_channel_id}>\n**Top {limit}**"
-        content += f'\nThis is top for last **{ch_limit}** challenges'
+            content += f' for last **{ch_limit}** challenges'
         m = await msg.channel.send('Consulting Malevitch...')
         buffer = await s.get_last_top_img(limit, ch_limit)
         await m.delete(delay=3)
