@@ -1428,6 +1428,62 @@ class leaderBot_class():
             return "no submissions found"
         return
 
+    async def get_last_top_img(s, limit, ch_limit):
+        # now let's do some calculations for players
+        players = s.json_data.get_last_top(ch_limit)
+        
+        if not players:
+            return
+        data = []
+
+        for player in players:
+            if limit > 0:
+                if player.get('iRank') > limit:
+                    break
+
+            avatar = await s.get_avatar(player['iID'])
+
+            data.append({'iRank':player.get('iRank'),
+                         'sName':player.get('sName'),
+                         'iDiscriminator':player.get('iDiscriminator'),
+                         'iPoints':player.get('iPoints'),
+                         'avatar':avatar
+                         })
+        buffer = rankDisplay.create_top_card(data, color_scheme=2)
+        return buffer
+        
+
+    async def last_top_img(s, *msg, limit=None, ch_limit=None, content=None):
+        if msg:
+            msg = msg[0]
+        if limit is None:
+            limit = 10
+            if len(msg.content.strip().split(' ')) > 1:
+                try:
+                    limit = int(msg.content.split(' ')[1])
+                except:
+                    ...
+                    
+        if ch_limit is None:
+            ch_limit = 5
+            if len(msg.content.strip().split(' ')) > 2:
+                try:
+                    ch_limit = int(msg.content.split(' ')[2])
+                except:
+                    ...
+            
+        if content is None:
+            content = f"Full leaderboard: <#{s.leaderboard_channel_id}>\n**Top {limit}**"
+        content += f'\nThis is top for last **{ch_limit}** challenges'
+        m = await msg.channel.send('Consulting Malevitch...')
+        buffer = await s.get_last_top_img(limit, ch_limit)
+        await m.delete(delay=3)
+        if buffer:
+            await msg.channel.send(content=content, file=discord.File(buffer, 'last_top.png'))
+        else:
+            return "no submissions found"
+        return
+
     async def act_img(s, *msg):
         limit = 7
         if msg:
@@ -2490,8 +2546,8 @@ class leaderBot_class():
         s.user_commands = (
                                 (f'{s.prefix}help', 'prints this message', s.help),
                                 (f'{s.prefix}rank', f'your rank; `{s.prefix}rank @user` to get *@user* rank', s.rank_img),
-                                (f'{s.prefix}top', f'leaderboard; add number to limit positions `{s.prefix}top 3`', s.top_img),
-                                (f'{s.prefix}leaderboard', f'same as `{s.prefix}top`', s.top_img),
+                                (f'{s.prefix}top', f'top for last 5 challenges; add number to limit positions; add second to limit challenges `{s.prefix}top 3 10`', s.last_top_img),
+                                (f'{s.prefix}leaderboard', f'absolute leaderboard; add number to limit positions', s.top_img),
                                 (f'{s.prefix}activity', f'activity rank; add number to limit positions `{s.prefix}activity 3`', s.act_img),
                                 (f'{s.prefix}ksp', 'random ksp loading hint', s.ksp),
                                 (f'{s.prefix}voting', "all emojis at line start added as reactions. *at least I'll try*. `-new`, `-list`", s.voting),

@@ -12,6 +12,20 @@ def beautify(tmp):
             del tmp[1]
     return '.'.join(tmp)
 
+def deepcopy(temp):
+    ret = None
+    if type(temp) is dict:
+        ret = {}
+        for key, val in temp.items():
+            ret[key] = deepcopy(val)
+    elif type(temp) is list:
+        ret = []
+        for val in temp:
+            ret.append(deepcopy(val))
+    else:
+        return temp
+    return ret
+
 class json_class():
     j = {}
     j['aChallenge'] = []
@@ -195,6 +209,41 @@ class json_class():
 
         response = [x for x in response if x.get('iRank') <= limit]
         return response
+
+    def get_last_top(s, limit_ch):
+
+        last_challenges = [s.get('sName') for s  in s.j.get('aChallenge', [])[-limit_ch:]]
+
+        if not last_challenges:
+            return []
+        
+        s.calculate_rating()
+
+        players = []
+        for p in deepcopy(s.j.get('aPlayer', [])):
+            p['iPoints'] = sum(x.get('iPoints', 0) for x in s.j.get('aSubmission', [])
+                               if (x['iUserID'] == p['iID']) and (x['sChallengeName'] in last_challenges))
+            if p['iPoints'] == int(p['iPoints']): p['iPoints'] = int(p['iPoints'])
+            if p['iPoints'] and (not p.get('bDisabled', False)):
+                players.append(p)
+            
+            
+        if not players:
+            return []
+        
+        players.sort(key=lambda x: float(x['iPoints']), reverse=True)
+        
+        curRank = None
+        lastPoints = None
+        i = 0
+        for p in players:
+            i += 1
+            if p['iPoints'] != lastPoints:
+                lastPoints = p['iPoints']
+                curRank = i
+            p['iRank'] = curRank
+            
+        return players
     
     def calculate_rating(s):
         s.oRankByChallenge = {}
