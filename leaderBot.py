@@ -435,7 +435,7 @@ class leaderBot_class():
             return
 
     def get_used_challenges(s, sChallengeName):
-        active_challenges = 4
+        active_challenges = 6
         last_challenges = set()
         last_challenge_types = set()
         used_challenge_types = set()
