@@ -35,6 +35,9 @@ import json
 
 import traceback
 
+scanned_messages = 0
+scanned_reactions = 0
+
 check_role = False
 check_channel = True
 
@@ -1428,6 +1431,62 @@ class leaderBot_class():
             return "no submissions found"
         return
 
+    async def get_last_top_img(s, limit, ch_limit):
+        # now let's do some calculations for players
+        players = s.json_data.get_last_top(ch_limit)
+        
+        if not players:
+            return
+        data = []
+
+        for player in players:
+            if limit > 0:
+                if player.get('iRank') > limit:
+                    break
+
+            avatar = await s.get_avatar(player['iID'])
+
+            data.append({'iRank':player.get('iRank'),
+                         'sName':player.get('sName'),
+                         'iDiscriminator':player.get('iDiscriminator'),
+                         'iPoints':player.get('iPoints'),
+                         'avatar':avatar
+                         })
+        buffer = rankDisplay.create_top_card(data, color_scheme=2)
+        return buffer
+        
+
+    async def last_top_img(s, *msg, limit=None, ch_limit=None, content=None):
+        if msg:
+            msg = msg[0]
+        if limit is None:
+            limit = 10
+            if len(msg.content.strip().split(' ')) > 1:
+                try:
+                    limit = int(msg.content.split(' ')[1])
+                except:
+                    ...
+                    
+        if ch_limit is None:
+            ch_limit = 5
+            if len(msg.content.strip().split(' ')) > 2:
+                try:
+                    ch_limit = int(msg.content.split(' ')[2])
+                except:
+                    ...
+            
+        if content is None:
+            content = f"Full leaderboard: <#{s.leaderboard_channel_id}>\n**Top {limit}**"
+            content += f' for last **{ch_limit}** challenges'
+        m = await msg.channel.send('Consulting Malevitch...')
+        buffer = await s.get_last_top_img(limit, ch_limit)
+        await m.delete(delay=3)
+        if buffer:
+            await msg.channel.send(content=content, file=discord.File(buffer, 'last_top.png'))
+        else:
+            return "no submissions found"
+        return
+
     async def act_img(s, *msg):
         limit = 7
         if msg:
@@ -1604,6 +1663,8 @@ class leaderBot_class():
         return random.choice(s.ksp_hints)[:-1]
 
     async def ping(s, *args):
+        global scanned_messages
+        global scanned_reactions
         time_d = int(time.time() - s.start_time)
         weeks = time_d // (7 * 24 * 3600)
         time_d = (time_d % (7 * 24 * 3600))
@@ -1621,7 +1682,7 @@ class leaderBot_class():
             uptime += f"{days} day{'s' if days > 1 else ''}, "
         uptime += hms
         
-        return f'Pong! **{int(s.client.latency*1000)}** ms\nUptime: {uptime}'
+        return f'Pong! **{int(s.client.latency*1000)}** ms\nUptime: {uptime}\nSince last restart scanned: {beautify(scanned_messages)} messages & {beautify(scanned_reactions)} reactions'
 
     async def unlock(s, *args):
         response = 'Locked -> Unlocked' if s.json_lock.lock else 'Unlocked -> Unlocked'
@@ -1708,7 +1769,7 @@ class leaderBot_class():
             msg = await message.channel.send('\n'.join(new_message))
 
             # it is not visible in audit, so...
-            if True:
+            if False: # disabled this check
                 # check if channel exists
                 channel_id = s.json_data.j.get('iMentionsChannel')
                 if channel_id:
@@ -1862,20 +1923,23 @@ class leaderBot_class():
                 channel_id = s.get_int(ch_m_id[0])
                 return (await s.get_message(channel_id, msg_id))
         except:
-            #traceback.print_exc()
+            traceback.print_exc()
             return
         return
 
     async def give_rocket(s, message):
         try:
-            msg = await s.get_message_from_id(message, message.content.split()[1])
+            try:
+                msg = await s.get_message_from_id(message, message.content.split()[1])
+            except:
+                msg = (await message.channel.history(limit=2).flatten())[-1]
             if message.guild.id in ksp_guilds:
                 await msg.add_reaction(s.client.get_emoji(732098507137220718))
             else:
                 await msg.add_reaction('\U0001F680')
             await message.delete()
         except Exception as e:
-            traceback.print_exc()
+            if DEBUG: traceback.print_exc()
             print('give_rocket', e)
 
     async def give_text(s, message):
@@ -2490,8 +2554,8 @@ class leaderBot_class():
         s.user_commands = (
                                 (f'{s.prefix}help', 'prints this message', s.help),
                                 (f'{s.prefix}rank', f'your rank; `{s.prefix}rank @user` to get *@user* rank', s.rank_img),
-                                (f'{s.prefix}top', f'leaderboard; add number to limit positions `{s.prefix}top 3`', s.top_img),
-                                (f'{s.prefix}leaderboard', f'same as `{s.prefix}top`', s.top_img),
+                                (f'{s.prefix}top', f'top for last 5 challenges; add number to limit positions; add second to limit challenges `{s.prefix}top 3 10`', s.last_top_img),
+                                (f'{s.prefix}leaderboard', f'absolute leaderboard; add number to limit positions', s.top_img),
                                 (f'{s.prefix}activity', f'activity rank; add number to limit positions `{s.prefix}activity 3`', s.act_img),
                                 (f'{s.prefix}ksp', 'random ksp loading hint', s.ksp),
                                 (f'{s.prefix}voting', "all emojis at line start added as reactions. *at least I'll try*. `-new`, `-list`", s.voting),
@@ -2569,6 +2633,8 @@ async def on_message(message):
             return
     if message.author == client.user:
         return
+    global scanned_messages
+    scanned_messages += 1
     if message.author.bot:
         await leaderBot[message.guild.id].ext_bot(message)
         return
@@ -2582,6 +2648,8 @@ async def on_message(message):
 @client.event
 async def on_raw_reaction_add(payload):
     try:
+        global scanned_reactions
+        scanned_reactions += 1
         await leaderBot[payload.guild_id].raw_react(payload)
     except Exception as e:
         print('on_raw_reaction_add:', e)
