@@ -422,7 +422,7 @@ class leaderBot_class():
                                 value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.hidden_admin_commands]),
                                 inline=False)
                 if message.guild.id in ksp_guilds:
-                    embed.add_field(name = 'Special emoji', value='For `voting`, `text` you can use `:coolrocket:`')
+                    embed.add_field(name = 'Special emoji', value='For `voting`, `text`, `say` you can use `:coolrocket:`')
             try:
                 admin_id = int(ADMIN)
                 admin = await s.client.fetch_user(admin_id)
@@ -2120,7 +2120,6 @@ class leaderBot_class():
                 try:
                     emoji = s.client.get_emoji(int(code))
                     if emoji and (message_text.find(se) != -1):
-                        create_new_vote = create_new_vote or emoji.animated
                         message_text = message_text.replace(se, f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
                         continue
                 except:
