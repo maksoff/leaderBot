@@ -35,6 +35,9 @@ import json
 
 import traceback
 
+scanned_messages = 0
+scanned_reactions = 0
+
 check_role = False
 check_channel = True
 
@@ -1660,6 +1663,8 @@ class leaderBot_class():
         return random.choice(s.ksp_hints)[:-1]
 
     async def ping(s, *args):
+        global scanned_messages
+        global scanned_reactions
         time_d = int(time.time() - s.start_time)
         weeks = time_d // (7 * 24 * 3600)
         time_d = (time_d % (7 * 24 * 3600))
@@ -1677,7 +1682,7 @@ class leaderBot_class():
             uptime += f"{days} day{'s' if days > 1 else ''}, "
         uptime += hms
         
-        return f'Pong! **{int(s.client.latency*1000)}** ms\nUptime: {uptime}'
+        return f'Pong! **{int(s.client.latency*1000)}** ms\nUptime: {uptime}\nSince last restart scanned: {beautify(scanned_messages)} messages & {beautify(scanned_reactions)} reactions'
 
     async def unlock(s, *args):
         response = 'Locked -> Unlocked' if s.json_lock.lock else 'Unlocked -> Unlocked'
@@ -1764,7 +1769,7 @@ class leaderBot_class():
             msg = await message.channel.send('\n'.join(new_message))
 
             # it is not visible in audit, so...
-            if True:
+            if False: # disabled this check
                 # check if channel exists
                 channel_id = s.json_data.j.get('iMentionsChannel')
                 if channel_id:
@@ -1918,20 +1923,23 @@ class leaderBot_class():
                 channel_id = s.get_int(ch_m_id[0])
                 return (await s.get_message(channel_id, msg_id))
         except:
-            #traceback.print_exc()
+            traceback.print_exc()
             return
         return
 
     async def give_rocket(s, message):
         try:
-            msg = await s.get_message_from_id(message, message.content.split()[1])
+            try:
+                msg = await s.get_message_from_id(message, message.content.split()[1])
+            except:
+                msg = (await message.channel.history(limit=2).flatten())[-1]
             if message.guild.id in ksp_guilds:
                 await msg.add_reaction(s.client.get_emoji(732098507137220718))
             else:
                 await msg.add_reaction('\U0001F680')
             await message.delete()
         except Exception as e:
-            traceback.print_exc()
+            if DEBUG: traceback.print_exc()
             print('give_rocket', e)
 
     async def give_text(s, message):
@@ -2625,6 +2633,8 @@ async def on_message(message):
             return
     if message.author == client.user:
         return
+    global scanned_messages
+    scanned_messages += 1
     if message.author.bot:
         await leaderBot[message.guild.id].ext_bot(message)
         return
@@ -2638,6 +2648,8 @@ async def on_message(message):
 @client.event
 async def on_raw_reaction_add(payload):
     try:
+        global scanned_reactions
+        scanned_reactions += 1
         await leaderBot[payload.guild_id].raw_react(payload)
     except Exception as e:
         print('on_raw_reaction_add:', e)
