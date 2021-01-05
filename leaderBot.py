@@ -415,8 +415,11 @@ class leaderBot_class():
                             value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.user_commands]),
                             inline=False)
             if 'help-hidden' in message.content:
-                embed.add_field(name = 'Hidden commands, use with care!',
+                embed.add_field(name = 'Hidden commands',
                                 value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.hidden_commands]),
+                                inline=False)
+                embed.add_field(name = 'Hidden commands, use with care! (only in `#leaderboard`)',
+                                value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.hidden_admin_commands]),
                                 inline=False)
                 if message.guild.id in ksp_guilds:
                     embed.add_field(name = 'Special emoji', value='For `voting`, `text` you can use `:coolrocket:`')
@@ -960,6 +963,73 @@ class leaderBot_class():
             s.json_lock.lock = None
             return 'placeholder created'
 
+    async def lb_settings(s, message):
+        if s.json_lock.lock:
+            await s.send(message.channel, '`json locked. try again later`')
+            return
+        await message.channel.send('You can choose between standart appearance (embed + ranking + activity)\n'+
+                                   'or shortened one (link to site with full ranking + top 10 / top last challenges)\n'+
+                                   'enter `standard` or `top`. You can `cancel` at any time')
+    
+        message_r = await s.wait_response(message)
+        if not message_r:
+            s.json_lock.lock = None
+            return
+        if message_r.content == 'top':
+            s.json_data.j['bShortLB'] = True
+            await message.channel.send('Please enter the `http://link` for website with full leaderboard, or `*` for no link')
+            message_r = await s.wait_response(message)
+            if not message_r:
+                s.json_lock.lock = None
+                return
+            if message_r.content == '*':
+                s.json_data.j['sLBurl'] = ''
+            else:
+                s.json_data.j['sLBurl'] = message_r.content
+                
+            await message.channel.send('How many *places* to show in rating?')
+            while True:
+                message_r = await s.wait_response(message)
+                if not message_r:
+                    s.json_lock.lock = None
+                    return
+                try:
+                    num = s.get_int(message_r.content)
+                    if not num:
+                        raise
+                except:
+                    await message.channel.send('Please enter number, like `10`')
+                    continue
+                s.json_data.j['iLBplaces'] = num
+                break
+                
+            await message.channel.send('How many *challenges* to count in **last top**?')
+            while True:
+                message_r = await s.wait_response(message)
+                if not message_r:
+                    s.json_lock.lock = None
+                    return
+                try:
+                    num = s.get_int(message_r.content)
+                    if not num:
+                        raise
+                except:
+                    await message.channel.send('Please enter number, like `10`')
+                    continue
+                s.json_data.j['iLBchallenges'] = num
+                break 
+
+        else:
+            # standart leaderboard thingy
+            try:
+                del s.json_data.j['bShortLB']
+            except:
+                ...
+        s.save_json()
+        s.json_lock.lock = None
+        await message.channel.send('Done')
+        return
+
     async def set_mention_ch(s, message):
         if s.json_lock.lock:
             await s.send(message.channel, '`json locked. try again later`')
@@ -1115,25 +1185,47 @@ class leaderBot_class():
             s.json_data.calculate_rating()
             await s.post()
             await s.post_img()
-
-            embed = s.generate_lb_embed()
             
             if not (s.leaderboard_channel_id and s.leaderboard_message_id):
                 return f'`{s.prefix}set leaderboard` required'
             msg = await s.get_message(s.leaderboard_channel_id, s.leaderboard_message_id)
             if not msg:
-                return f'`{s.prefix}set leaderboard` required'
-            try:
-                await msg.edit(embed=embed)
-                await s.update_lb_img()
-                return 'updated'
-            except Exception as e:
-                traceback.print_exc()
-                if DEBUG:
-                    raise e
-                else:
-                    print('update_lb:', e)
-                return 'something wrong'
+                channel = await s.client.fetch_channel(s.leaderboard_channel_id)
+                msg = await channel.send('Here will be leaderboard published')
+            if s.json_data.j.get('bShortLB', False):
+                try:
+                    if s.json_data.j.get('sLBurl', ''):
+                        embed = discord.Embed()
+                        embed.add_field(name='Full leaderboard can be found', value=f'[:arrow_right::regional_indicator_h::regional_indicator_e::regional_indicator_r::regional_indicator_e::arrow_left:]({s.json_data.j.get("sLBurl")})')
+                        try:
+                            await msg.edit(content='', embed=embed)
+                        except:
+                            await msg.channel.send(embed=embed)
+                    else:
+                        try:
+                            await msg.delete()
+                        except:
+                            ...
+                    await s.update_lb_img(short_rank=True,
+                                          places=s.json_data.j.get('iLBplaces'),
+                                          challenges=s.json_data.j.get('iLBchallenges'))
+                    return 'updated'
+                except:
+                    traceback.print_exc()
+                    return 'something wrong'  
+            else:
+                try:
+                    embed = s.generate_lb_embed()
+                    await msg.edit(embed=embed)
+                    await s.update_lb_img()
+                    return 'updated'
+                except Exception as e:
+                    traceback.print_exc()
+                    if DEBUG:
+                        raise e
+                    else:
+                        print('update_lb:', e)
+                    return 'something wrong'
             
         except Exception as e:
             traceback.print_exc()
@@ -1296,11 +1388,11 @@ class leaderBot_class():
                 print('activity_img 2:', e)
             return 'something wrong'
 
-    async def get_activity_img(s, *args):
+    async def get_activity_img(s, *args, **kwargs):
         s.json_data.calculate_rating()
         # get not disabled players with submissions
         players = sorted(s.json_data.j.get('aPlayer', []), key=lambda x: float(x.get('iPoints')), reverse=True)
-        players = list(filter(lambda x: (float(x.get('iPoints', 0)) - float(x.get('iStaticPoints', 0)) > 0) and not x.get('bDisabled', False), players))
+        players = list(filter(lambda x: not x.get('bDisabled', False), players))
         if not players:
             return
         lChallenges = list(s.json_data.list_of_challenges())
@@ -1321,11 +1413,12 @@ class leaderBot_class():
             #get avatar     
             pp['avatar'] = await s.get_avatar(p.get('iID', None))
             players_prepared.append(pp)
-        buffer = rankDisplay.create_activity_card(players_prepared, dMaxPoints)
+        website = kwargs.get('website', False)
+        buffer = rankDisplay.create_activity_card(players_prepared, dMaxPoints, website)
         return buffer
     
     
-    async def update_lb_img(s, *args):
+    async def update_lb_img(s, *args, **kwargs):
         try:
             s.json_data.calculate_rating()
             try:
@@ -1334,33 +1427,64 @@ class leaderBot_class():
                     return f'please configure `{s.prefix}set leaderboard`'
                 channel = client.get_channel(channel_id)
 
-                # leaderboard image
-                message_id = s.json_data.j.get('iLeaderboardImage')
-                if message_id:
-                    try:
-                        message = await channel.fetch_message(message_id)
-                        await message.delete()
-                    except:
-                        ...
-                buffer = await s.get_top_img(0)
-                if not buffer:
-                    return
-                message = await channel.send(content = 'updated leaderboard', file=discord.File(buffer, 'lb.png'))
-                s.json_data.j['iLeaderboardImage'] = message.id
+                
+                if kwargs.get('short_rank', False):# leaderboard image
+                    places = kwargs.get('places', 10)
+                    challenges = kwargs.get('challenges', 10)
+                    message_id = s.json_data.j.get('iLeaderboardImage')
+                    if message_id:
+                        try:
+                            message = await channel.fetch_message(message_id)
+                            await message.delete()
+                        except:
+                            ...
+                    buffer = await s.get_top_img(places)
+                    if not buffer:
+                        return
+                    message = await channel.send(content = f'Top **{places}** absolute leaders', file=discord.File(buffer, 'lb_top.png'))
+                    s.json_data.j['iLeaderboardImage'] = message.id
 
-                # activity image
-                message_id = s.json_data.j.get('iActivityImage')
-                if message_id:
-                    try:
-                        message = await channel.fetch_message(message_id)
-                        await message.delete()
-                    except:
-                        ...
-                buffer = await s.get_activity_img()
-                if not buffer:
-                    return
-                message = await channel.send(content = 'Activity graph. One **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'actual.png'))
-                s.json_data.j['iActivityImage'] = message.id
+                    # activity image
+                    message_id = s.json_data.j.get('iActivityImage')
+                    if message_id:
+                        try:
+                            message = await channel.fetch_message(message_id)
+                            await message.delete()
+                        except:
+                            ...
+                    buffer = await s.get_last_top_img(places, challenges)
+                    if not buffer:
+                        return
+                    message = await channel.send(content = f'Top **{places}** for last **{challenges}** challenges', file=discord.File(buffer, 'actual.png'))
+                    s.json_data.j['iActivityImage'] = message.id
+                else:
+                    # leaderboard image
+                    message_id = s.json_data.j.get('iLeaderboardImage')
+                    if message_id:
+                        try:
+                            message = await channel.fetch_message(message_id)
+                            await message.delete()
+                        except:
+                            ...
+                    buffer = await s.get_top_img(0)
+                    if not buffer:
+                        return
+                    message = await channel.send(content = 'updated leaderboard', file=discord.File(buffer, 'lb.png'))
+                    s.json_data.j['iLeaderboardImage'] = message.id
+
+                    # activity image
+                    message_id = s.json_data.j.get('iActivityImage')
+                    if message_id:
+                        try:
+                            message = await channel.fetch_message(message_id)
+                            await message.delete()
+                        except:
+                            ...
+                    buffer = await s.get_activity_img()
+                    if not buffer:
+                        return
+                    message = await channel.send(content = 'Activity graph. One **column** per challenge, **brighter** => more points for this challenge', file=discord.File(buffer, 'actual.png'))
+                    s.json_data.j['iActivityImage'] = message.id
                 
                 s.save_json()
                 return 'updated'
@@ -1380,7 +1504,7 @@ class leaderBot_class():
                 print('update lb img 2:', e)
             return 'something wrong'
 
-    async def get_top_img(s, limit):
+    async def get_top_img(s, limit, **kwargs):
         s.json_data.calculate_rating()
         players = sorted(s.json_data.j.get('aPlayer', []), key=lambda x: float(x.get('iPoints')), reverse=True)
         if not players:
@@ -1402,7 +1526,8 @@ class leaderBot_class():
                          'iPoints':player.get('iPoints'),
                          'avatar':avatar
                          })
-        buffer = rankDisplay.create_top_card(data)
+        website = kwargs.get('website', False)
+        buffer = rankDisplay.create_top_card(data, 0, website=website)
         return buffer
         
 
@@ -1576,7 +1701,7 @@ class leaderBot_class():
             except Exception as e:
                 return f'Specify URL `{s.prefix}post_img URL`'
         try:
-            r = requests.post(url, files={'top.png':(await s.get_top_img(-1)), 'activity.png':(await s.get_activity_img())})   
+            r = requests.post(url, files={'top.png':(await s.get_top_img(-1, website=True)), 'activity.png':(await s.get_activity_img(website=True))})   
             response = '\nstatus: `{}` \ntext: `{}`'.format(
                         r.status_code, r.text)
         except Exception as e:
@@ -2474,6 +2599,10 @@ class leaderBot_class():
                 if message.content.lower().startswith(n):
                     response = await f(message)
                     break
+            for n, _, f in s.hidden_admin_commands:
+                if message.content.lower().startswith(n):
+                    response = await f(message)
+                    break
             if response:
                 await s.send(message.channel, response)
                 return
@@ -2622,11 +2751,14 @@ class leaderBot_class():
                                 (f'{s.prefix}give', 'give cool rocket reaction. `channel_id-message_id`  or `message_id` or `#channel-message_id`', s.give_rocket),
                                 (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message. Add `channel_id-message_id` to send to another #channel', s.give_text),
                                 (f'{s.prefix}say', f'posts text from the name of <@{s.client.user.id}>. Add `{s.prefix}say #channel TEXT` to post in another channel', s.say),
+                            )
+        s.hidden_admin_commands = (
                                 (f'{s.prefix}unlock', "removes `json lock`. don't use! debug feature", s.unlock),
                                 (f'{s.prefix}import json', 'imports data from json', s.json_imp),
                                 (f'{s.prefix}delete json', 'clears all you data from server', s.json_del),
-                                
-                            )
+                                (f'{s.prefix}lb settings', 'changes appearance settings for leaderboard', s.lb_settings),
+                                )
+            
     
     def __init__(s, client, guild_id):
         s.start_time = time.time()
