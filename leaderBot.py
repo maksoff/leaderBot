@@ -1737,15 +1737,21 @@ class leaderBot_class():
                 
 
         # replace integers with animated emojis
-        emojis = []           
+        emojis = []
+        if create_new_list:
+            first_item_in_list = len(message_text.splitlines()[0].split()) > 1
         try:
             for a in message_text.split(maxsplit=1)[1].splitlines():
                 if create_new_list:
                     if a:
-                        emo = next(emoji_list, '')
-                        new_message.append(emo + (' ' if emo else '') + a)
-                        emojis.append(emo)
-                        continue
+                        if first_item_in_list:
+                            new_message.append(a)
+                        else:
+                            emo = next(emoji_list, '')
+                            new_message.append(emo + (' ' if emo else '') + a)
+                            emojis.append(emo)
+                    first_item_in_list = False
+                    continue
                 if a:
                     code = a.split()[0].split('>', 1)[0].split(':')[-1]
                     if code.isdecimal():
@@ -1968,6 +1974,37 @@ class leaderBot_class():
                 await message.delete()
             except Exception as e:
                 ...
+
+    
+    async def say(s, message):
+        try:
+            message_text = message.content.split(maxsplit=1)[-1]
+        except:
+            return
+
+        try:
+            channel = await s.client.fetch_channel(s.get_int(message.content.split()[1]))
+            if not channel:
+                raise
+            message_text = message.content.split(maxsplit=2)[-1]
+        except:
+            channel = message.channel
+            
+        if message.guild.id in ksp_guilds:
+            for se, code in s.special_emojis.items():
+                try:
+                    emoji = s.client.get_emoji(int(code))
+                    if emoji and (message_text.find(se) != -1):
+                        create_new_vote = create_new_vote or emoji.animated
+                        message_text = message_text.replace(se, f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
+                        continue
+                except:
+                    ...
+        try:
+            await channel.send(message_text)
+            await message.delete()
+        except:
+            if DEBUG: traceback.print_exc()
 
     async def init_message(s):
         # check if mentions channel exists
@@ -2584,9 +2621,11 @@ class leaderBot_class():
         s.hidden_commands = (
                                 (f'{s.prefix}give', 'give cool rocket reaction. `channel_id-message_id`  or `message_id` or `#channel-message_id`', s.give_rocket),
                                 (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message. Add `channel_id-message_id` to send to another #channel', s.give_text),
+                                (f'{s.prefix}say', f'posts text from the name of <@{s.client.user.id}>. Add `{s.prefix}say #channel TEXT` to post in another channel', s.say),
                                 (f'{s.prefix}unlock', "removes `json lock`. don't use! debug feature", s.unlock),
                                 (f'{s.prefix}import json', 'imports data from json', s.json_imp),
                                 (f'{s.prefix}delete json', 'clears all you data from server', s.json_del),
+                                
                             )
     
     def __init__(s, client, guild_id):
