@@ -35,6 +35,9 @@ import json
 
 import traceback
 
+scanned_messages = 0
+scanned_reactions = 0
+
 check_role = False
 check_channel = True
 
@@ -68,6 +71,8 @@ def deepcopy(temp):
         ret = []
         for val in temp:
             ret.append(deepcopy(val))
+    elif type(temp) is bool:
+        return temp
     else:
         return str(temp)
     return ret
@@ -433,7 +438,7 @@ class leaderBot_class():
             return
 
     def get_used_challenges(s, sChallengeName):
-        active_challenges = 4
+        active_challenges = 6
         last_challenges = set()
         last_challenge_types = set()
         used_challenge_types = set()
@@ -1035,6 +1040,7 @@ class leaderBot_class():
                 await s.get_avatar(user.id, update=True, user=user) # update avatar too
                 player['sName'] = user.display_name
                 player['iDiscriminator'] = user.discriminator
+                player['sAvatarURL'] = str(user.avatar_url)
             except Exception as e:
                 traceback.print_exc()
                 if DEBUG:
@@ -1108,6 +1114,7 @@ class leaderBot_class():
             await s.update_usernames() # update usernames & avatars
             s.json_data.calculate_rating()
             await s.post()
+            await s.post_img()
 
             embed = s.generate_lb_embed()
             
@@ -1383,7 +1390,7 @@ class leaderBot_class():
         for player in players:
             if player.get('bDisabled') or (limit == 0 and (float(player.get('iStaticPoints', 0)) - float(player.get('iPoints', 0))) == 0):
                 continue
-            if limit:
+            if limit > 0:
                 if player.get('iRank') > limit:
                     break
 
@@ -1420,6 +1427,62 @@ class leaderBot_class():
         await m.delete(delay=3)
         if buffer:
             await msg.channel.send(content=content, file=discord.File(buffer, 'top.png'))
+        else:
+            return "no submissions found"
+        return
+
+    async def get_last_top_img(s, limit, ch_limit):
+        # now let's do some calculations for players
+        players = s.json_data.get_last_top(ch_limit)
+        
+        if not players:
+            return
+        data = []
+
+        for player in players:
+            if limit > 0:
+                if player.get('iRank') > limit:
+                    break
+
+            avatar = await s.get_avatar(player['iID'])
+
+            data.append({'iRank':player.get('iRank'),
+                         'sName':player.get('sName'),
+                         'iDiscriminator':player.get('iDiscriminator'),
+                         'iPoints':player.get('iPoints'),
+                         'avatar':avatar
+                         })
+        buffer = rankDisplay.create_top_card(data, color_scheme=2)
+        return buffer
+        
+
+    async def last_top_img(s, *msg, limit=None, ch_limit=None, content=None):
+        if msg:
+            msg = msg[0]
+        if limit is None:
+            limit = 10
+            if len(msg.content.strip().split(' ')) > 1:
+                try:
+                    limit = int(msg.content.split(' ')[1])
+                except:
+                    ...
+                    
+        if ch_limit is None:
+            ch_limit = 5
+            if len(msg.content.strip().split(' ')) > 2:
+                try:
+                    ch_limit = int(msg.content.split(' ')[2])
+                except:
+                    ...
+            
+        if content is None:
+            content = f"Full leaderboard: <#{s.leaderboard_channel_id}>\n**Top {limit}**"
+            content += f' for last **{ch_limit}** challenges'
+        m = await msg.channel.send('Consulting Malevitch...')
+        buffer = await s.get_last_top_img(limit, ch_limit)
+        await m.delete(delay=3)
+        if buffer:
+            await msg.channel.send(content=content, file=discord.File(buffer, 'last_top.png'))
         else:
             return "no submissions found"
         return
@@ -1468,27 +1531,57 @@ class leaderBot_class():
                 return
         else:
             try:
-                url = args[0].content.strip().split(' ')[1]
+                if len(args[0].content.strip().split(' ')) == 1:
+                    url = s.json_data.j.get('sPOSTURL')
+                    if not url:
+                        raise
+                else:
+                    url = args[0].content.strip().split(' ')[1]
             except Exception as e:
                 return f'Specify URL `{s.prefix}post URL`'
-
-            # send empty data
-            if len(args[0].content.split(' ')) > 2:
-                data = ''
-
-        if data == None:    
-            payload = deepcopy(s.json_data.j)            
-            payload['iGuildID'] = s.guild_id
-            data = json.dumps(payload)
+ 
+        payload = deepcopy(s.json_data.j)            
+        payload['iGuildID'] = s.guild_id
+        data = json.dumps(payload)
             
         headers = {'content-type': 'application/json'}
         try:
-            r = requests.post(url, data=data, headers=headers)       
+
+            r = requests.post(url, data=data, headers=headers) 
             response = '\nstatus: `{}` \ntext: `{}`'.format(
                         r.status_code, r.text)
         except Exception as e:
             traceback.print_exc()
-            response = 'Exception: {}'.format(e)
+            return f'Exception: ```{e}```'
+        return 'Done: ' + str(response)
+
+    async def post_img(s, *args):
+        if len(args) == 0:
+            try:
+                url = s.json_data.j.get('sPOSTURL_IMG')
+                if not url:
+                    return
+            except Exception as e:
+                traceback.print_exc()
+                print('post', str(e))
+                return
+        else:
+            try:
+                if len(args[0].content.strip().split(' ')) == 1:
+                    url = s.json_data.j.get('sPOSTURL_IMG')
+                    if not url:
+                        raise
+                else:
+                    url = args[0].content.strip().split(' ')[1]
+            except Exception as e:
+                return f'Specify URL `{s.prefix}post_img URL`'
+        try:
+            r = requests.post(url, files={'top.png':(await s.get_top_img(-1)), 'activity.png':(await s.get_activity_img())})   
+            response = '\nstatus: `{}` \ntext: `{}`'.format(
+                        r.status_code, r.text)
+        except Exception as e:
+            traceback.print_exc()
+            return f'Exception: ```{e}```'
         return 'Done: ' + str(response)
     
 
@@ -1510,6 +1603,26 @@ class leaderBot_class():
             s.save_json()
             s.json_lock.lock = None
             return 'Auto-POST URL updated'
+
+        
+    async def seturl_img(s, msg):
+        if s.json_lock.lock:
+            await msg.channel.send('`json locked. try again later`')
+            return
+        data = msg.content.strip().split(' ')
+        if len(data) == 1:
+            try:
+                del s.json_data.j['sPOSTURL_IMG']
+            except:
+                s.json_lock.lock = None
+                return 'No Auto-POST-IMG URL found'
+            s.json_lock.lock = None
+            return 'Auto-POST-IMG URL deleted'
+        else:
+            s.json_data.j['sPOSTURL_IMG'] = data[1]
+            s.save_json()
+            s.json_lock.lock = None
+            return 'Auto-POST-IMG URL updated'
 
     async def disable(s, msg):
         if s.json_lock.lock:
@@ -1550,6 +1663,8 @@ class leaderBot_class():
         return random.choice(s.ksp_hints)[:-1]
 
     async def ping(s, *args):
+        global scanned_messages
+        global scanned_reactions
         time_d = int(time.time() - s.start_time)
         weeks = time_d // (7 * 24 * 3600)
         time_d = (time_d % (7 * 24 * 3600))
@@ -1567,7 +1682,7 @@ class leaderBot_class():
             uptime += f"{days} day{'s' if days > 1 else ''}, "
         uptime += hms
         
-        return f'Pong! **{int(s.client.latency*1000)}** ms\nUptime: {uptime}'
+        return f'Pong! **{int(s.client.latency*1000)}** ms\nUptime: {uptime}\nSince last restart scanned: {beautify(scanned_messages)} messages & {beautify(scanned_reactions)} reactions'
 
     async def unlock(s, *args):
         response = 'Locked -> Unlocked' if s.json_lock.lock else 'Unlocked -> Unlocked'
@@ -1622,15 +1737,21 @@ class leaderBot_class():
                 
 
         # replace integers with animated emojis
-        emojis = []           
+        emojis = []
+        if create_new_list:
+            first_item_in_list = len(message_text.splitlines()[0].split()) > 1
         try:
             for a in message_text.split(maxsplit=1)[1].splitlines():
                 if create_new_list:
                     if a:
-                        emo = next(emoji_list, '')
-                        new_message.append(emo + (' ' if emo else '') + a)
-                        emojis.append(emo)
-                        continue
+                        if first_item_in_list:
+                            new_message.append(a)
+                        else:
+                            emo = next(emoji_list, '')
+                            new_message.append(emo + (' ' if emo else '') + a)
+                            emojis.append(emo)
+                    first_item_in_list = False
+                    continue
                 if a:
                     code = a.split()[0].split('>', 1)[0].split(':')[-1]
                     if code.isdecimal():
@@ -1654,7 +1775,7 @@ class leaderBot_class():
             msg = await message.channel.send('\n'.join(new_message))
 
             # it is not visible in audit, so...
-            if True:
+            if False: # disabled this check
                 # check if channel exists
                 channel_id = s.json_data.j.get('iMentionsChannel')
                 if channel_id:
@@ -1808,20 +1929,23 @@ class leaderBot_class():
                 channel_id = s.get_int(ch_m_id[0])
                 return (await s.get_message(channel_id, msg_id))
         except:
-            #traceback.print_exc()
+            traceback.print_exc()
             return
         return
 
     async def give_rocket(s, message):
         try:
-            msg = await s.get_message_from_id(message, message.content.split()[1])
+            try:
+                msg = await s.get_message_from_id(message, message.content.split()[1])
+            except:
+                msg = (await message.channel.history(limit=2).flatten())[-1]
             if message.guild.id in ksp_guilds:
                 await msg.add_reaction(s.client.get_emoji(732098507137220718))
             else:
                 await msg.add_reaction('\U0001F680')
             await message.delete()
         except Exception as e:
-            traceback.print_exc()
+            if DEBUG: traceback.print_exc()
             print('give_rocket', e)
 
     async def give_text(s, message):
@@ -1850,6 +1974,37 @@ class leaderBot_class():
                 await message.delete()
             except Exception as e:
                 ...
+
+    
+    async def say(s, message):
+        try:
+            message_text = message.content.split(maxsplit=1)[-1]
+        except:
+            return
+
+        try:
+            channel = await s.client.fetch_channel(s.get_int(message.content.split()[1]))
+            if not channel:
+                raise
+            message_text = message.content.split(maxsplit=2)[-1]
+        except:
+            channel = message.channel
+            
+        if message.guild.id in ksp_guilds:
+            for se, code in s.special_emojis.items():
+                try:
+                    emoji = s.client.get_emoji(int(code))
+                    if emoji and (message_text.find(se) != -1):
+                        create_new_vote = create_new_vote or emoji.animated
+                        message_text = message_text.replace(se, f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
+                        continue
+                except:
+                    ...
+        try:
+            await channel.send(message_text)
+            await message.delete()
+        except:
+            if DEBUG: traceback.print_exc()
 
     async def init_message(s):
         # check if mentions channel exists
@@ -2037,14 +2192,18 @@ class leaderBot_class():
                         user_id = rSubmission.get('iUserID')
 
                         leaderboard_ch = f"<#{s.leaderboard_channel_id}>" if s.leaderboard_channel_id else 'leaderboard'
-                        winners_ch = f"<#{win_ch_id}>" if win_ch_id else 'challenge winners'
+                        winners_ch = f"<#{win_ch_id}>" if win_ch_id else 'Challenge winners'
                         newPlayerWelcome = '\n:tada: **Welcome to the challenges by the way! :tada:**' if newPlayer else ''
                         iPoints = rSubmission.get('iPoints')
                         if iPoints and iPoints > 0:
+                            if len(s.json_data.find(s.json_data.j.get('aChallenge'), sName=rSubmission.get('sChallengeName')).get('aPoints', [])) == 1:
+                                place = ''
+                            else:
+                                place = f"and the **{rSubmission.get('iRank')}**{s.json_data.suffix(rSubmission.get('iRank'))} place "
                             buffer = await s.rank_img(msg, user_id=user_id)
                             message_r = await message.channel.send(f"<@{user_id}>, **yay!** You got " +
                                                                    f"**{beautify(iPoints)}** points " +
-                                                                   f"and the **{rSubmission.get('iRank')}**{s.json_data.suffix(rSubmission.get('iRank'))} place "+
+                                                                   place +
                                                                    f"in modus **{modus}**." +
                                                                    f"\n{winners_ch} and {leaderboard_ch} are updated" +
                                                                    newPlayerWelcome +
@@ -2055,10 +2214,12 @@ class leaderBot_class():
                                                                    newPlayerWelcome)
                         embed = discord.Embed()
                         embed.add_field(name='Accept message sent', value=f'[jump]({message_r.jump_url})')
+                        embed.add_field(name='Accepted by', value=f'<@{payload.user_id}>')
                         await msg.channel.send(embed=embed)
                         try:
                             embed_dict['title'] = ':white_check_mark: submission accepted'
                             embed_dict['fields'].append({'name':'accept', 'value':f'[jump]({message_r.jump_url})'})
+                            embed_dict['fields'].append({'name':'by', 'value':f'<@{payload.user_id}>'})
                             await msg.edit(embed = discord.Embed.from_dict(embed_dict))
                         except Exception as e:
                             traceback.print_exc()
@@ -2077,6 +2238,7 @@ class leaderBot_class():
                             try:
                                 embed_dict['title'] = ':no_entry: submission declined'
                                 embed_dict['fields'].append({'name':'decline', 'value':'without message'})
+                                embed_dict['fields'].append({'name':'by', 'value':f'<@{payload.user_id}>'})
                                 await msg.edit(embed = discord.Embed.from_dict(embed_dict))
                             except Exception as e:
                                 traceback.print_exc()
@@ -2086,9 +2248,11 @@ class leaderBot_class():
                         message_r = await message.channel.send(f'<@{message.author.id}>, *sorry, your submission is declined*\n{message_r.content}')
                         embed = discord.Embed()
                         embed.add_field(name='Decline message sent', value=f'[jump]({message_r.jump_url})')
+                        embed.add_field(name='Declined by', value=f'<@{payload.user_id}>')
                         try:
                             embed_dict['title'] = ':no_entry: submission declined'
                             embed_dict['fields'].append({'name':'decline', 'value':f'[jump]({message_r.jump_url})'})
+                            embed_dict['fields'].append({'name':'by', 'value':f'<@{payload.user_id}>'})
                             await msg.edit(embed = discord.Embed.from_dict(embed_dict))
                         except Exception as e:
                             traceback.print_exc()
@@ -2427,8 +2591,8 @@ class leaderBot_class():
         s.user_commands = (
                                 (f'{s.prefix}help', 'prints this message', s.help),
                                 (f'{s.prefix}rank', f'your rank; `{s.prefix}rank @user` to get *@user* rank', s.rank_img),
-                                (f'{s.prefix}top', f'leaderboard; add number to limit positions `{s.prefix}top 3`', s.top_img),
-                                (f'{s.prefix}leaderboard', f'same as `{s.prefix}top`', s.top_img),
+                                (f'{s.prefix}top', f'top for last 5 challenges; add number to limit positions; add second to limit challenges `{s.prefix}top 3 10`', s.last_top_img),
+                                (f'{s.prefix}leaderboard', f'absolute leaderboard; add number to limit positions', s.top_img),
                                 (f'{s.prefix}activity', f'activity rank; add number to limit positions `{s.prefix}activity 3`', s.act_img),
                                 (f'{s.prefix}ksp', 'random ksp loading hint', s.ksp),
                                 (f'{s.prefix}voting', "all emojis at line start added as reactions. *at least I'll try*. `-new`, `-list`", s.voting),
@@ -2445,8 +2609,10 @@ class leaderBot_class():
                                 (f'{s.prefix}set mentions', f'set channel where <@{s.client.user.id}> mentions will be posted', s.set_mention_ch),
                                 (f'{s.prefix}set role', 'set @role for active winners', s.set_role),
                                 (f'{s.prefix}export json', 'exports data in json', s.json_exp),
-                                (f'{s.prefix}post', f'send json over `post` request. e.g.`{s.prefix}post http://URL`', s.post),
-                                (f'{s.prefix}seturl', f'`{s.prefix}seturl URL` - where will be JSON posted after each ranking update', s.seturl),
+                                (f'{s.prefix}post_img', f'send leaderboard images over `post` request. e.g.`{s.prefix}post_img http://URL`', s.post_img),
+                                (f'{s.prefix}seturl_img', f'`{s.prefix}seturl_img URL` - where will be IMG `post`ed after each ranking update', s.seturl_img),
+                                (f'{s.prefix}post', f'send leaderboard json over `post` request. e.g.`{s.prefix}post http://URL`', s.post),
+                                (f'{s.prefix}seturl', f'`{s.prefix}seturl URL` - where will be JSON `post`ed after each ranking update', s.seturl),
                                 (f'{s.prefix}disable user', 'to hide user from leaderboard', s.disable),
                                 (f'{s.prefix}enable user', 'to reenable user to leaderboard', s.enable),
                                 (f'{s.prefix}change prefix', 'to change the prefix', s.change_prefix),
@@ -2455,9 +2621,11 @@ class leaderBot_class():
         s.hidden_commands = (
                                 (f'{s.prefix}give', 'give cool rocket reaction. `channel_id-message_id`  or `message_id` or `#channel-message_id`', s.give_rocket),
                                 (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message. Add `channel_id-message_id` to send to another #channel', s.give_text),
+                                (f'{s.prefix}say', f'posts text from the name of <@{s.client.user.id}>. Add `{s.prefix}say #channel TEXT` to post in another channel', s.say),
                                 (f'{s.prefix}unlock', "removes `json lock`. don't use! debug feature", s.unlock),
                                 (f'{s.prefix}import json', 'imports data from json', s.json_imp),
                                 (f'{s.prefix}delete json', 'clears all you data from server', s.json_del),
+                                
                             )
     
     def __init__(s, client, guild_id):
@@ -2504,6 +2672,8 @@ async def on_message(message):
             return
     if message.author == client.user:
         return
+    global scanned_messages
+    scanned_messages += 1
     if message.author.bot:
         await leaderBot[message.guild.id].ext_bot(message)
         return
@@ -2517,6 +2687,8 @@ async def on_message(message):
 @client.event
 async def on_raw_reaction_add(payload):
     try:
+        global scanned_reactions
+        scanned_reactions += 1
         await leaderBot[payload.guild_id].raw_react(payload)
     except Exception as e:
         print('on_raw_reaction_add:', e)

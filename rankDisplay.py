@@ -238,6 +238,11 @@ def create_top_card(the_top, color_scheme=0):
         grey = "#484B4E"
         grey_text = "#808486"
         cian = "#F1C40F"
+    elif color_scheme == 2:
+        background = "#23272A"
+        grey = "#484B4E"
+        grey_text = "#808486"
+        cian = "#BADA55"
     else:
         background = "#23272A"
         grey = "#484B4E"
