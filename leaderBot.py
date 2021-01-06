@@ -1407,6 +1407,9 @@ class leaderBot_class():
                              if x.get('iUserID') == p.get('iID') and x.get('sChallengeName') == ch)
                 if dMaxPoints.get(ch, 0) < points:
                     dMaxPoints[ch] = points # max points for challenge
+                if not any(not (x.get('iPoints') is None) for x in s.json_data.j['aSubmission']
+                             if x.get('iUserID') == p.get('iID') and x.get('sChallengeName') == ch):
+                    points = None
                 pp['aSubmissions'].append((ch, points))
 
             #get avatar     

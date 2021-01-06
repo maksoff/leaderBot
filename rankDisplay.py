@@ -17,7 +17,7 @@ g_a_s = int(y-diam/2-diam) # guild avatar size
 background = "#23272A"
 grey = "#484B4E"
 grey_text = "#808486"
-cian = "#62D3F5"
+bar_color = "#62D3F5"
 
 
 def create_ebar(draw, x, y, length, diam, color):
@@ -85,7 +85,7 @@ def create_rank_card(user_avatar,
     create_ebar(draw, x, y, length, diam, grey)
 
     # create progress bar
-    create_ebar(draw, x, y, length*user_points/max_points, diam, cian)
+    create_ebar(draw, x, y, length*user_points/max_points, diam, bar_color)
 
     # add avatars
 
@@ -180,7 +180,7 @@ def create_activity_card(players, dMaxPoints, website=False):
             w = 800
         if w > 1800:
             w = 1800
-    min_trans = 20
+    min_trans = 40
     fontM = ImageFont.truetype('Roboto-Medium.ttf', font_size_M, encoding="utf-8")
     
     # creating new Image object 
@@ -225,9 +225,9 @@ def create_activity_card(players, dMaxPoints, website=False):
                      (max_w+step+(j+1)*act_w-dx, step*(i+1)-dy)]
             drw.rectangle(big_coord, fill=grey)
             drw.rectangle(coord, fill=background)
-            transp = hex(int(min_trans + points / (dMaxPoints.get(ch) or points or 1) * (255 - min_trans)))[2:]
-            if points:
-                drw.rectangle(coord, fill=cian+transp)
+            if not (points is None):
+                transp = hex(int(min_trans + points / (dMaxPoints.get(ch) or points or 1) * (255 - min_trans)))[2:]
+                drw.rectangle(coord, fill=bar_color+transp)
             j += 1
                 
     img = Image.alpha_composite(img, rect)
@@ -245,17 +245,17 @@ def create_top_card(the_top, color_scheme=0, website=False):
         background = "#40444B"
         grey = "#484B4E"
         grey_text = "#808486"
-        cian = "#F1C40F"
+        bar_color = "#F1C40F"
     elif color_scheme == 2:
         background = "#23272A"
         grey = "#484B4E"
         grey_text = "#808486"
-        cian = "#BADA55"
+        bar_color = "#BADA55"
     else:
         background = "#23272A"
         grey = "#484B4E"
         grey_text = "#808486"
-        cian = "#62D3F5"
+        bar_color = "#62D3F5"
          
     if not the_top:
         return
@@ -329,7 +329,7 @@ def create_top_card(the_top, color_scheme=0, website=False):
 
         # add bar
         create_ebar (draw, max_w + step + diam, step * i + step * 3 / 4,
-                     bar * int(p.get('iPoints')) / max_p, diam, cian)
+                     bar * int(p.get('iPoints')) / max_p, diam, bar_color)
 
         # add score
         t_w, t_h = draw.textsize(str(p.get('iPoints')), font=fontS)     
