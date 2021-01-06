@@ -1192,15 +1192,14 @@ class leaderBot_class():
             if not msg:
                 channel = await s.client.fetch_channel(s.leaderboard_channel_id)
                 msg = await channel.send('Here will be leaderboard published')
+                s.leaderboard_channel_id, s.leaderboard_message_id = msg.channel.id, msg.id
+                s.json_data.set_lb_message(s.leaderboard_channel_id, s.leaderboard_message_id)
             if s.json_data.j.get('bShortLB', False):
                 try:
                     if s.json_data.j.get('sLBurl', ''):
                         embed = discord.Embed()
-                        embed.add_field(name='Full leaderboard can be found', value=f'[:arrow_right::regional_indicator_h::regional_indicator_e::regional_indicator_r::regional_indicator_e::arrow_left:]({s.json_data.j.get("sLBurl")})')
-                        try:
-                            await msg.edit(content='', embed=embed)
-                        except:
-                            await msg.channel.send(embed=embed)
+                        embed.add_field(name='Full leaderboard can be found', value=f'[HERE (official "{msg.guild.name}" leaderboard)]({s.json_data.j.get("sLBurl")})')
+                        await msg.edit(content='', embed=embed)
                     else:
                         try:
                             await msg.delete()
@@ -1532,7 +1531,7 @@ class leaderBot_class():
         
 
     async def top_img(s, *msg, leaderboard=False, content=None):
-        limit = 7
+        limit = s.json_data.j.get('iLBplaces', 10)
         if msg:
             msg = msg[0]
         if len(msg.content.strip().split(' ')) > 1:
@@ -1585,7 +1584,7 @@ class leaderBot_class():
         if msg:
             msg = msg[0]
         if limit is None:
-            limit = 10
+            limit = s.json_data.j.get('iLBplaces', 10)
             if len(msg.content.strip().split(' ')) > 1:
                 try:
                     limit = int(msg.content.split(' ')[1])
@@ -1593,7 +1592,7 @@ class leaderBot_class():
                     ...
                     
         if ch_limit is None:
-            ch_limit = 5
+            ch_limit = s.json_data.j.get('iLBchallenges', 5)
             if len(msg.content.strip().split(' ')) > 2:
                 try:
                     ch_limit = int(msg.content.split(' ')[2])
