@@ -2056,7 +2056,7 @@ class leaderBot_class():
                 channel_id = s.get_int(ch_m_id[0])
                 return (await s.get_message(channel_id, msg_id))
         except:
-            traceback.print_exc()
+            if DEBUG: traceback.print_exc()
             return
         return
 
