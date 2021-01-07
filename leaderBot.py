@@ -2127,7 +2127,9 @@ class leaderBot_class():
                 except:
                     ...
         try:
-            await channel.send(message_text)
+            if message.attachments and len(message.content.split()) == 1:
+                message_text = ''
+            await channel.send(message_text, files=(await s.get_files(message)))
             await message.delete()
         except:
             if DEBUG: traceback.print_exc()
@@ -2457,6 +2459,11 @@ class leaderBot_class():
                     await msg.channel.send('`reverted`')
                     await s.add_ynd_reactions(msg, mode='yn')
                     return
+        else:
+            try:
+                await msg.remove_reaction(payload.emoji, s.client.user)
+            except:
+                if DEBUG: traceback.print_exc()
         return
 
     async def change_prefix(s, message):
@@ -2641,6 +2648,17 @@ class leaderBot_class():
         return
 
     @staticmethod
+    async def get_files(message):
+        if not message.attachments:
+            return
+        files = []
+        for m in message.attachments:
+            buffer = io.BytesIO(await m.read())
+            buffer.seek(0)
+            files.append(discord.File(buffer, m.filename))
+        return files
+
+    @staticmethod
     async def dm(client, message):
         if not hasattr(leaderBot_class.dm, "last_user"):
             leaderBot_class.dm.last_user = None  # it doesn't exist yet, so initialize it
@@ -2651,20 +2669,11 @@ class leaderBot_class():
                 raise
         except:
             return
-        async def get_files(message):
-            if not message.attachments:
-                return
-            files = []
-            for m in message.attachments:
-                buffer = io.BytesIO(await m.read())
-                buffer.seek(0)
-                files.append(discord.File(buffer, m.filename))
-            return files
 
         # normal user
         if (message.author != admin) or ('super!mega!test' in message.content):
             await admin.send(f"> from <@{message.author.id}> @{message.author.name}#{message.author.discriminator} {message.author.id}\n" +
-                             message.content, files=(await get_files(message)))
+                             message.content, files=(await s.get_files(message)))
             await message.channel.send('`message sent`')
             leaderBot_class.dm.last_user = message.author
         # admin user
@@ -2710,7 +2719,7 @@ class leaderBot_class():
                 await message.channel.send('Message should start with @user or id; referenced to `| from` or `| to` or it will be sent to last user')
                 return
             try:
-                await user.send(content, files=(await get_files(message)))
+                await user.send(content, files=(await s.get_files(message)))
                 await message.channel.send(f'> to <@{user.id}> @{user.name}#{user.discriminator} {user.id}')
                 leaderBot_class.dm.last_user = user
             except Exception as e:
