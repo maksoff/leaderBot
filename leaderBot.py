@@ -967,9 +967,9 @@ class leaderBot_class():
         if s.json_lock.lock:
             await s.send(message.channel, '`json locked. try again later`')
             return
-        await message.channel.send('You can choose between standart appearance (embed + ranking + activity)\n'+
+        await message.channel.send('You can choose between default appearance (embed with full leaderboard + ranking img + activity img)\n'+
                                    'or shortened one (link to site with full ranking + top 10 / top last challenges)\n'+
-                                   'enter `standard` or `top`. You can `cancel` at any time')
+                                   'enter `default` or `top`. You can `cancel` at any time')
     
         message_r = await s.wait_response(message)
         if not message_r:
@@ -1350,20 +1350,43 @@ class leaderBot_class():
                 print('rank img:', e)
             guild_avatar = None
 
-        buffer = rankDisplay.create_rank_card(user_avatar,
-                                              guild_avatar,
-                                              user.display_name,
-                                              user.discriminator,
-                                              points,
-                                              max_points,
-                                              rank,
-                                              len(s.json_data.j.get('aPlayer', [])),
-                                              last_top=s.json_data.j.get('bShortLB'),
-                                              lt_user_points = 100,
-                                              lt_max_points = 200,
-                                              lt_rank = 3,
-                                              lt_members = 6,
-                                              lt_challenges = 7)
+        if s.json_data.j.get('bShortLB'):
+            lt_challenges = s.json_data.j.get('iLBchallenges', 5)
+            players = s.json_data.get_last_top(lt_challenges)
+            player = dfind(players, iID=user_id)
+            lt_members = len(players)
+            lt_max_points = max([x.get('iPoints') for x in players])
+            if not player:
+                lt_user_points = 0
+                lt_rank = lt_members
+            else:
+                lt_user_points = player.get('iPoints', 0)
+                lt_rank = player.get('iRank', lt_members)
+            
+            
+            buffer = rankDisplay.create_rank_card(user_avatar,
+                                                  guild_avatar,
+                                                  user.display_name,
+                                                  user.discriminator,
+                                                  points,
+                                                  max_points,
+                                                  rank,
+                                                  len(s.json_data.j.get('aPlayer', [])),
+                                                  last_top=True,
+                                                  lt_user_points = lt_user_points,
+                                                  lt_max_points = lt_max_points,
+                                                  lt_rank = lt_rank,
+                                                  lt_members = lt_members,
+                                                  lt_challenges = lt_challenges)
+        else:
+            buffer = rankDisplay.create_rank_card(user_avatar,
+                                                  guild_avatar,
+                                                  user.display_name,
+                                                  user.discriminator,
+                                                  points,
+                                                  max_points,
+                                                  rank,
+                                                  len(s.json_data.j.get('aPlayer', [])))
         if kwargs.get('user_id'):
             return buffer
         await msg.channel.send(file=discord.File(buffer, 'rank.png'))

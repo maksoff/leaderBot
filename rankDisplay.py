@@ -95,6 +95,8 @@ def create_rank_card(user_avatar,
         # add points
         draw = ImageDraw.Draw(img) 
         lt_points_text = f'last {lt_challenges} challenges: {lt_user_points} / {lt_max_points}'
+        if lt_user_points == 0:
+            lt_rank = '-'
         lt_rank_text = f' #{lt_rank}/{lt_members}'
         lt_tpw, lt_tph = draw.textsize(lt_points_text, font=font_S_I)
         lt_trw, lt_trh = draw.textsize(lt_rank_text, font=font_M)
@@ -190,7 +192,8 @@ def create_rank_card(user_avatar,
         create_ebar(draw, x, y+diff, length, diam, grey)
 
         # create progress bar
-        create_ebar(draw, x, y+diff, length*lt_user_points/lt_max_points, diam, bar_color_top)
+        if lt_user_points:
+            create_ebar(draw, x, y+diff, length*lt_user_points/lt_max_points, diam, bar_color_top)
 
         # add rank
         draw.text((int(w-diam-lt_trw), int(g_a_s + diam/2-lt_trh + diff)), lt_rank_text,
@@ -287,13 +290,12 @@ def create_activity_card(players, dMaxPoints, website=False):
     return buffer
 
 
-def create_top_card(the_top, color_scheme=0, website=False):
+def create_top_card(the_top, color_scheme=0, website=False, background=background, bar_color=bar_color):
     if color_scheme == 1:
         background = backgorund_activity
         bar_color = bar_color_activity
     elif color_scheme == 2:
         bar_color = bar_color_top
-         
     if not the_top:
         return
 
