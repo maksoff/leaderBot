@@ -17,7 +17,7 @@ g_a_s = int(y-diam/2-diam) # guild avatar size
 background = "#23272A"
 grey = "#484B4E"
 grey_text = "#808486"
-cian = "#62D3F5"
+bar_color = "#62D3F5"
 
 
 def create_ebar(draw, x, y, length, diam, color):
@@ -85,7 +85,7 @@ def create_rank_card(user_avatar,
     create_ebar(draw, x, y, length, diam, grey)
 
     # create progress bar
-    create_ebar(draw, x, y, length*user_points/max_points, diam, cian)
+    create_ebar(draw, x, y, length*user_points/max_points, diam, bar_color)
 
     # add avatars
 
@@ -159,21 +159,29 @@ def create_rank_card(user_avatar,
     buffer.seek(0)
     return buffer
 
-def create_activity_card(players, dMaxPoints):
+def create_activity_card(players, dMaxPoints, website=False):
     if (not players) or (not dMaxPoints):
         return
     avatar_size = 64
-    step = 68
+    step = 72
     dy = 1
     dx = 1
+    font_size_M = 28
+    if website:
+        avatar_size = 32
+        step = 36
+        font_size_M = 18
     h = step * len(players)
-    w = int(h * 4 / 3)
-    if w < 800:
-        w = 800
-    if w > 1800:
-        w = 1800
-    min_trans = 20
-    fontM = ImageFont.truetype('Roboto-Medium.ttf', 28, encoding="utf-8")
+    if website:
+        w = 900
+    else:
+        w = int(h * 4 / 3)
+        if w < 800:
+            w = 800
+        if w > 1800:
+            w = 1800
+    min_trans = 40
+    fontM = ImageFont.truetype('Roboto-Medium.ttf', font_size_M, encoding="utf-8")
     
     # creating new Image object 
     img = Image.new("RGBA", (w, h)) 
@@ -217,9 +225,9 @@ def create_activity_card(players, dMaxPoints):
                      (max_w+step+(j+1)*act_w-dx, step*(i+1)-dy)]
             drw.rectangle(big_coord, fill=grey)
             drw.rectangle(coord, fill=background)
-            transp = hex(int(min_trans + points / (dMaxPoints.get(ch) or points or 1) * (255 - min_trans)))[2:]
-            if points:
-                drw.rectangle(coord, fill=cian+transp)
+            if not (points is None):
+                transp = hex(int(min_trans + points / (dMaxPoints.get(ch) or points or 1) * (255 - min_trans)))[2:]
+                drw.rectangle(coord, fill=bar_color+transp)
             j += 1
                 
     img = Image.alpha_composite(img, rect)
@@ -232,35 +240,49 @@ def create_activity_card(players, dMaxPoints):
     return buffer
 
 
-def create_top_card(the_top, color_scheme=0):
+def create_top_card(the_top, color_scheme=0, website=False):
     if color_scheme == 1:
         background = "#40444B"
         grey = "#484B4E"
         grey_text = "#808486"
-        cian = "#F1C40F"
+        bar_color = "#F1C40F"
     elif color_scheme == 2:
         background = "#23272A"
         grey = "#484B4E"
         grey_text = "#808486"
-        cian = "#BADA55"
+        bar_color = "#BADA55"
     else:
         background = "#23272A"
         grey = "#484B4E"
         grey_text = "#808486"
-        cian = "#62D3F5"
+        bar_color = "#62D3F5"
          
     if not the_top:
         return
-    step = 72
-    diam = 20
-    avatar_size = 64
-    bar = 500
-    
-    w, h = 700, 700
 
-    fontB = ImageFont.truetype('Roboto-Medium.ttf', 36, encoding="utf-8")
-    fontM = ImageFont.truetype('Roboto-Medium.ttf', 28, encoding="utf-8")
-    fontS = ImageFont.truetype('Roboto-Medium.ttf', 24, encoding="utf-8")
+    if website:
+        step = 36
+        diam = 10
+        avatar_size = 32
+        bar = 250
+        
+        w, h = 350, 350
+
+        fontB = ImageFont.truetype('Roboto-Medium.ttf', 18, encoding="utf-8")
+        fontM = ImageFont.truetype('Roboto-Medium.ttf', 14, encoding="utf-8")
+        fontS = ImageFont.truetype('Roboto-Medium.ttf', 12, encoding="utf-8")
+
+    else:
+        step = 72
+        diam = 20
+        avatar_size = 64
+        bar = 500
+        
+        w, h = 700, 700
+
+        fontB = ImageFont.truetype('Roboto-Medium.ttf', 36, encoding="utf-8")
+        fontM = ImageFont.truetype('Roboto-Medium.ttf', 28, encoding="utf-8")
+        fontS = ImageFont.truetype('Roboto-Medium.ttf', 24, encoding="utf-8")
     # creating new Image object 
     img = Image.new("RGB", (w, h)) 
 
@@ -275,12 +297,13 @@ def create_top_card(the_top, color_scheme=0):
     #w = max_w + step + diam + bar + diam + max_wp + diam//2
     #user_w = w - max_w - step - diam
     h = step * len(the_top)
-    
-    w = int(h * 2 / 3)
-    if w < 700:
-        w = 700
-    if w > 1800:
-        w = 1800
+
+    if not website:
+        w = int(h * 2 / 3)
+        if w < 700:
+            w = 700
+        if w > 1800:
+            w = 1800
     bar = w - (max_w + step + diam + diam + max_wp + diam//2)
     user_w = w - max_w - step - diam
     
@@ -306,7 +329,7 @@ def create_top_card(the_top, color_scheme=0):
 
         # add bar
         create_ebar (draw, max_w + step + diam, step * i + step * 3 / 4,
-                     bar * int(p.get('iPoints')) / max_p, diam, cian)
+                     bar * int(p.get('iPoints')) / max_p, diam, bar_color)
 
         # add score
         t_w, t_h = draw.textsize(str(p.get('iPoints')), font=fontS)     
