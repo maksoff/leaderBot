@@ -1357,7 +1357,13 @@ class leaderBot_class():
                                               points,
                                               max_points,
                                               rank,
-                                              len(s.json_data.j.get('aPlayer', [])))
+                                              len(s.json_data.j.get('aPlayer', [])),
+                                              last_top=s.json_data.j.get('bShortLB'),
+                                              lt_user_points = 100,
+                                              lt_max_points = 200,
+                                              lt_rank = 3,
+                                              lt_members = 6,
+                                              lt_challenges = 7)
         if kwargs.get('user_id'):
             return buffer
         await msg.channel.send(file=discord.File(buffer, 'rank.png'))

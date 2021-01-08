@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 avatar_size = 128
 diam = 20
-x = 1*diam + avatar_size
+x = diam+diam//2 + avatar_size
 w, h = 600, avatar_size + diam
 y = h-diam*1.25
 length = w - x - diam*1.25
@@ -74,7 +74,34 @@ def create_rank_card(user_avatar,
                      user_points,
                      max_points,
                      rank,
-                     members):
+                     members,
+                     h = h,
+                     **kwargs):
+
+    font_S_I = ImageFont.truetype('Roboto-Italic.ttf', 20)
+    font_M = ImageFont.truetype('Roboto-Medium.ttf', 30)
+    
+    # check kwargs for special challenges
+    last_top = kwargs.get('last_top', False)
+    diff = 0
+    if last_top:
+        lt_user_points = kwargs.get('lt_user_points')
+        lt_max_points = kwargs.get('lt_max_points')
+        lt_rank = kwargs.get('lt_rank')
+        lt_members = kwargs.get('lt_members')
+        lt_challenges = kwargs.get('lt_challenges')
+
+        img = Image.new("RGB", (w, h))
+        # add points
+        draw = ImageDraw.Draw(img) 
+        lt_points_text = f'last {lt_challenges} challenges: {lt_user_points} / {lt_max_points}'
+        lt_rank_text = f' #{lt_rank}/{lt_members}'
+        lt_tpw, lt_tph = draw.textsize(lt_points_text, font=font_S_I)
+        lt_trw, lt_trh = draw.textsize(lt_rank_text, font=font_M)
+        
+        diff = diam*2 + max((lt_tph, lt_trh))
+        h += diff
+  
     
     # creating new Image object 
     img = Image.new("RGB", (w, h)) 
@@ -93,7 +120,7 @@ def create_rank_card(user_avatar,
 
     # add avatars
 
-    place_avatar(img, user_avatar, diam//2, diam//2, diam,
+    place_avatar(img, user_avatar, diam//2, diam//2+diff//2, diam,
                  avatar_size = avatar_size)
     place_avatar(img, guild_avatar, int(w-diam/2-g_a_s), diam//2, diam,
                  avatar_size = g_a_s, circle=False)
@@ -110,11 +137,10 @@ def create_rank_card(user_avatar,
 
     # add points
     draw = ImageDraw.Draw(img) 
-    font = ImageFont.truetype('Roboto-Italic.ttf', 20)
     text = f'points: {user_points} / {max_points}'
-    tpw, tph = draw.textsize(text, font=font)
+    tpw, tph = draw.textsize(text, font=font_S_I)
     draw.text((int(w-diam-g_a_s-tpw), int(g_a_s + diam/2-tdh)), text,
-              fill = grey_text, font = font)
+              fill = grey_text, font = font_S_I)
 
     # add rank
     draw = ImageDraw.Draw(img) 
@@ -156,6 +182,23 @@ def create_rank_card(user_avatar,
         
     draw.text((avatar_size+diam, int(g_a_s + diam/2-tdh-tuh-d)), text,
               fill = "white", font = font)
+
+    # adding activity, if needed
+    if last_top:
+        # create progress bar background
+        create_ebar(draw, x, y+diff, length, diam+4, "black")
+        create_ebar(draw, x, y+diff, length, diam, grey)
+
+        # create progress bar
+        create_ebar(draw, x, y+diff, length*lt_user_points/lt_max_points, diam, bar_color_top)
+
+        # add rank
+        draw.text((int(w-diam-lt_trw), int(g_a_s + diam/2-lt_trh + diff)), lt_rank_text,
+              fill = "white", font = font_M)
+
+        # add points
+        draw.text((int(w-diam-lt_tpw-lt_trw), int(g_a_s + diam/2-lt_tph + diff)), lt_points_text,
+              fill = grey_text, font = font_S_I)
 
     # save PNG in buffer
     buffer = io.BytesIO()
