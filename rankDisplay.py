@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 avatar_size = 128
 diam = 20
-x = 1*diam + avatar_size
+x = diam+diam//2 + avatar_size
 w, h = 600, avatar_size + diam
 y = h-diam*1.25
 length = w - x - diam*1.25
@@ -15,9 +15,12 @@ g_a_s = int(y-diam/2-diam) # guild avatar size
 
 
 background = "#23272A"
+backgorund_activity = "#40444B"
 grey = "#484B4E"
 grey_text = "#808486"
 bar_color = "#62D3F5"
+bar_color_top = "#BADA55"
+bar_color_activity = "#F1C40F"
 
 
 def create_ebar(draw, x, y, length, diam, color):
@@ -71,7 +74,37 @@ def create_rank_card(user_avatar,
                      user_points,
                      max_points,
                      rank,
-                     members):
+                     members,
+                     h = h,
+                     **kwargs):
+
+    font_S_I = ImageFont.truetype('Roboto-Italic.ttf', 20)
+    font_M = ImageFont.truetype('Roboto-Medium.ttf', 30)
+    
+    # check kwargs for special challenges
+    last_top = kwargs.get('last_top', False)
+    diff = 0
+    if last_top:
+        lt_user_points = kwargs.get('lt_user_points')
+        lt_max_points = kwargs.get('lt_max_points')
+        lt_rank = kwargs.get('lt_rank')
+        lt_members = kwargs.get('lt_members')
+        lt_challenges = kwargs.get('lt_challenges')
+
+        img = Image.new("RGB", (w, h))
+        # add points
+        draw = ImageDraw.Draw(img) 
+        lt_points_text = f'last {lt_challenges} challenges: {lt_user_points} / {lt_max_points}'
+        if lt_user_points == 0:
+            lt_rank = '-'
+        lt_rank_text = f' #{lt_rank}/{lt_members}'
+        lt_tpw, lt_tph = draw.textsize(lt_points_text, font=font_S_I)
+        lt_trw, lt_trh = draw.textsize(lt_rank_text, font=font_M)
+        
+        diff = diam*2 + max((lt_tph, lt_trh))
+        h += diff
+  
+    
     # creating new Image object 
     img = Image.new("RGB", (w, h)) 
 
@@ -89,7 +122,7 @@ def create_rank_card(user_avatar,
 
     # add avatars
 
-    place_avatar(img, user_avatar, diam//2, diam//2, diam,
+    place_avatar(img, user_avatar, diam//2, diam//2+diff//2, diam,
                  avatar_size = avatar_size)
     place_avatar(img, guild_avatar, int(w-diam/2-g_a_s), diam//2, diam,
                  avatar_size = g_a_s, circle=False)
@@ -106,11 +139,10 @@ def create_rank_card(user_avatar,
 
     # add points
     draw = ImageDraw.Draw(img) 
-    font = ImageFont.truetype('Roboto-Italic.ttf', 20)
     text = f'points: {user_points} / {max_points}'
-    tpw, tph = draw.textsize(text, font=font)
+    tpw, tph = draw.textsize(text, font=font_S_I)
     draw.text((int(w-diam-g_a_s-tpw), int(g_a_s + diam/2-tdh)), text,
-              fill = grey_text, font = font)
+              fill = grey_text, font = font_S_I)
 
     # add rank
     draw = ImageDraw.Draw(img) 
@@ -152,6 +184,24 @@ def create_rank_card(user_avatar,
         
     draw.text((avatar_size+diam, int(g_a_s + diam/2-tdh-tuh-d)), text,
               fill = "white", font = font)
+
+    # adding activity, if needed
+    if last_top:
+        # create progress bar background
+        create_ebar(draw, x, y+diff, length, diam+4, "black")
+        create_ebar(draw, x, y+diff, length, diam, grey)
+
+        # create progress bar
+        if lt_user_points:
+            create_ebar(draw, x, y+diff, length*lt_user_points/lt_max_points, diam, bar_color_top)
+
+        # add rank
+        draw.text((int(w-diam-lt_trw), int(g_a_s + diam/2-lt_trh + diff)), lt_rank_text,
+              fill = "white", font = font_M)
+
+        # add points
+        draw.text((int(w-diam-lt_tpw-lt_trw), int(g_a_s + diam/2-lt_tph + diff)), lt_points_text,
+              fill = grey_text, font = font_S_I)
 
     # save PNG in buffer
     buffer = io.BytesIO()
@@ -240,23 +290,12 @@ def create_activity_card(players, dMaxPoints, website=False):
     return buffer
 
 
-def create_top_card(the_top, color_scheme=0, website=False):
+def create_top_card(the_top, color_scheme=0, website=False, background=background, bar_color=bar_color):
     if color_scheme == 1:
-        background = "#40444B"
-        grey = "#484B4E"
-        grey_text = "#808486"
-        bar_color = "#F1C40F"
+        background = backgorund_activity
+        bar_color = bar_color_activity
     elif color_scheme == 2:
-        background = "#23272A"
-        grey = "#484B4E"
-        grey_text = "#808486"
-        bar_color = "#BADA55"
-    else:
-        background = "#23272A"
-        grey = "#484B4E"
-        grey_text = "#808486"
-        bar_color = "#62D3F5"
-         
+        bar_color = bar_color_top
     if not the_top:
         return
 
