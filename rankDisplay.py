@@ -15,9 +15,12 @@ g_a_s = int(y-diam/2-diam) # guild avatar size
 
 
 background = "#23272A"
+backgorund_activity = "#40444B"
 grey = "#484B4E"
 grey_text = "#808486"
 bar_color = "#62D3F5"
+bar_color_top = "#BADA55"
+bar_color_activity = "#F1C40F"
 
 
 def create_ebar(draw, x, y, length, diam, color):
@@ -72,6 +75,7 @@ def create_rank_card(user_avatar,
                      max_points,
                      rank,
                      members):
+    
     # creating new Image object 
     img = Image.new("RGB", (w, h)) 
 
@@ -242,20 +246,10 @@ def create_activity_card(players, dMaxPoints, website=False):
 
 def create_top_card(the_top, color_scheme=0, website=False):
     if color_scheme == 1:
-        background = "#40444B"
-        grey = "#484B4E"
-        grey_text = "#808486"
-        bar_color = "#F1C40F"
+        background = backgorund_activity
+        bar_color = bar_color_activity
     elif color_scheme == 2:
-        background = "#23272A"
-        grey = "#484B4E"
-        grey_text = "#808486"
-        bar_color = "#BADA55"
-    else:
-        background = "#23272A"
-        grey = "#484B4E"
-        grey_text = "#808486"
-        bar_color = "#62D3F5"
+        bar_color = bar_color_top
          
     if not the_top:
         return
