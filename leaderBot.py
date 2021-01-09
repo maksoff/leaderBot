@@ -1,15 +1,6 @@
 # maksoff - KSP leaderbot (automagically calculates the rating and etc.)
 
-### beautify fScore output
-### cancel input
-### sort winners
-### activity card
-### activity (sum of last 3 challenges)
-### try to create submission from embed (role react?)
-### hash avatars
-
 # TODO: #
-# hyperkerbalnaut role - automatic
 # leaderboard ?help -> add image
 # create channels for new submissions
 # change prefix
@@ -2073,6 +2064,10 @@ class leaderBot_class():
         s.json_lock.lock = None
         return
 
+    @staticmethod
+    def can_send(member, channel):
+        return member.permissions_in(channel).send_messages
+
     async def get_message_from_id(s, message, ch_m_id):
         ''' ch_m_id in format channel_id-message_id '''
         ''' or if only message_id, channel_id taken from message '''
@@ -2109,6 +2104,7 @@ class leaderBot_class():
         msg = await s.get_message_from_id(message, message.content.split()[1])
         if msg is None:
             add_reaction = False
+            msg = message
         text = message.content.split(maxsplit = 1 + int(add_reaction))[-1]
         emojis, unique = replace_letters(text, special_emojis=s.special_emojis_full)
         if not unique:
@@ -2126,10 +2122,13 @@ class leaderBot_class():
                     ...
         else:
             try:
-                await message.channel.send(' '.join(emojis).replace('\n ', '\n'))
-                await message.delete()
+                if s.can_send(message.author, msg.channel):
+                    await msg.channel.send(' '.join(emojis).replace('\n ', '\n'))
+                    await message.delete()
+                else:
+                    await message.channel.send('nope')
             except Exception as e:
-                ...
+                if DEBUG: traceback.print_exc()
 
     
     async def say(s, message):
@@ -2145,6 +2144,10 @@ class leaderBot_class():
             message_text = message.content.split(maxsplit=2)[-1]
         except:
             channel = message.channel
+
+        if not s.can_send(message.author, channel):
+            await message.channel.send('nope')
+            return
             
         if message.guild.id in ksp_guilds:
             for se, code in s.special_emojis.items():
