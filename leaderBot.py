@@ -2125,8 +2125,10 @@ class leaderBot_class():
                 if s.can_send(message.author, msg.channel):
                     await msg.channel.send(' '.join(emojis).replace('\n ', '\n'))
                     await message.delete()
+                else:
+                    await message.channel.send('nope')
             except Exception as e:
-                ...
+                if DEBUG: traceback.print_exc()
 
     
     async def say(s, message):
@@ -2142,6 +2144,10 @@ class leaderBot_class():
             message_text = message.content.split(maxsplit=2)[-1]
         except:
             channel = message.channel
+
+        if not s.can_send(message.author, channel):
+            await message.channel.send('nope')
+            return
             
         if message.guild.id in ksp_guilds:
             for se, code in s.special_emojis.items():
