@@ -2064,6 +2064,10 @@ class leaderBot_class():
         s.json_lock.lock = None
         return
 
+    @staticmethod
+    def can_send(member, channel):
+        return member.permissions_in(channel).send_messages
+
     async def get_message_from_id(s, message, ch_m_id):
         ''' ch_m_id in format channel_id-message_id '''
         ''' or if only message_id, channel_id taken from message '''
@@ -2100,6 +2104,7 @@ class leaderBot_class():
         msg = await s.get_message_from_id(message, message.content.split()[1])
         if msg is None:
             add_reaction = False
+            msg = message
         text = message.content.split(maxsplit = 1 + int(add_reaction))[-1]
         emojis, unique = replace_letters(text, special_emojis=s.special_emojis_full)
         if not unique:
@@ -2117,8 +2122,9 @@ class leaderBot_class():
                     ...
         else:
             try:
-                await message.channel.send(' '.join(emojis).replace('\n ', '\n'))
-                await message.delete()
+                if s.can_send(message.author, msg.channel):
+                    await msg.channel.send(' '.join(emojis).replace('\n ', '\n'))
+                    await message.delete()
             except Exception as e:
                 ...
 
