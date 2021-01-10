@@ -399,9 +399,35 @@ class leaderBot_class():
     async def help(s, message):
         if message.channel.name == CHANNEL:
             embed = discord.Embed(title = 'Hello! This bot helps to update the leaderboard.')
-            embed.add_field(name = 'Use these commands (in `#leaderbot` channel!)',
-                            value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.commands]),
-                            inline=False)
+            value = ''
+            limit = 1000
+            first = True
+            for n, t, _ in s.commands:
+                if value:
+                    value += '\n'
+                add_val = f'`{n}` - {t}'
+                if len(value + add_val) > limit:
+                    if first:
+                        name = f'Use these commands (in `#{CHANNEL}` channel!)'
+                        first = False
+                    else:
+                        name = '\u200b'
+                    embed.add_field(name = name,
+                                    value = value,
+                                    inline=False)
+                    value = ''
+                else:
+                    value += add_val
+
+            if value:
+                if first:
+                    name = 'Use these commands (in `#{CHANNEL}` channel!)'
+                else:
+                    name = '\u200b'
+                embed.add_field(name = name,
+                                value = value,
+                                inline=False)
+                    
             embed.add_field(name = 'User commands',
                             value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.user_commands]),
                             inline=False)
@@ -2176,7 +2202,7 @@ class leaderBot_class():
                 channel = client.get_channel(channel_id)
                 if not channel:
                     return
-                await channel.send(f"<@{s.client.user.id}> just restarted")
+                await channel.send(f"<@{s.client.user.id}> just restarted. `{s.prefix}help`")
             except:
                 return
         else:
@@ -2359,7 +2385,7 @@ class leaderBot_class():
                             if len(s.json_data.find(s.json_data.j.get('aChallenge'), sName=rSubmission.get('sChallengeName')).get('aPoints', [])) == 1:
                                 place = ''
                             else:
-                                place = f"and the **{rSubmission.get('iRank')}**{s.json_data.suffix(rSubmission.get('iRank'))} place "
+                                place = f"and ranked **{rSubmission.get('iRank')}**{s.json_data.suffix(rSubmission.get('iRank'))} "
                             buffer = await s.rank_img(msg, user_id=user_id)
                             message_r = await message.channel.send(f"<@{user_id}>, **yay!** You got " +
                                                                    f"**{beautify(iPoints)}** points " +
@@ -2507,7 +2533,7 @@ class leaderBot_class():
         if not msg_r:
             s.json_lock.lock = None
             return
-        s.prefix = msg_r.content
+        s.prefix = msg_r.content.lower()
         s.json_data.j['sPrefix'] = s.prefix
         #await s.client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'your rank'))
         s.save_json()
