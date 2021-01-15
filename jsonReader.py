@@ -256,8 +256,8 @@ class json_class():
             bHigh = s.find(s.j['aChallengeType'], 'sName', sub['sChallengeTypeName'])['bHigherScore']
             oP = s.find(oRCT, iUserID=sub['iUserID'])
             if (oP):
-                if (((oP['fScore'] > sub['fScore']) and not bHigh) or ((oP['fScore'] < sub['fScore']) and bHigh)):
-                    oP['fScore'] = sub['fScore']
+                if (((float(oP['fScore']) > float(sub['fScore'])) and not bHigh) or ((float(oP['fScore']) < float(sub['fScore'])) and bHigh)):
+                    oP['fScore'] = float(sub['fScore'])
                     oP['iSubmissionId'] = sub['iSubmissionId']
             else:
                 oRCT.append(sub.copy())

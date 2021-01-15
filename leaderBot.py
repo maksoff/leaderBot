@@ -352,12 +352,15 @@ class leaderBot_class():
         if s.json_lock.lock:
             await message.channel.send('`json locked. Retry later`')
             return
-        await message.channel.send('Please send me your json! Or `cancel`')
+        
+        if not message.attachments:
+            await message.channel.send('Please send me your json! Or `cancel`')
 
-        message = await s.wait_response(message)
-        if not message:
-            s.json_lock.lock = None
-            return
+            message = await s.wait_response(message)
+            if not message:
+                s.json_lock.lock = None
+                return
+            
         if message.attachments:
             test = message.attachments[0].filename
             try:
@@ -399,9 +402,35 @@ class leaderBot_class():
     async def help(s, message):
         if message.channel.name == CHANNEL:
             embed = discord.Embed(title = 'Hello! This bot helps to update the leaderboard.')
-            embed.add_field(name = 'Use these commands (in `#leaderbot` channel!)',
-                            value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.commands]),
-                            inline=False)
+            value = ''
+            limit = 1000
+            first = True
+            for n, t, _ in s.commands:
+                if value:
+                    value += '\n'
+                add_val = f'`{n}` - {t}'
+                if len(value + add_val) > limit:
+                    if first:
+                        name = f'Use these commands (in `#{CHANNEL}` channel!)'
+                        first = False
+                    else:
+                        name = '\u200b'
+                    embed.add_field(name = name,
+                                    value = value,
+                                    inline=False)
+                    value = ''
+                else:
+                    value += add_val
+
+            if value:
+                if first:
+                    name = 'Use these commands (in `#{CHANNEL}` channel!)'
+                else:
+                    name = '\u200b'
+                embed.add_field(name = name,
+                                value = value,
+                                inline=False)
+                    
             embed.add_field(name = 'User commands',
                             value = '\n'.join([f'`{n}` - {t}' for n, t, _ in s.user_commands]),
                             inline=False)
@@ -795,14 +824,19 @@ class leaderBot_class():
             all_gets_same_score = len(s.json_data.find(s.json_data.j.get('aChallenge'), sName=sChallengeName).get('aPoints', [])) == 1
                 
             if not all_gets_same_score:
-                await s.send(message.channel, 'Enter score (e.g. `3.14`):')
-                msg = await s.wait_response(message, author_id=author_id)
-                if not message:
-                    await message.channel.send('`changes reverted`')
-                    s.open_json()
-                    s.json_lock.lock = None
-                    return
-                fScore = float(msg.content)
+                await s.send(message.channel, 'Enter score (e.g. `31415.92`), [`.` - decimal separator]:')
+                while True:
+                    try:
+                        msg = await s.wait_response(message, author_id=author_id)
+                        if not msg:
+                            await message.channel.send('`changes reverted`')
+                            s.open_json()
+                            s.json_lock.lock = None
+                            return
+                        fScore = float(msg.content.strip().replace(',', '').replace(' ', ''))
+                        break
+                    except:
+                        await message.channel.send('Number must be int or float, like `31415` or `2.7183`\nTry again or `cancel`')
             else:
                 fScore = 1.0
 
@@ -1919,7 +1953,7 @@ class leaderBot_class():
             return # no text in message
             
         if create_new_vote:
-            msg = await message.channel.send('\n'.join(new_message))
+            msg = await message.channel.send('\n'.join(new_message) + f'\n||message author <@{message.author.id}>||')
 
             # it is not visible in audit, so...
             if False: # disabled this check
@@ -2123,7 +2157,7 @@ class leaderBot_class():
         else:
             try:
                 if s.can_send(message.author, msg.channel):
-                    await msg.channel.send(' '.join(emojis).replace('\n ', '\n'))
+                    await msg.channel.send(' '.join(emojis).replace('\n ', '\n') + f'\n||message author <@{message.author.id}>||')
                     await message.delete()
                 else:
                     await message.channel.send('nope')
@@ -2148,7 +2182,7 @@ class leaderBot_class():
         if not s.can_send(message.author, channel):
             await message.channel.send('nope')
             return
-            
+   
         if message.guild.id in ksp_guilds:
             for se, code in s.special_emojis.items():
                 try:
@@ -2161,7 +2195,7 @@ class leaderBot_class():
         try:
             if message.attachments and len(message.content.split()) == 1:
                 message_text = ''
-            await channel.send(message_text, files=(await s.get_files(message)))
+            await channel.send(message_text + f'\n||message author <@{message.author.id}>||', files=(await s.get_files(message)))
             await message.delete()
         except:
             if DEBUG: traceback.print_exc()
@@ -2176,7 +2210,7 @@ class leaderBot_class():
                 channel = client.get_channel(channel_id)
                 if not channel:
                     return
-                await channel.send(f"<@{s.client.user.id}> just restarted")
+                await channel.send(f"<@{s.client.user.id}> just restarted. `{s.prefix}help`")
             except:
                 return
         else:
@@ -2359,7 +2393,7 @@ class leaderBot_class():
                             if len(s.json_data.find(s.json_data.j.get('aChallenge'), sName=rSubmission.get('sChallengeName')).get('aPoints', [])) == 1:
                                 place = ''
                             else:
-                                place = f"and the **{rSubmission.get('iRank')}**{s.json_data.suffix(rSubmission.get('iRank'))} place "
+                                place = f"and ranked **{rSubmission.get('iRank')}**{s.json_data.suffix(rSubmission.get('iRank'))} "
                             buffer = await s.rank_img(msg, user_id=user_id)
                             message_r = await message.channel.send(f"<@{user_id}>, **yay!** You got " +
                                                                    f"**{beautify(iPoints)}** points " +
@@ -2507,7 +2541,7 @@ class leaderBot_class():
         if not msg_r:
             s.json_lock.lock = None
             return
-        s.prefix = msg_r.content
+        s.prefix = msg_r.content.lower()
         s.json_data.j['sPrefix'] = s.prefix
         #await s.client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f'your rank'))
         s.save_json()
