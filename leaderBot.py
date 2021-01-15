@@ -1945,7 +1945,7 @@ class leaderBot_class():
             return # no text in message
             
         if create_new_vote:
-            msg = await message.channel.send('\n'.join(new_message))
+            msg = await message.channel.send('\n'.join(new_message) + f'\n||message author <@{message.author.id}>||')
 
             # it is not visible in audit, so...
             if False: # disabled this check
@@ -2149,7 +2149,7 @@ class leaderBot_class():
         else:
             try:
                 if s.can_send(message.author, msg.channel):
-                    await msg.channel.send(' '.join(emojis).replace('\n ', '\n'))
+                    await msg.channel.send(' '.join(emojis).replace('\n ', '\n') + f'\n||message author <@{message.author.id}>||')
                     await message.delete()
                 else:
                     await message.channel.send('nope')
@@ -2174,7 +2174,7 @@ class leaderBot_class():
         if not s.can_send(message.author, channel):
             await message.channel.send('nope')
             return
-            
+   
         if message.guild.id in ksp_guilds:
             for se, code in s.special_emojis.items():
                 try:
@@ -2187,7 +2187,7 @@ class leaderBot_class():
         try:
             if message.attachments and len(message.content.split()) == 1:
                 message_text = ''
-            await channel.send(message_text, files=(await s.get_files(message)))
+            await channel.send(message_text + f'\n||message author <@{message.author.id}>||', files=(await s.get_files(message)))
             await message.delete()
         except:
             if DEBUG: traceback.print_exc()
