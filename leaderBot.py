@@ -352,12 +352,15 @@ class leaderBot_class():
         if s.json_lock.lock:
             await message.channel.send('`json locked. Retry later`')
             return
-        await message.channel.send('Please send me your json! Or `cancel`')
+        
+        if not message.attachments:
+            await message.channel.send('Please send me your json! Or `cancel`')
 
-        message = await s.wait_response(message)
-        if not message:
-            s.json_lock.lock = None
-            return
+            message = await s.wait_response(message)
+            if not message:
+                s.json_lock.lock = None
+                return
+            
         if message.attachments:
             test = message.attachments[0].filename
             try:
@@ -833,7 +836,7 @@ class leaderBot_class():
                         fScore = float(msg.content.strip().replace(',', '').replace(' ', ''))
                         break
                     except:
-                        await message.channel.send('Number must be int or float, like `31415` or `2.7183`')
+                        await message.channel.send('Number must be int or float, like `31415` or `2.7183`\nTry again or `cancel`')
             else:
                 fScore = 1.0
 
