@@ -821,14 +821,19 @@ class leaderBot_class():
             all_gets_same_score = len(s.json_data.find(s.json_data.j.get('aChallenge'), sName=sChallengeName).get('aPoints', [])) == 1
                 
             if not all_gets_same_score:
-                await s.send(message.channel, 'Enter score (e.g. `3.14`):')
-                msg = await s.wait_response(message, author_id=author_id)
-                if not message:
-                    await message.channel.send('`changes reverted`')
-                    s.open_json()
-                    s.json_lock.lock = None
-                    return
-                fScore = float(msg.content)
+                await s.send(message.channel, 'Enter score (e.g. `31415.92`), [`.` - decimal separator]:')
+                while True:
+                    try:
+                        msg = await s.wait_response(message, author_id=author_id)
+                        if not msg:
+                            await message.channel.send('`changes reverted`')
+                            s.open_json()
+                            s.json_lock.lock = None
+                            return
+                        fScore = float(msg.content.strip().replace(',', '').replace(' ', ''))
+                        break
+                    except:
+                        await message.channel.send('Number must be int or float, like `31415` or `2.7183`')
             else:
                 fScore = 1.0
 
