@@ -28,6 +28,7 @@ import traceback
 
 scanned_messages = 0
 scanned_reactions = 0
+start_time = None
 
 check_role = False
 check_channel = True
@@ -133,6 +134,8 @@ class leaderBot_class():
     avatar_cache={}
 
     prefix = 'lb?'
+
+    last_lb_users = []
 
     
     special_emojis = {':coolrocket:':'732098507137220718'}
@@ -424,7 +427,7 @@ class leaderBot_class():
 
             if value:
                 if first:
-                    name = 'Use these commands (in `#{CHANNEL}` channel!)'
+                    name = f'Use these commands (in `#{CHANNEL}` channel!)'
                 else:
                     name = '\u200b'
                 embed.add_field(name = name,
@@ -1075,48 +1078,46 @@ class leaderBot_class():
                 await s.send(message.channel, 'wrong channel. try again or `cancel`')
                 continue
             
-            if channel:
-                s.json_data.j['iMentionsChannel'] = channel.id
+            s.json_data.j['iMentionsChannel'] = channel.id
+            break
+
+        text = ''
+        await message.channel.send('Who should be mentioned? Enter `@users`, `@roles` or `*` for empty')
+        msg = await s.wait_response(message)
+        if not msg:
+            s.json_lock.lock = None
+            return
+        if msg.content != '*':
+            text = str(msg.content)
+        s.json_data.j['iMentionsText'] = text
+
+        text = ''
+        await message.channel.send('In which channels bot should **react** to mentions (separate multiple with *space*)?\n' +
+                                   'e.g. `miss test` for sub**miss**ion, **miss**ions and **test**\n' +
+                                   'or `*` for no filter')
+        msg = await s.wait_response(message)
+        if not msg:
+            s.json_lock.lock = None
+            return
+        if msg.content != '*':
+            text = str(msg.content)
+        s.json_data.j['iMentionsChIncluded'] = text
                 
-                text = ''
-                await message.channel.send('Who should be mentioned? Enter `@users`, `@roles` or `*` for empty')
-                msg = await s.wait_response(message)
-                if not msg:
-                    s.json_lock.lock = None
-                    return
-                if msg.content != '*':
-                    text = str(msg.content)
-                s.json_data.j['iMentionsText'] = text
-                
-                text = ''
-                await message.channel.send('In which channels bot should **react** to mentions (separate multiple with *space*)?\n' +
-                                           'e.g. `miss test` for sub**miss**ion, **miss**ions and **test**\n' +
-                                           'or `*` for no filter')
-                msg = await s.wait_response(message)
-                if not msg:
-                    s.json_lock.lock = None
-                    return
-                if msg.content != '*':
-                    text = str(msg.content)
-                s.json_data.j['iMentionsChIncluded'] = text
-                
-                text = ''
-                await message.channel.send('In which channels bot should **ignore** mentions (separate multiple with *space*)?\n' +
-                                           'e.g. `admin anno` for **admin** and **anno**ucements\n' +
-                                           'or `*` for no filter')
-                msg = await s.wait_response(message)
-                if not msg:
-                    s.json_lock.lock = None
-                    return
-                if msg.content != '*':
-                    text = str(msg.content)
-                s.json_data.j['iMentionsChExcluded'] = text
-                s.save_json()
-                s.json_lock.lock = None
-            else:
-                s.json_lock.lock = None
-                return "channel doesn't exist"
-            
+        text = ''
+        await message.channel.send('In which channels bot should **ignore** mentions (separate multiple with *space*)?\n' +
+                                   'e.g. `admin anno` for **admin** and **anno**ucements\n' +
+                                   'or `*` for no filter')
+        msg = await s.wait_response(message)
+        if not msg:
+            s.json_lock.lock = None
+            return
+        if msg.content != '*':
+            text = str(msg.content)
+        s.json_data.j['iMentionsChExcluded'] = text
+
+        await message.channel.send('`done`')
+        
+        s.save_json()
         s.json_lock.lock = None
         return
 
@@ -1846,7 +1847,8 @@ class leaderBot_class():
     async def ping(s, *args):
         global scanned_messages
         global scanned_reactions
-        time_d = int(time.time() - s.start_time)
+        global start_time
+        time_d = int(time.time() - start_time)
         weeks = time_d // (7 * 24 * 3600)
         time_d = (time_d % (7 * 24 * 3600))
         days = time_d // (24 * 3600)
@@ -1953,7 +1955,8 @@ class leaderBot_class():
             return # no text in message
             
         if create_new_vote:
-            msg = await message.channel.send('\n'.join(new_message) + f'\n||message author <@{message.author.id}>||')
+            msg = await message.channel.send('\n'.join(new_message))
+            s.add_lb_user(message.author, msg)
 
             # it is not visible in audit, so...
             if False: # disabled this check
@@ -2157,7 +2160,8 @@ class leaderBot_class():
         else:
             try:
                 if s.can_send(message.author, msg.channel):
-                    await msg.channel.send(' '.join(emojis).replace('\n ', '\n') + f'\n||message author <@{message.author.id}>||')
+                    msg = await msg.channel.send(' '.join(emojis).replace('\n ', '\n'))
+                    s.add_lb_user(message.author, msg)
                     await message.delete()
                 else:
                     await message.channel.send('nope')
@@ -2195,7 +2199,8 @@ class leaderBot_class():
         try:
             if message.attachments and len(message.content.split()) == 1:
                 message_text = ''
-            await channel.send(message_text + f'\n||message author <@{message.author.id}>||', files=(await s.get_files(message)))
+            msg = await channel.send(message_text, files=(await s.get_files(message)))
+            s.add_lb_user(message.author, msg)
             await message.delete()
         except:
             if DEBUG: traceback.print_exc()
@@ -2210,7 +2215,11 @@ class leaderBot_class():
                 channel = client.get_channel(channel_id)
                 if not channel:
                     return
-                await channel.send(f"<@{s.client.user.id}> just restarted. `{s.prefix}help`")
+                global start_time
+                text = 'reconnected'
+                if time.time() - start_time < 300:
+                    text = 'restarted'
+                await channel.send(f"<@{s.client.user.id}> just {text}. `{s.prefix}help`")
             except:
                 return
         else:
@@ -2304,12 +2313,32 @@ class leaderBot_class():
             embed.add_field(name='#winners', value=f'<#{ch_winners}>')
 
             
-        embed.add_field(name='message text', value=f'{message.content}', inline=False)
+        embed.add_field(name='message text', value=f'{message.content[:500] or "*"}', inline=False)
         msg = await channel.send(content=text, embed=embed)
         await msg.pin(reason='new challenge submission')
 
         await s.add_ynd_reactions(msg, mode='ynd')
         return
+
+    def add_lb_user(s, user, message):
+        s.last_lb_users.append({'user':user, 'message':message})
+        if len(s.last_lb_users) > 20:
+            s.last_lb_users.pop(0)
+
+    async def print_lb_user(s, message):
+        if len(s.last_lb_users) == 0:
+            await message.channel.send('No one used hidden features since last restart')
+        embed = discord.Embed()
+        for u in s.last_lb_users:
+            message = u['message']
+            if message.content:
+                text = message.content[:500]
+            else:
+                text = '`empty`'
+            user = u['user']
+            embed.add_field(name=f'@{user.display_name}#{user.discriminator} {user.id}', value=f'[{text}]({message.jump_url})', inline=False)
+        await message.channel.send(embed=embed)
+            
 
     async def raw_react(s, payload):
         if payload.user_id == s.client.user.id or payload.member.bot:
@@ -2525,7 +2554,7 @@ class leaderBot_class():
                     await msg.channel.send('`reverted`')
                     await s.add_ynd_reactions(msg, mode='yn')
                     return
-        else:
+        elif 0: #let's disable reaction removal
             try:
                 await msg.remove_reaction(payload.emoji, s.client.user)
             except:
@@ -2827,6 +2856,7 @@ class leaderBot_class():
                                 (f'{s.prefix}give', 'give cool rocket reaction. `channel_id-message_id`  or `message_id` or `#channel-message_id`', s.give_rocket),
                                 (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message. Add `channel_id-message_id` to send to another #channel', s.give_text),
                                 (f'{s.prefix}say', f'posts text from the name of <@{s.client.user.id}>. Add `{s.prefix}say #channel TEXT` to post in another channel', s.say),
+                                (f'{s.prefix}last', f'last users who used hidden features', s.print_lb_user),       
                             )
         s.hidden_admin_commands = (
                                 (f'{s.prefix}unlock', "removes `json lock`. don't use! debug feature", s.unlock),
@@ -2837,7 +2867,9 @@ class leaderBot_class():
             
     
     def __init__(s, client, guild_id):
-        s.start_time = time.time()
+        global start_time
+        if start_time is None:
+            start_time = time.time()
         s.guild_id = guild_id
         s.client = client
         s.json_data = json_class()
