@@ -28,6 +28,7 @@ import traceback
 
 scanned_messages = 0
 scanned_reactions = 0
+start_time = None
 
 check_role = False
 check_channel = True
@@ -424,7 +425,7 @@ class leaderBot_class():
 
             if value:
                 if first:
-                    name = 'Use these commands (in `#{CHANNEL}` channel!)'
+                    name = f'Use these commands (in `#{CHANNEL}` channel!)'
                 else:
                     name = '\u200b'
                 embed.add_field(name = name,
@@ -1846,7 +1847,8 @@ class leaderBot_class():
     async def ping(s, *args):
         global scanned_messages
         global scanned_reactions
-        time_d = int(time.time() - s.start_time)
+        global start_time
+        time_d = int(time.time() - start_time)
         weeks = time_d // (7 * 24 * 3600)
         time_d = (time_d % (7 * 24 * 3600))
         days = time_d // (24 * 3600)
@@ -2210,7 +2212,11 @@ class leaderBot_class():
                 channel = client.get_channel(channel_id)
                 if not channel:
                     return
-                await channel.send(f"<@{s.client.user.id}> just restarted. `{s.prefix}help`")
+                global start_time
+                text = 'reconnected'
+                if time.time() - start_time < 300:
+                    text = 'restarted'
+                await channel.send(f"<@{s.client.user.id}> just {text}. `{s.prefix}help`")
             except:
                 return
         else:
@@ -2525,7 +2531,7 @@ class leaderBot_class():
                     await msg.channel.send('`reverted`')
                     await s.add_ynd_reactions(msg, mode='yn')
                     return
-        else:
+        elif 0: #let's disable reaction removal
             try:
                 await msg.remove_reaction(payload.emoji, s.client.user)
             except:
@@ -2837,7 +2843,9 @@ class leaderBot_class():
             
     
     def __init__(s, client, guild_id):
-        s.start_time = time.time()
+        global start_time
+        if start_time is None:
+            start_time = time.time()
         s.guild_id = guild_id
         s.client = client
         s.json_data = json_class()
