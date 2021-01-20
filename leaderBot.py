@@ -1078,48 +1078,46 @@ class leaderBot_class():
                 await s.send(message.channel, 'wrong channel. try again or `cancel`')
                 continue
             
-            if channel:
-                s.json_data.j['iMentionsChannel'] = channel.id
+            s.json_data.j['iMentionsChannel'] = channel.id
+            break
+
+        text = ''
+        await message.channel.send('Who should be mentioned? Enter `@users`, `@roles` or `*` for empty')
+        msg = await s.wait_response(message)
+        if not msg:
+            s.json_lock.lock = None
+            return
+        if msg.content != '*':
+            text = str(msg.content)
+        s.json_data.j['iMentionsText'] = text
+
+        text = ''
+        await message.channel.send('In which channels bot should **react** to mentions (separate multiple with *space*)?\n' +
+                                   'e.g. `miss test` for sub**miss**ion, **miss**ions and **test**\n' +
+                                   'or `*` for no filter')
+        msg = await s.wait_response(message)
+        if not msg:
+            s.json_lock.lock = None
+            return
+        if msg.content != '*':
+            text = str(msg.content)
+        s.json_data.j['iMentionsChIncluded'] = text
                 
-                text = ''
-                await message.channel.send('Who should be mentioned? Enter `@users`, `@roles` or `*` for empty')
-                msg = await s.wait_response(message)
-                if not msg:
-                    s.json_lock.lock = None
-                    return
-                if msg.content != '*':
-                    text = str(msg.content)
-                s.json_data.j['iMentionsText'] = text
-                
-                text = ''
-                await message.channel.send('In which channels bot should **react** to mentions (separate multiple with *space*)?\n' +
-                                           'e.g. `miss test` for sub**miss**ion, **miss**ions and **test**\n' +
-                                           'or `*` for no filter')
-                msg = await s.wait_response(message)
-                if not msg:
-                    s.json_lock.lock = None
-                    return
-                if msg.content != '*':
-                    text = str(msg.content)
-                s.json_data.j['iMentionsChIncluded'] = text
-                
-                text = ''
-                await message.channel.send('In which channels bot should **ignore** mentions (separate multiple with *space*)?\n' +
-                                           'e.g. `admin anno` for **admin** and **anno**ucements\n' +
-                                           'or `*` for no filter')
-                msg = await s.wait_response(message)
-                if not msg:
-                    s.json_lock.lock = None
-                    return
-                if msg.content != '*':
-                    text = str(msg.content)
-                s.json_data.j['iMentionsChExcluded'] = text
-                s.save_json()
-                s.json_lock.lock = None
-            else:
-                s.json_lock.lock = None
-                return "channel doesn't exist"
-            
+        text = ''
+        await message.channel.send('In which channels bot should **ignore** mentions (separate multiple with *space*)?\n' +
+                                   'e.g. `admin anno` for **admin** and **anno**ucements\n' +
+                                   'or `*` for no filter')
+        msg = await s.wait_response(message)
+        if not msg:
+            s.json_lock.lock = None
+            return
+        if msg.content != '*':
+            text = str(msg.content)
+        s.json_data.j['iMentionsChExcluded'] = text
+
+        await message.channel.send('`done`')
+        
+        s.save_json()
         s.json_lock.lock = None
         return
 
@@ -2315,7 +2313,7 @@ class leaderBot_class():
             embed.add_field(name='#winners', value=f'<#{ch_winners}>')
 
             
-        embed.add_field(name='message text', value=f'{message.content}', inline=False)
+        embed.add_field(name='message text', value=f'{message.content[:500] or "*"}', inline=False)
         msg = await channel.send(content=text, embed=embed)
         await msg.pin(reason='new challenge submission')
 
