@@ -1936,13 +1936,13 @@ class leaderBot_class():
                     first_item_in_list = False
                     continue
                 if a:
-                    code = a.split()[0].split('>', 1)[0].split(':')[-1]
+                    code = a[:18]
                     if code.isdecimal():
                         try:
                             emoji = s.client.get_emoji(int(code))
                             if emoji:
                                 create_new_vote = create_new_vote or emoji.animated
-                                a = a.replace(a.split()[0], f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
+                                a = a.replace(code, f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
                                 new_message.append(a)
                                 emojis.append(emoji)
                                 continue
