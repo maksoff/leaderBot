@@ -827,7 +827,7 @@ class leaderBot_class():
             all_gets_same_score = len(s.json_data.find(s.json_data.j.get('aChallenge'), sName=sChallengeName).get('aPoints', [])) == 1
                 
             if not all_gets_same_score:
-                await s.send(message.channel, 'Enter score (e.g. `31415.92`), [`.` - decimal separator]:')
+                await s.send(message.channel, 'Enter score (e.g. `31415.93`), [`.` - decimal separator]:')
                 while True:
                     try:
                         msg = await s.wait_response(message, author_id=author_id)
@@ -1936,19 +1936,23 @@ class leaderBot_class():
                     first_item_in_list = False
                     continue
                 if a:
-                    code = a.split()[0].split('>', 1)[0].split(':')[-1]
+                    code = a[:18]
                     if code.isdecimal():
                         try:
                             emoji = s.client.get_emoji(int(code))
                             if emoji:
                                 create_new_vote = create_new_vote or emoji.animated
-                                a = a.replace(a.split()[0], f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
+                                a = a.replace(code, f"<{'a' if emoji.animated else ''}:{emoji.name}:{emoji.id}>")
                                 new_message.append(a)
                                 emojis.append(emoji)
                                 continue
                         except:
                             ...
                     else:
+##                        try:
+##                            print(' '.join(str(ord(x)) for x in a))
+##                        except Exception as e:
+##                            print(e)
                         emojis.append(a.split()[0])
                 new_message.append(a)
         except Exception as e:
@@ -1982,12 +1986,14 @@ class leaderBot_class():
             message = msg
             
         for emoji in emojis:
-            try:
-                await message.add_reaction(emoji)
-##                print('\\u' + '\\u'.join(hex(ord(e))[2:] for e in emoji))
-##                print(emoji)
-            except Exception as e:
-                ...
+            while emoji:
+                try:
+                    await message.add_reaction(emoji)
+                    break
+    ##                print('\\u' + '\\u'.join(hex(ord(e))[2:] for e in emoji))
+    ##                print(emoji)
+                except Exception as e:
+                    emoji = emoji[:-1]
         return
 
     async def update_roles(s, message):
@@ -2330,9 +2336,9 @@ class leaderBot_class():
             await message.channel.send('No one used hidden features since last restart')
         embed = discord.Embed()
         for u in s.last_lb_users:
-            message = u['message']
-            if message.content:
-                text = message.content[:500]
+            msg = u['message']
+            if msg.content:
+                text = msg.content[:500]
             else:
                 text = '`empty`'
             user = u['user']
@@ -2344,6 +2350,8 @@ class leaderBot_class():
         if payload.user_id == s.client.user.id or payload.member.bot:
             return # ignore own & bot reactions
         msg = await s.get_message(payload.channel_id, payload.message_id)
+        if not msg:
+            return
         if msg.author.id == s.client.user.id:
             if msg.embeds:
                 embed_dict = msg.embeds[0].to_dict()
