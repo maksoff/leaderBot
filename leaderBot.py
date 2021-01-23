@@ -1949,6 +1949,10 @@ class leaderBot_class():
                         except:
                             ...
                     else:
+##                        try:
+##                            print(' '.join(str(ord(x)) for x in a))
+##                        except Exception as e:
+##                            print(e)
                         emojis.append(a.split()[0])
                 new_message.append(a)
         except Exception as e:
@@ -1982,12 +1986,14 @@ class leaderBot_class():
             message = msg
             
         for emoji in emojis:
-            try:
-                await message.add_reaction(emoji)
-##                print('\\u' + '\\u'.join(hex(ord(e))[2:] for e in emoji))
-##                print(emoji)
-            except Exception as e:
-                ...
+            while emoji:
+                try:
+                    await message.add_reaction(emoji)
+                    break
+    ##                print('\\u' + '\\u'.join(hex(ord(e))[2:] for e in emoji))
+    ##                print(emoji)
+                except Exception as e:
+                    emoji = emoji[:-1]
         return
 
     async def update_roles(s, message):
