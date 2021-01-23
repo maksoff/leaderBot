@@ -827,7 +827,7 @@ class leaderBot_class():
             all_gets_same_score = len(s.json_data.find(s.json_data.j.get('aChallenge'), sName=sChallengeName).get('aPoints', [])) == 1
                 
             if not all_gets_same_score:
-                await s.send(message.channel, 'Enter score (e.g. `31415.92`), [`.` - decimal separator]:')
+                await s.send(message.channel, 'Enter score (e.g. `31415.93`), [`.` - decimal separator]:')
                 while True:
                     try:
                         msg = await s.wait_response(message, author_id=author_id)
