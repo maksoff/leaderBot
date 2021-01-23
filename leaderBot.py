@@ -2330,9 +2330,9 @@ class leaderBot_class():
             await message.channel.send('No one used hidden features since last restart')
         embed = discord.Embed()
         for u in s.last_lb_users:
-            message = u['message']
-            if message.content:
-                text = message.content[:500]
+            msg = u['message']
+            if msg.content:
+                text = msg.content[:500]
             else:
                 text = '`empty`'
             user = u['user']
@@ -2344,6 +2344,8 @@ class leaderBot_class():
         if payload.user_id == s.client.user.id or payload.member.bot:
             return # ignore own & bot reactions
         msg = await s.get_message(payload.channel_id, payload.message_id)
+        if not msg:
+            return
         if msg.author.id == s.client.user.id:
             if msg.embeds:
                 embed_dict = msg.embeds[0].to_dict()
