@@ -657,47 +657,61 @@ class leaderBot_class():
             if s.json_lock.lock:
                 await message.channel.send('`json locked. try again later`')
                 return
-        # challenges list
-        if s.json_data.list_of_challenges():
-            response = 'Past challenges: `' + '`, `'.join(s.json_data.list_of_challenges()) + '`'
-        else:
-            response = '**Time to create new challenge!**'
-        response += '\nEnter challenge name (e.g. `42`)\n(if challenge not in the list, new challenge will be created)'
-        await s.send(message.channel, response)
-        # select challenge
-        message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait_response, author_id should be sent in case of start from reaction
-        if not message:
-            if change_existing_channel: s.json_lock.lock = None
-            return
-        sChallengeName = message.content
+
+        sChallengeName = kwargs.get('challenge_name')
+        if sChallengeName is None:
+            # challenges list
+            if s.json_data.list_of_challenges():
+                response = 'Past challenges: `' + '`, `'.join(s.json_data.list_of_challenges()) + '`'
+            else:
+                response = '**Time to create new challenge!**'
+            response += '\nEnter challenge name (e.g. `42`)\n(if challenge not in the list, new challenge will be created)'
+            await s.send(message.channel, response)
+            # select challenge
+            message = await s.wait_response(message, author_id=kwargs.get('author_id')) # first wait_response, author_id should be sent in case of start from reaction
+            if not message:
+                if change_existing_channel: s.json_lock.lock = None
+                return
+            sChallengeName = message.content
         if sChallengeName in s.json_data.list_of_challenges():
             await s.send(message.channel, '> Existing challenge')
             if not change_existing_channel:
                 return sChallengeName 
         else:
             await s.send(message.channel, '**New** challenge, cool!')
+
+        winners_channel = kwargs.get('winners_channel')
+        if winners_channel:
+            try:
+                msg = await winners_channel.send('Here will be winners published')
+                channel_id = winners_channel.id
+                message_id = msg.id
+            except:
+                channel_id = 0
+                message_id = 0
             
         try:
-            await s.send(message.channel, 'Select channel to post winners (e.g. `#winners-42`) or `*` for none')
-            while True:
-                msg_r = await s.wait_response(message)
-                if not msg_r:
-                    if change_existing_channel: s.json_lock.lock = None
-                    return
-                if msg_r.content != '*':
-                    channel_id = s.get_int(msg_r.content)
-                    channel = client.get_channel(channel_id)
-                    if not channel:
-                        await message.channel.send('wrong id, try again or `cancel`')
-                        continue
-                    msg = await channel.send('Here will be winners published')
-                    message_id = msg.id
-                    break
-                else:
-                    channel_id = 0
-                    message_id = 0
-                    break
-
+            if not (winners_channel and channel_id and message_id):
+                await s.send(message.channel, 'Select channel to post winners (e.g. `#winners-42`) or `*` for none')
+                while True:
+                    msg_r = await s.wait_response(message)
+                    if not msg_r:
+                        if change_existing_channel: s.json_lock.lock = None
+                        return
+                    if msg_r.content != '*':
+                        channel_id = s.get_int(msg_r.content)
+                        channel = client.get_channel(channel_id)
+                        if not channel:
+                            await message.channel.send('wrong id, try again or `cancel`')
+                            continue
+                        msg = await channel.send('Here will be winners published')
+                        message_id = msg.id
+                        break
+                    else:
+                        channel_id = 0
+                        message_id = 0
+                        break
+                
             if not (sChallengeName in s.json_data.list_of_challenges()):
                 aPoints = await s.get_points_for_channel(message)
                 if not aPoints:
@@ -2142,6 +2156,30 @@ class leaderBot_class():
             if DEBUG: traceback.print_exc()
             print('give_rocket', e)
 
+    async def raw(s, message):
+        try:
+            try:
+                msg = await s.get_message_from_id(message, message.content.split()[1])
+            except:
+                msg = (await message.channel.history(limit=2).flatten())[-1]
+                
+            special_format = msg.content.find('```') >=0
+            if special_format:
+                buffer = io.BytesIO()
+                buffer.write(msg.content.encode('utf-8'))
+                buffer.seek(0)
+                file = discord.File(buffer, f'{msg.id}.txt')
+            else:
+                file = None
+                
+            await message.channel.send('```\n' + msg.content.replace('```', '`_`_`') + '\n```' +
+                                       ('\nadded `_` between ``` , for original check file' if special_format else ''), file = file)
+            await message.delete()
+        except Exception as e:
+            if DEBUG: traceback.print_exc()
+            print('raw', e)
+        
+
     async def give_text(s, message):
         add_reaction = True
         msg = await s.get_message_from_id(message, message.content.split()[1])
@@ -2344,7 +2382,39 @@ class leaderBot_class():
             user = u['user']
             embed.add_field(name=f'@{user.display_name}#{user.discriminator} {user.id}', value=f'[{text}]({message.jump_url})', inline=False)
         await message.channel.send(embed=embed)
-            
+
+    async def create_channels(s, message):
+        if len(message.content.split(maxsplit=1)) > 1:
+            CName = message.content.split(maxsplit=1)[1]
+        else:
+            await message.channel.send('Enter new challenge name (e.g. `42`)')
+            msg_r = await s.wait_response(message)
+            if not msg_r:
+                return
+            CName = msg_r.content
+        category = await message.guild.create_category("This week's challenge", position=4)
+
+        overwrites = {
+                        message.guild.default_role: discord.PermissionOverwrite(send_messages=False),
+                        message.guild.me: discord.PermissionOverwrite(send_messages=True),
+                     }
+    
+        await category.create_text_channel(f'Challenge {CName}', overwrites=overwrites)
+        await category.create_text_channel(f'Questions {CName}')
+        await category.create_text_channel(f'Submissions {CName}')
+        winners_channel = await category.create_text_channel(f'Winners {CName}', overwrites=overwrites)
+        msg_q = await message.channel.send('`Done`. Add #winners to challenges?')
+        while True:
+            reaction, user = await s.ask_for_reaction(msg_q, timeout=120, mode='yn')
+            if reaction == 'yes':
+                ans = await s.set_challenge_channel(message, challenge_name=CName, winners_channel=winners_channel, author_id=user.id)
+                if ans is None:
+                    continue
+                await message.channel.send(ans)
+                break
+            else:
+                break
+        return   
 
     async def raw_react(s, payload):
         if payload.user_id == s.client.user.id or payload.member.bot:
@@ -2842,6 +2912,7 @@ class leaderBot_class():
         
         s.commands = (
                                 (f'{s.prefix}ping', 'bot latency', s.ping),
+                                (f'{s.prefix}create', 'creates empty channels for new challenge', s.create_channels),
                                 (f'{s.prefix}add', 'to add new submission', s.add_submission),
                                 (f'{s.prefix}static points', 'add points (e.g. giveaways)', s.add_points),
                                 (f'{s.prefix}update', 'force leaderboard update', s.update_all),
@@ -2865,6 +2936,7 @@ class leaderBot_class():
                                 (f'{s.prefix}text', f'give text reaction `message_id text`. if no `message_id` or not all letters are unique, creates new message. Add `channel_id-message_id` to send to another #channel', s.give_text),
                                 (f'{s.prefix}say', f'posts text from the name of <@{s.client.user.id}>. Add `{s.prefix}say #channel TEXT` to post in another channel', s.say),
                                 (f'{s.prefix}last', f'last users who used hidden features', s.print_lb_user),       
+                                (f'{s.prefix}raw', f'displays *raw message code* for last message or add `channel_id-message_id`', s.raw),       
                             )
         s.hidden_admin_commands = (
                                 (f'{s.prefix}unlock', "removes `json lock`. don't use! debug feature", s.unlock),
