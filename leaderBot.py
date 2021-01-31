@@ -2392,7 +2392,7 @@ class leaderBot_class():
             if not msg_r:
                 return
             CName = msg_r.content
-        category = await message.guild.create_category("This week's challenge", position=4)
+        category = await message.guild.create_category(f"This week's challenge {CName}", position=4)
 
         overwrites = {
                         message.guild.default_role: discord.PermissionOverwrite(send_messages=False),
