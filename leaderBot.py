@@ -135,7 +135,7 @@ class leaderBot_class():
 
     prefix = 'lb?'
 
-    last_lb_users = []
+    last_lb_users = None
 
     
     special_emojis = {':coolrocket:':'732098507137220718'}
@@ -2215,7 +2215,10 @@ class leaderBot_class():
     
     async def say(s, message):
         try:
-            message_text = message.content.split(maxsplit=1)[-1]
+            if len(message.content.split()) == 1:
+                message_text = await s.ksp()
+            else:
+                message_text = message.content.split(maxsplit=1)[-1]
         except:
             return
 
@@ -2365,13 +2368,16 @@ class leaderBot_class():
         return
 
     def add_lb_user(s, user, message):
+        if s.last_lb_users is None:
+            s.last_lb_users = []
         s.last_lb_users.append({'user':user, 'message':message})
-        if len(s.last_lb_users) > 20:
+        if len(s.last_lb_users) > 25:
             s.last_lb_users.pop(0)
 
     async def print_lb_user(s, message):
-        if len(s.last_lb_users) == 0:
+        if (s.last_lb_users is None) or len(s.last_lb_users) == 0:
             await message.channel.send('No one used hidden features since last restart')
+            return
         embed = discord.Embed()
         for u in s.last_lb_users:
             msg = u['message']
@@ -2380,7 +2386,7 @@ class leaderBot_class():
             else:
                 text = '`empty`'
             user = u['user']
-            embed.add_field(name=f'@{user.display_name}#{user.discriminator} {user.id}', value=f'[{text}]({message.jump_url})', inline=False)
+            embed.add_field(name=f'@{user.display_name}#{user.discriminator} {user.id}', value=f'[{text}]({msg.jump_url})', inline=False)
         await message.channel.send(embed=embed)
 
     async def create_channels(s, message):
@@ -2995,11 +3001,17 @@ async def on_message(message):
     global scanned_messages
     scanned_messages += 1
     if message.author.bot:
-        await leaderBot[message.guild.id].ext_bot(message)
+        try:
+            await leaderBot[message.guild.id].ext_bot(message)
+        except:
+            ...
         return
     
     if message.guild:
-        await leaderBot[message.guild.id](message)
+        try:
+            await leaderBot[message.guild.id](message)
+        except:
+            ...
     else:
         #dm message
         await leaderBot_class.dm(client, message)
