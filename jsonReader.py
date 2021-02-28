@@ -120,7 +120,7 @@ class json_class():
         for key, value in s.oRankByChallenge[ChallengeName].items():
             challengeType = s.find(s.j['aChallengeType'], sName=key)
             response = ''
-            not_same = len(s.find(s.j.get('aChallenge'), sName=ChallengeName).get('aPoints', [])) != 1
+            not_same = len(s.find(s.j.get('aChallenge'), sName=ChallengeName).get('aPoints', [])) > 1
             # if it special type (rank = score)
             bSpecial = challengeType.get('bSpecial', False)
             value.sort(key=lambda x: x['iRank'])
@@ -292,6 +292,8 @@ class json_class():
                             iScore -= 1 # transform to index
                         if iScore < 0: iScore = 0
                         cc['iPoints'] = aPoints[iScore] if iScore < len(aPoints) else 0
+                    elif challenge.get('aPoints', s.aPoint) == []:
+                        cc['iPoints'] = float(cc['fScore'])*float(s.find(s.j['aChallengeType'], 'sName', ct).get('fMultiplier', 1))
                     else:
                         cc['iPoints'] = s.getPoints(iRank - 1, points=challenge.get('aPoints'))*float(s.find(s.j['aChallengeType'], 'sName', ct).get('fMultiplier', 1))
                     oS = s.find(s.j.get('aSubmission', []), sChallengeName=rbc, sChallengeTypeName=ct, iUserID=cc['iUserID'], fScore=cc['fScore'])
