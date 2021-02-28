@@ -554,7 +554,7 @@ class leaderBot_class():
                 if save_json:
                     s.save_json()
                 return sName
-            elif (len(temp) == 4) and (temp[4] == '='):
+            elif (len(temp) == 4) and (temp[3] == '='):
                 s.json_data.j['aChallengeType'].append({'sName':sName,
                                                         'sNick':temp[0],
                                                         'bHigherScore':temp[1][0] == 'h',
@@ -629,6 +629,7 @@ class leaderBot_class():
                 response += '\n{:4}: `'.format(i) + '` `'.join(a) + '`'
             response += '\nEnter number (e.g. `1`), or new point sequence (e.g. `10 6 4 3.14 1`)'
             response += '\n> Enter `* 10` if all submissions should get `10` points'
+            response += '\n> Enter `+` if `score` = `points`'
             await s.send(message.channel, response)
             msg = await s.wait_response(message)
             if not msg:
@@ -636,6 +637,10 @@ class leaderBot_class():
             ar = msg.content.strip().split(' ')
             if len(ar) == 1:
                 try:
+                    if ar[0] == '+':
+                        return []
+                    else:
+                        raise
                     return aPoints[int(ar[0])-1]
                 except:
                     await s.send(message.channel, '**Wrong index.** Try again or `cancel`')
@@ -714,12 +719,12 @@ class leaderBot_class():
                 
             if not (sChallengeName in s.json_data.list_of_challenges()):
                 aPoints = await s.get_points_for_channel(message)
-                if not aPoints:
+                if aPoints is None:
                     if change_existing_channel: s.json_lock.lock = None
                     return
             else:
                 aPoints = s.json_data.find(s.json_data.j.get('aChallenge'), sName=sChallengeName).get('aPoints', [])
-            if (len(aPoints) == 1) or (channel_id == 0):
+            if (len(aPoints) <= 1) or (channel_id == 0):
                 bShowScore = False
             else:
                 msg = await message.channel.send('Show score for this challenge in `#winners`?')
