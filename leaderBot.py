@@ -554,7 +554,7 @@ class leaderBot_class():
                 if save_json:
                     s.save_json()
                 return sName
-            elif (len(temp) == 4) and (temp[4] == '='):
+            elif (len(temp) == 4) and (temp[3] == '='):
                 s.json_data.j['aChallengeType'].append({'sName':sName,
                                                         'sNick':temp[0],
                                                         'bHigherScore':temp[1][0] == 'h',
