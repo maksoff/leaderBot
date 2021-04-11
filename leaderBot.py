@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 # maksoff - KSP leaderbot (automagically calculates the rating and etc.)
 
 # TODO: #
@@ -640,8 +641,7 @@ class leaderBot_class():
                     if ar[0] == '+':
                         return []
                     else:
-                        raise
-                    return aPoints[int(ar[0])-1]
+                        return aPoints[int(ar[0])-1]
                 except:
                     await s.send(message.channel, '**Wrong index.** Try again or `cancel`')
                     continue
@@ -2772,6 +2772,22 @@ class leaderBot_class():
                 traceback.print_exc()
                 print('ext_bot2:', e)
         return
+
+    async def member_remove(s, member):
+        # check if mentions channel exists
+        channel_id = s.json_data.j.get('iMentionsChannel')
+        #text = s.json_data.j.get('iMentionsText', '')
+        
+        if channel_id:
+            try:
+                channel = client.get_channel(channel_id)
+                if not channel:
+                    return
+                await channel.send(f"<@{member.id}> ({member.display_name}) leaved server`")
+            except:
+                traceback.print_exc()
+                return
+        return
                 
     async def __call__(s, message):
         response = ''
@@ -2857,7 +2873,7 @@ class leaderBot_class():
         # normal user
         if (message.author != admin) or ('super!mega!test' in message.content):
             await admin.send(f"> from <@{message.author.id}> @{message.author.name}#{message.author.discriminator} {message.author.id}\n" +
-                             message.content, files=(await s.get_files(message)))
+                             message.content, files=(await leaderBot_class.get_files(message)))
             await message.channel.send('`message sent`')
             leaderBot_class.dm.last_user = message.author
         # admin user
@@ -3031,6 +3047,16 @@ async def on_raw_reaction_add(payload):
         print('on_raw_reaction_add:', e)
         traceback.print_exc()
     return
+
+@client.event
+async def on_member_remove(member):
+    try:
+        await leaderBot[payload.guild_id].member_remove(member)
+    except Exception as e:
+        print('on_member_remove:', e)
+        traceback.print_exc()
+    return
+    
 
 print('ready, steady, go')
 client.run(TOKEN)
