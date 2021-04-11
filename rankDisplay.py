@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 # importing image object from PIL
 import io
 import math 
